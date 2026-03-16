@@ -26,7 +26,9 @@ const PROJECT_STATUSES = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-// TODO(issue-worktree-support): re-enable this UI once the workflow is ready to ship.
+// PAP-525 / TODO(issue-worktree-support): keep the project-level execution
+// workspace controls implemented, but hide them from project configuration
+// until the workflow is ready to ship again.
 const SHOW_EXPERIMENTAL_ISSUE_WORKTREE_UI = false;
 
 interface ProjectPropertiesProps {
@@ -712,6 +714,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
           )}
         </div>
 
+        {/* Hidden for now per PAP-525. Keep this section intact so it can be restored later. */}
         {SHOW_EXPERIMENTAL_ISSUE_WORKTREE_UI && (
           <>
         <Separator className="my-4" />
