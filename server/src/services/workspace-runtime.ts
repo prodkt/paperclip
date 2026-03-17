@@ -94,7 +94,7 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function sanitizeRuntimeServiceBaseEnv(baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+export function sanitizeRuntimeServiceBaseEnv(baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...baseEnv };
   for (const key of Object.keys(env)) {
     if (key.startsWith("PAPERCLIP_")) {
@@ -504,7 +504,7 @@ function buildExecutionWorkspaceCleanupEnv(input: {
   };
   projectWorkspaceCwd?: string | null;
 }) {
-  const env: NodeJS.ProcessEnv = { ...process.env };
+  const env: NodeJS.ProcessEnv = sanitizeRuntimeServiceBaseEnv(process.env);
   env.PAPERCLIP_WORKSPACE_CWD = input.workspace.cwd ?? "";
   env.PAPERCLIP_WORKSPACE_PATH = input.workspace.cwd ?? "";
   env.PAPERCLIP_WORKSPACE_WORKTREE_PATH =
@@ -796,8 +796,14 @@ export async function cleanupExecutionWorkspaceArtifacts(input: {
   } else if (input.workspace.providerType === "local_fs" && createdByRuntime && workspacePath) {
     const projectWorkspaceCwd = input.projectWorkspace?.cwd ? path.resolve(input.projectWorkspace.cwd) : null;
     const resolvedWorkspacePath = path.resolve(workspacePath);
-    if (projectWorkspaceCwd && resolvedWorkspacePath === projectWorkspaceCwd) {
-      warnings.push(`Refusing to remove shared project workspace "${workspacePath}".`);
+    const containsProjectWorkspace = projectWorkspaceCwd
+      ? (
+          resolvedWorkspacePath === projectWorkspaceCwd ||
+          projectWorkspaceCwd.startsWith(`${resolvedWorkspacePath}${path.sep}`)
+        )
+      : false;
+    if (containsProjectWorkspace) {
+      warnings.push(`Refusing to remove path "${workspacePath}" because it contains the project workspace.`);
     } else {
       await fs.rm(resolvedWorkspacePath, { recursive: true, force: true });
       if (input.recorder) {
