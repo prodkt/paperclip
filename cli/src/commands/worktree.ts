@@ -32,6 +32,7 @@ import {
   formatDatabaseBackupResult,
   goals,
   heartbeatRuns,
+  inspectMigrations,
   issueAttachments,
   issueComments,
   issueDocuments,
@@ -1392,6 +1393,16 @@ async function openConfiguredDb(configPath: string): Promise<OpenDbHandle> {
       );
     }
     const connectionString = resolveSourceConnectionString(config, envEntries, embeddedHandle?.port);
+    const migrationState = await inspectMigrations(connectionString);
+    if (migrationState.status !== "upToDate") {
+      const pending =
+        migrationState.reason === "pending-migrations"
+          ? ` Pending migrations: ${migrationState.pendingMigrations.join(", ")}.`
+          : "";
+      throw new Error(
+        `Database for ${configPath} is not up to date.${pending} Run \`pnpm db:migrate\` (or start Paperclip once) before using worktree merge history.`,
+      );
+    }
     const db = createDb(connectionString) as ClosableDb;
     return {
       db,
