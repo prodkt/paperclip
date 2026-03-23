@@ -114,6 +114,24 @@ function parseCsvValues(input: string | undefined): string[] {
   return Array.from(new Set(input.split(",").map((part) => part.trim()).filter(Boolean)));
 }
 
+export function resolveCompanyImportApiPath(input: {
+  dryRun: boolean;
+  targetMode: "new_company" | "existing_company";
+  companyId?: string | null;
+}): string {
+  if (input.targetMode === "existing_company") {
+    const companyId = input.companyId?.trim();
+    if (!companyId) {
+      throw new Error("Existing-company imports require a companyId to resolve the API route.");
+    }
+    return input.dryRun
+      ? `/api/companies/${companyId}/imports/preview`
+      : `/api/companies/${companyId}/imports/apply`;
+  }
+
+  return input.dryRun ? "/api/companies/import/preview" : "/api/companies/import";
+}
+
 export function isHttpUrl(input: string): boolean {
   return /^https?:\/\//i.test(input.trim());
 }
@@ -576,17 +594,19 @@ export function registerCompanyCommands(program: Command): void {
             agents,
             collisionStrategy: collision,
           };
+          const importApiPath = resolveCompanyImportApiPath({
+            dryRun: Boolean(opts.dryRun),
+            targetMode: targetPayload.mode,
+            companyId: targetPayload.mode === "existing_company" ? targetPayload.companyId : null,
+          });
 
           if (opts.dryRun) {
-            const preview = await ctx.api.post<CompanyPortabilityPreviewResult>(
-              "/api/companies/import/preview",
-              payload,
-            );
+            const preview = await ctx.api.post<CompanyPortabilityPreviewResult>(importApiPath, payload);
             printOutput(preview, { json: ctx.json });
             return;
           }
 
-          const imported = await ctx.api.post<CompanyPortabilityImportResult>("/api/companies/import", payload);
+          const imported = await ctx.api.post<CompanyPortabilityImportResult>(importApiPath, payload);
           printOutput(imported, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);

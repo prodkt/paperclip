@@ -449,7 +449,7 @@ describe("paperclipai company import/export e2e", () => {
     );
 
     expect(previewExisting.errors).toEqual([]);
-    expect(previewExisting.plan.companyAction).toBe("update");
+    expect(previewExisting.plan.companyAction).toBe("none");
     expect(previewExisting.plan.agentPlans.some((plan) => plan.action === "create")).toBe(true);
     expect(previewExisting.plan.projectPlans.some((plan) => plan.action === "create")).toBe(true);
     expect(previewExisting.plan.issuePlans.some((plan) => plan.action === "create")).toBe(true);
@@ -474,7 +474,7 @@ describe("paperclipai company import/export e2e", () => {
       { apiBase, configPath },
     );
 
-    expect(importedExisting.company.action).toBe("updated");
+    expect(importedExisting.company.action).toBe("unchanged");
     expect(importedExisting.agents.some((agent) => agent.action === "created")).toBe(true);
 
     const twiceImportedAgents = await api<Array<{ id: string; name: string }>>(
