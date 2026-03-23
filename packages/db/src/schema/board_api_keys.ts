@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { authUsers } from "./auth.js";
 
 export const boardApiKeys = pgTable(
@@ -14,7 +14,7 @@ export const boardApiKeys = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    keyHashIdx: index("board_api_keys_key_hash_idx").on(table.keyHash),
+    keyHashIdx: uniqueIndex("board_api_keys_key_hash_idx").on(table.keyHash),
     userIdx: index("board_api_keys_user_idx").on(table.userId),
   }),
 );

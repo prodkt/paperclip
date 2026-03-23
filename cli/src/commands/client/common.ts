@@ -1,6 +1,7 @@
 import pc from "picocolors";
 import type { Command } from "commander";
 import { getStoredBoardCredential, loginBoardCli } from "../../client/board-auth.js";
+import { buildCliCommandLabel } from "../../client/command-label.js";
 import { readConfig } from "../../config/store.js";
 import { readContext, resolveProfile, type ClientContextProfile } from "../../client/context.js";
 import { ApiRequestError, PaperclipApiClient } from "../../client/http.js";
@@ -110,11 +111,6 @@ function shouldRecoverBoardAuth(error: ApiRequestError): boolean {
 
 function canAttemptInteractiveBoardAuth(): boolean {
   return Boolean(process.stdin.isTTY && process.stdout.isTTY);
-}
-
-function buildCliCommandLabel(): string {
-  const args = process.argv.slice(2);
-  return args.length > 0 ? `paperclipai ${args.join(" ")}` : "paperclipai";
 }
 
 export function printOutput(data: unknown, opts: { json?: boolean; label?: string } = {}): void {

@@ -1671,8 +1671,12 @@ export function accessRoutes(
       );
 
       if (approved.status === "approved") {
-        const accessSnapshot = await boardAuth.resolveBoardAccess(userId);
-        for (const companyId of accessSnapshot.companyIds) {
+        const companyIds = await boardAuth.resolveBoardActivityCompanyIds({
+          userId,
+          requestedCompanyId: approved.challenge.requestedCompanyId,
+          boardApiKeyId: approved.challenge.boardApiKeyId,
+        });
+        for (const companyId of companyIds) {
           await logActivity(db, {
             companyId,
             actorType: "user",
@@ -1737,8 +1741,11 @@ export function accessRoutes(
       req.actor.userId,
     );
     await boardAuth.revokeBoardApiKey(key.id);
-    const accessSnapshot = await boardAuth.resolveBoardAccess(key.userId);
-    for (const companyId of accessSnapshot.companyIds) {
+    const companyIds = await boardAuth.resolveBoardActivityCompanyIds({
+      userId: key.userId,
+      boardApiKeyId: key.id,
+    });
+    for (const companyId of companyIds) {
       await logActivity(db, {
         companyId,
         actorType: "user",

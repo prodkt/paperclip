@@ -198,4 +198,34 @@ describe("applyPendingMigrations", () => {
     },
     20_000,
   );
+
+  it(
+    "enforces a unique board_api_keys.key_hash after migration 0044",
+    async () => {
+      const connectionString = await createTempDatabase();
+
+      await applyPendingMigrations(connectionString);
+
+      const sql = postgres(connectionString, { max: 1, onnotice: () => {} });
+      try {
+        await sql.unsafe(`
+          INSERT INTO "user" ("id", "name", "email", "email_verified", "created_at", "updated_at")
+          VALUES ('user-1', 'User One', 'user@example.com', true, now(), now())
+        `);
+        await sql.unsafe(`
+          INSERT INTO "board_api_keys" ("id", "user_id", "name", "key_hash", "created_at")
+          VALUES ('00000000-0000-0000-0000-000000000001', 'user-1', 'Key One', 'dup-hash', now())
+        `);
+        await expect(
+          sql.unsafe(`
+            INSERT INTO "board_api_keys" ("id", "user_id", "name", "key_hash", "created_at")
+            VALUES ('00000000-0000-0000-0000-000000000002', 'user-1', 'Key Two', 'dup-hash', now())
+          `),
+        ).rejects.toThrow();
+      } finally {
+        await sql.end();
+      }
+    },
+    20_000,
+  );
 });

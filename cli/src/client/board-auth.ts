@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import pc from "picocolors";
+import { buildCliCommandLabel } from "./command-label.js";
 import { resolveDefaultCliAuthPath } from "../config/home.js";
 
 type RequestedAccess = "board" | "instance_admin_required";
@@ -187,11 +188,6 @@ function openUrl(url: string): boolean {
   } catch {
     return false;
   }
-}
-
-function buildCliCommandLabel(): string {
-  const parts = process.argv.slice(2);
-  return parts.length > 0 ? `paperclipai ${parts.join(" ")}` : "paperclipai";
 }
 
 export async function loginBoardCli(params: {

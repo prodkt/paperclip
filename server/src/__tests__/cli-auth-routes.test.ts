@@ -18,6 +18,7 @@ const mockBoardAuthService = vi.hoisted(() => ({
   approveCliAuthChallenge: vi.fn(),
   cancelCliAuthChallenge: vi.fn(),
   resolveBoardAccess: vi.fn(),
+  resolveBoardActivityCompanyIds: vi.fn(),
   assertCurrentBoardKey: vi.fn(),
   revokeBoardApiKey: vi.fn(),
 }));
@@ -132,6 +133,7 @@ describe("cli auth routes", () => {
       companyIds: ["company-1"],
       isInstanceAdmin: false,
     });
+    mockBoardAuthService.resolveBoardActivityCompanyIds.mockResolvedValue(["company-1"]);
 
     const app = await createApp({
       type: "board",
@@ -158,6 +160,70 @@ describe("cli auth routes", () => {
       expect.objectContaining({
         companyId: "company-1",
         action: "board_api_key.created",
+      }),
+    );
+  });
+
+  it("logs approve activity for instance admins without company memberships", async () => {
+    mockBoardAuthService.approveCliAuthChallenge.mockResolvedValue({
+      status: "approved",
+      challenge: {
+        id: "challenge-2",
+        boardApiKeyId: "board-key-2",
+        requestedAccess: "instance_admin_required",
+        requestedCompanyId: null,
+        expiresAt: new Date("2026-03-23T13:00:00.000Z"),
+      },
+    });
+    mockBoardAuthService.resolveBoardActivityCompanyIds.mockResolvedValue(["company-a", "company-b"]);
+
+    const app = await createApp({
+      type: "board",
+      userId: "admin-1",
+      source: "session",
+      isInstanceAdmin: true,
+      companyIds: [],
+    });
+    const res = await request(app)
+      .post("/api/cli-auth/challenges/challenge-2/approve")
+      .send({ token: "pcp_cli_auth_secret" });
+
+    expect(res.status).toBe(200);
+    expect(mockBoardAuthService.resolveBoardActivityCompanyIds).toHaveBeenCalledWith({
+      userId: "admin-1",
+      requestedCompanyId: null,
+      boardApiKeyId: "board-key-2",
+    });
+    expect(mockLogActivity).toHaveBeenCalledTimes(2);
+  });
+
+  it("logs revoke activity with resolved audit company ids", async () => {
+    mockBoardAuthService.assertCurrentBoardKey.mockResolvedValue({
+      id: "board-key-3",
+      userId: "admin-2",
+    });
+    mockBoardAuthService.resolveBoardActivityCompanyIds.mockResolvedValue(["company-z"]);
+
+    const app = await createApp({
+      type: "board",
+      userId: "admin-2",
+      keyId: "board-key-3",
+      source: "board_key",
+      isInstanceAdmin: true,
+      companyIds: [],
+    });
+    const res = await request(app).post("/api/cli-auth/revoke-current").send({});
+
+    expect(res.status).toBe(200);
+    expect(mockBoardAuthService.resolveBoardActivityCompanyIds).toHaveBeenCalledWith({
+      userId: "admin-2",
+      boardApiKeyId: "board-key-3",
+    });
+    expect(mockLogActivity).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        companyId: "company-z",
+        action: "board_api_key.revoked",
       }),
     );
   });

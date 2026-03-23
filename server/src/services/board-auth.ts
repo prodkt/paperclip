@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import {
   authUsers,
@@ -84,6 +84,46 @@ export function boardAuthService(db: Db) {
       companyIds: memberships,
       isInstanceAdmin: Boolean(adminRole),
     };
+  }
+
+  async function resolveBoardActivityCompanyIds(input: {
+    userId: string;
+    requestedCompanyId?: string | null;
+    boardApiKeyId?: string | null;
+  }) {
+    const access = await resolveBoardAccess(input.userId);
+    const companyIds = new Set(access.companyIds);
+
+    if (companyIds.size === 0 && input.requestedCompanyId?.trim()) {
+      companyIds.add(input.requestedCompanyId.trim());
+    }
+
+    if (companyIds.size === 0 && input.boardApiKeyId?.trim()) {
+      const challengeCompanyIds = await db
+        .select({ requestedCompanyId: cliAuthChallenges.requestedCompanyId })
+        .from(cliAuthChallenges)
+        .where(eq(cliAuthChallenges.boardApiKeyId, input.boardApiKeyId.trim()))
+        .then((rows) =>
+          rows
+            .map((row) => row.requestedCompanyId?.trim() ?? null)
+            .filter((value): value is string => Boolean(value)),
+        );
+      for (const companyId of challengeCompanyIds) {
+        companyIds.add(companyId);
+      }
+    }
+
+    if (companyIds.size === 0 && access.isInstanceAdmin) {
+      const allCompanyIds = await db
+        .select({ id: companies.id })
+        .from(companies)
+        .then((rows) => rows.map((row) => row.id));
+      for (const companyId of allCompanyIds) {
+        companyIds.add(companyId);
+      }
+    }
+
+    return Array.from(companyIds);
   }
 
   async function findBoardApiKeyByToken(token: string) {
@@ -210,47 +250,59 @@ export function boardAuthService(db: Db) {
   }
 
   async function approveCliAuthChallenge(id: string, token: string, userId: string) {
-    const challenge = await getCliAuthChallengeBySecret(id, token);
-    if (!challenge) throw notFound("CLI auth challenge not found");
-
-    const status = challengeStatusForRow(challenge);
-    if (status === "expired") return { status, challenge };
-    if (status === "cancelled") return { status, challenge };
-
     const access = await resolveBoardAccess(userId);
-    if (challenge.requestedAccess === "instance_admin_required" && !access.isInstanceAdmin) {
-      throw forbidden("Instance admin required");
-    }
+    return db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select ${cliAuthChallenges.id} from ${cliAuthChallenges} where ${cliAuthChallenges.id} = ${id} for update`,
+      );
 
-    let boardKeyId = challenge.boardApiKeyId;
-    if (!boardKeyId) {
-      const createdKey = await db
-        .insert(boardApiKeys)
-        .values({
-          userId,
-          name: challenge.pendingKeyName,
-          keyHash: challenge.pendingKeyHash,
-          expiresAt: boardApiKeyExpiresAt(),
+      const challenge = await tx
+        .select()
+        .from(cliAuthChallenges)
+        .where(eq(cliAuthChallenges.id, id))
+        .then((rows) => rows[0] ?? null);
+      if (!challenge || !tokenHashesMatch(challenge.secretHash, hashBearerToken(token))) {
+        throw notFound("CLI auth challenge not found");
+      }
+
+      const status = challengeStatusForRow(challenge);
+      if (status === "expired") return { status, challenge };
+      if (status === "cancelled") return { status, challenge };
+
+      if (challenge.requestedAccess === "instance_admin_required" && !access.isInstanceAdmin) {
+        throw forbidden("Instance admin required");
+      }
+
+      let boardKeyId = challenge.boardApiKeyId;
+      if (!boardKeyId) {
+        const createdKey = await tx
+          .insert(boardApiKeys)
+          .values({
+            userId,
+            name: challenge.pendingKeyName,
+            keyHash: challenge.pendingKeyHash,
+            expiresAt: boardApiKeyExpiresAt(),
+          })
+          .returning()
+          .then((rows) => rows[0]);
+        boardKeyId = createdKey.id;
+      }
+
+      const approvedAt = challenge.approvedAt ?? new Date();
+      const updated = await tx
+        .update(cliAuthChallenges)
+        .set({
+          approvedByUserId: userId,
+          boardApiKeyId: boardKeyId,
+          approvedAt,
+          updatedAt: new Date(),
         })
+        .where(eq(cliAuthChallenges.id, challenge.id))
         .returning()
-        .then((rows) => rows[0]);
-      boardKeyId = createdKey.id;
-    }
+        .then((rows) => rows[0] ?? challenge);
 
-    const approvedAt = challenge.approvedAt ?? new Date();
-    const updated = await db
-      .update(cliAuthChallenges)
-      .set({
-        approvedByUserId: userId,
-        boardApiKeyId: boardKeyId,
-        approvedAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(cliAuthChallenges.id, challenge.id))
-      .returning()
-      .then((rows) => rows[0] ?? challenge);
-
-    return { status: "approved" as const, challenge: updated };
+      return { status: "approved" as const, challenge: updated };
+    });
   }
 
   async function cancelCliAuthChallenge(id: string, token: string) {
@@ -297,5 +349,6 @@ export function boardAuthService(db: Db) {
     approveCliAuthChallenge,
     cancelCliAuthChallenge,
     assertCurrentBoardKey,
+    resolveBoardActivityCompanyIds,
   };
 }
