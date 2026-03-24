@@ -13,7 +13,7 @@ import type {
 } from "@paperclipai/shared";
 import { ApiRequestError } from "../../client/http.js";
 import { openUrl } from "../../client/board-auth.js";
-import { readZipArchive } from "./zip.js";
+import { binaryContentTypeByExtension, readZipArchive } from "./zip.js";
 import {
   addCommonClientOptions,
   formatInlineRecord,
@@ -107,15 +107,6 @@ type ImportSelectionState = {
   issues: Set<string>;
   agents: Set<string>;
   skills: Set<string>;
-};
-
-const binaryContentTypeByExtension: Record<string, string> = {
-  ".gif": "image/gif",
-  ".jpeg": "image/jpeg",
-  ".jpg": "image/jpeg",
-  ".png": "image/png",
-  ".svg": "image/svg+xml",
-  ".webp": "image/webp",
 };
 
 function readPortableFileEntry(filePath: string, contents: Buffer): CompanyPortabilityFileEntry {

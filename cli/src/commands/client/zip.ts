@@ -4,7 +4,7 @@ import type { CompanyPortabilityFileEntry } from "@paperclipai/shared";
 
 const textDecoder = new TextDecoder();
 
-const binaryContentTypeByExtension: Record<string, string> = {
+export const binaryContentTypeByExtension: Record<string, string> = {
   ".gif": "image/gif",
   ".jpeg": "image/jpeg",
   ".jpg": "image/jpeg",

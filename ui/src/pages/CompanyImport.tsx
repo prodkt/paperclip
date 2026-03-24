@@ -356,6 +356,7 @@ function applyImportedSidebarOrder(
 ) {
   const sidebar = preview?.manifest.sidebar;
   if (!sidebar) return;
+  if (!userId?.trim()) return;
 
   const agentIdBySlug = new Map(
     result.agents
@@ -846,7 +847,18 @@ export function CompanyImport() {
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
       const importedCompany = await companiesApi.get(result.company.id);
-      applyImportedSidebarOrder(importPreview, result, currentUserId);
+      const refreshedSession = currentUserId
+        ? null
+        : await queryClient.fetchQuery({
+          queryKey: queryKeys.auth.session,
+          queryFn: () => authApi.getSession(),
+        });
+      const sidebarOrderUserId =
+        currentUserId
+        ?? refreshedSession?.user?.id
+        ?? refreshedSession?.session?.userId
+        ?? null;
+      applyImportedSidebarOrder(importPreview, result, sidebarOrderUserId);
       setSelectedCompanyId(importedCompany.id);
       pushToast({
         tone: "success",
