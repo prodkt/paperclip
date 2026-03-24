@@ -135,6 +135,9 @@ export function defaultIssueExecutionWorkspaceSettingsForProject(
 export function issueExecutionWorkspaceModeForPersistedWorkspace(
   mode: string | null | undefined,
 ): IssueExecutionWorkspaceSettings["mode"] {
+  if (mode === null || mode === undefined) {
+    return "agent_default";
+  }
   if (mode === "isolated_workspace" || mode === "operator_branch" || mode === "shared_workspace") {
     return mode;
   }
