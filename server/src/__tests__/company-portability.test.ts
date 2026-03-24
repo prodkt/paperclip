@@ -2112,4 +2112,74 @@ describe("company portability", () => {
     expect(materializedFiles["AGENTS.md"]).not.toMatch(/^---\n/);
     expect(materializedFiles["AGENTS.md"]).not.toContain('name: "ClaudeCoder"');
   });
+
+  it("strips root AGENTS frontmatter when importing a nested agent entry path", async () => {
+    const portability = companyPortabilityService({} as any);
+
+    companySvc.create.mockResolvedValue({
+      id: "company-imported",
+      name: "Imported Paperclip",
+    });
+    accessSvc.ensureMembership.mockResolvedValue(undefined);
+    agentSvc.create.mockResolvedValue({
+      id: "agent-created",
+      name: "ClaudeCoder",
+    });
+
+    const exported = await portability.exportBundle("company-1", {
+      include: {
+        company: true,
+        agents: true,
+        projects: false,
+        issues: false,
+      },
+    });
+    const originalAgentsMarkdown = exported.files["agents/claudecoder/AGENTS.md"];
+    expect(typeof originalAgentsMarkdown).toBe("string");
+
+    const files = {
+      ...exported.files,
+      "agents/claudecoder/nested/AGENTS.md": originalAgentsMarkdown!,
+    };
+
+    agentSvc.list.mockResolvedValue([]);
+
+    await portability.importBundle({
+      source: {
+        type: "inline",
+        rootPath: exported.rootPath,
+        files,
+      },
+      include: {
+        company: true,
+        agents: true,
+        projects: false,
+        issues: false,
+      },
+      target: {
+        mode: "new_company",
+        newCompanyName: "Imported Paperclip",
+      },
+      agents: ["claudecoder"],
+      collisionStrategy: "rename",
+      adapterOverrides: {
+        claudecoder: {
+          adapterType: "codex_local",
+          adapterConfig: {
+            dangerouslyBypassApprovalsAndSandbox: true,
+          },
+        },
+      },
+    }, "user-1");
+
+    const nestedMaterializedFiles = agentInstructionsSvc.materializeManagedBundle.mock.calls
+      .map(([, filesArg]) => filesArg as Record<string, string>)
+      .find((filesArg) => typeof filesArg["nested/AGENTS.md"] === "string");
+
+    expect(nestedMaterializedFiles).toBeDefined();
+    expect(nestedMaterializedFiles?.["nested/AGENTS.md"]).toContain("You are ClaudeCoder.");
+    expect(nestedMaterializedFiles?.["AGENTS.md"]).toContain("You are ClaudeCoder.");
+    expect(nestedMaterializedFiles?.["AGENTS.md"]).not.toMatch(/^---\n/);
+    expect(nestedMaterializedFiles?.["AGENTS.md"]).not.toContain('name: "ClaudeCoder"');
+  });
 });
