@@ -26,52 +26,12 @@ import {
   thematicBreakPlugin,
   type RealmPlugin,
 } from "@mdxeditor/editor";
-import { LinkNode, type LinkAttributes } from "@lexical/link";
 import { buildAgentMentionHref, buildProjectMentionHref } from "@paperclipai/shared";
 import { AgentIcon } from "./AgentIconPicker";
 import { applyMentionChipDecoration, clearMentionChipDecoration, parseMentionChipHref } from "../lib/mention-chips";
+import { MentionAwareLinkNode, mentionAwareLinkNodeReplacement } from "../lib/mention-aware-link-node";
 import { mentionDeletionPlugin } from "../lib/mention-deletion";
 import { cn } from "../lib/utils";
-
-const CUSTOM_MENTION_URL_RE = /^(agent|project):\/\//;
-
-class MentionAwareLinkNode extends LinkNode {
-  static clone(node: MentionAwareLinkNode): MentionAwareLinkNode {
-    return new MentionAwareLinkNode(
-      node.getURL(),
-      {
-        rel: node.getRel(),
-        target: node.getTarget(),
-        title: node.getTitle(),
-      },
-      node.getKey(),
-    );
-  }
-
-  constructor(url?: string, attributes?: LinkAttributes, key?: string) {
-    super(url, attributes, key);
-  }
-
-  sanitizeUrl(url: string): string {
-    if (CUSTOM_MENTION_URL_RE.test(url)) return url;
-    return super.sanitizeUrl(url);
-  }
-}
-
-const mentionAwareLinkNodeReplacement = {
-  replace: LinkNode,
-  with: (node: LinkNode) =>
-    new MentionAwareLinkNode(
-      node.getURL(),
-      {
-        rel: node.getRel(),
-        target: node.getTarget(),
-        title: node.getTitle(),
-      },
-      node.getKey(),
-    ),
-  withKlass: MentionAwareLinkNode,
-} as const;
 
 /* ---- Mention types ---- */
 
@@ -590,7 +550,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
           "paperclip-mdxeditor-content focus:outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:list-item",
           contentClassName,
         )}
-        additionalLexicalNodes={[mentionAwareLinkNodeReplacement]}
+        additionalLexicalNodes={[MentionAwareLinkNode, mentionAwareLinkNodeReplacement]}
         plugins={plugins}
       />
 
