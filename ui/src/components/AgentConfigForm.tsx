@@ -774,7 +774,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
                 <ClaudeLocalAdvancedFields {...adapterFieldProps} />
               )}
 
-              <BillingModeField {...adapterFieldProps} />
+              {isLocal && <BillingModeField {...adapterFieldProps} />}
 
               <Field label="Extra args (comma-separated)" hint={help.extraArgs}>
                 <DraftInput
