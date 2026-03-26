@@ -71,9 +71,10 @@ For local adapters, set:
 You can set:
 
 - `promptTemplate`: used for every run (first run and resumed sessions)
-- `bootstrapPromptTemplate`: used only on the first run of a new session (before the agent has any prior context)
 
 Templates support variables like `{{agent.id}}`, `{{agent.name}}`, and run context values.
+
+> **Note:** `bootstrapPromptTemplate` is deprecated and should not be used for new agents. Existing configs that use it will continue to work but should be migrated to the managed instructions bundle system.
 
 ## 4. Session resume behavior
 
@@ -174,7 +175,7 @@ Start with least privilege where possible, and avoid exposing secrets in broad r
 
 1. Choose adapter (e.g. `claude_local`, `codex_local`, `opencode_local`, `hermes_local`, `cursor`, or `openclaw_gateway`).
 2. Set `cwd` to the target workspace (for local adapters).
-3. Optionally add prompt templates (`promptTemplate` and/or `bootstrapPromptTemplate`).
+3. Optionally add a prompt template (`promptTemplate`) or use the managed instructions bundle.
 4. Configure heartbeat policy (timer and/or assignment wakeups).
 5. Trigger a manual wakeup.
 6. Confirm run succeeds and session/token usage is recorded.

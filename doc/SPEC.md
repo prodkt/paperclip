@@ -410,7 +410,7 @@ No separate "agent API" vs. "board API." Same endpoints, different authorization
 
 ### Work Artifacts
 
-Paperclip does **not** manage full delivery infrastructure (code repos, deployments, production runtime). It tracks task-linked artifacts (for example issue documents and attachments), while implementation and deployment remain the agent's domain.
+Paperclip manages task-linked work artifacts: issue documents (rich-text plans, specs, notes attached to issues) and file attachments. Agents read and write these through the API as part of normal task execution. Full delivery infrastructure (code repos, deployments, production runtime) remains the agent's domain — Paperclip orchestrates the work, not the build pipeline.
 
 ### Open Questions
 
@@ -512,7 +512,7 @@ Things Paperclip explicitly does **not** do:
 - **Not a SaaS** — single-tenant, self-hosted
 - **Not opinionated about Agent implementation** — any language, any framework, any runtime
 - **Not automatically self-healing** — surfaces problems, doesn't silently fix them
-- **Does not manage work artifacts** — no repo management, no deployment, no file systems
+- **Does not manage delivery infrastructure** — no repo management, no deployment, no file systems (but does manage task-linked documents and attachments)
 - **Does not auto-reassign work** — stale tasks are surfaced, not silently redistributed
 - **Does not track external revenue/expenses** — that's a future plugin. Token/LLM cost budgeting is core.
 
