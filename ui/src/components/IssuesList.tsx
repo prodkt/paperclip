@@ -182,17 +182,22 @@ interface IssuesSearchInputProps {
 
 function IssuesSearchInput({ initialValue, onValueCommitted }: IssuesSearchInputProps) {
   const [value, setValue] = useState(initialValue);
+  const onValueCommittedRef = useRef(onValueCommitted);
 
   useEffect(() => {
     setValue(initialValue);
   }, [initialValue]);
 
   useEffect(() => {
+    onValueCommittedRef.current = onValueCommitted;
+  }, [onValueCommitted]);
+
+  useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      onValueCommitted(value);
+      onValueCommittedRef.current(value);
     }, ISSUE_SEARCH_COMMIT_DELAY_MS);
     return () => window.clearTimeout(timeoutId);
-  }, [value, onValueCommitted]);
+  }, [value]);
 
   return (
     <div className="relative w-48 sm:w-64 md:w-80">
