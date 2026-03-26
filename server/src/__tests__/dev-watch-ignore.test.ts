@@ -25,10 +25,18 @@ describe("resolveServerDevWatchIgnorePaths", () => {
     const ignorePaths = resolveServerDevWatchIgnorePaths(serverRoot);
 
     expect(ignorePaths).toContain(path.join(worktreeUiRoot, "node_modules"));
+    expect(ignorePaths).toContain(`${path.join(worktreeUiRoot, "node_modules").replaceAll(path.sep, "/")}/**`);
     expect(ignorePaths).toContain(fs.realpathSync(path.join(sharedUiRoot, "node_modules")));
+    expect(ignorePaths).toContain(`${fs.realpathSync(path.join(sharedUiRoot, "node_modules")).replaceAll(path.sep, "/")}/**`);
+    expect(ignorePaths).toContain(path.join(worktreeUiRoot, "node_modules", ".vite-temp"));
+    expect(ignorePaths).toContain(
+      `${path.join(worktreeUiRoot, "node_modules", ".vite-temp").replaceAll(path.sep, "/")}/**`,
+    );
     expect(ignorePaths).toContain(path.join(worktreeUiRoot, ".vite"));
     expect(ignorePaths).toContain(fs.realpathSync(path.join(sharedUiRoot, ".vite")));
     expect(ignorePaths).toContain(path.join(worktreeUiRoot, "dist"));
     expect(ignorePaths).toContain(fs.realpathSync(path.join(sharedUiRoot, "dist")));
+    expect(ignorePaths).toContain("**/{node_modules,bower_components,vendor}/**");
+    expect(ignorePaths).toContain("**/.vite-temp/**");
   });
 });
