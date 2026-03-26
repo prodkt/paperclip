@@ -137,11 +137,40 @@ function FailedRunInboxRow({
       className,
     )}>
       <div className="flex items-start gap-2 sm:items-center">
+        {showUnreadSlot ? (
+          <span className="hidden sm:inline-flex h-4 w-4 shrink-0 items-center justify-center self-center">
+            {showUnreadDot ? (
+              <button
+                type="button"
+                onClick={onMarkRead}
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-blue-500/20"
+                aria-label="Mark as read"
+              >
+                <span className={cn(
+                  "block h-2 w-2 rounded-full bg-blue-600 transition-opacity duration-300 dark:bg-blue-400",
+                  unreadState === "fading" ? "opacity-0" : "opacity-100",
+                )} />
+              </button>
+            ) : onArchive ? (
+              <button
+                type="button"
+                onClick={onArchive}
+                disabled={archiveDisabled}
+                className="inline-flex h-4 w-4 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
+                aria-label="Dismiss from inbox"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <span className="inline-flex h-4 w-4" aria-hidden="true" />
+            )}
+          </span>
+        ) : null}
         <Link
           to={`/agents/${run.agentId}/runs/${run.id}`}
           className="flex min-w-0 flex-1 items-start gap-2 no-underline text-inherit transition-colors hover:bg-accent/50"
         >
-          <span className="hidden h-2 w-2 shrink-0 sm:inline-flex" aria-hidden="true" />
+          {!showUnreadSlot && <span className="hidden h-2 w-2 shrink-0 sm:inline-flex" aria-hidden="true" />}
           <span className="hidden h-3.5 w-3.5 shrink-0 sm:inline-flex" aria-hidden="true" />
           <span className="mt-0.5 shrink-0 rounded-md bg-red-500/20 p-1.5 sm:mt-0">
             <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
@@ -190,35 +219,6 @@ function FailedRunInboxRow({
             </button>
           )}
         </div>
-        {showUnreadSlot && (
-          <span className="hidden sm:inline-flex h-4 w-4 shrink-0 items-center justify-center self-center">
-            {showUnreadDot ? (
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onMarkRead?.(); }}
-                className="inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-blue-500/20"
-                aria-label="Mark as read"
-              >
-                <span className={cn(
-                  "block h-2 w-2 rounded-full bg-blue-600 transition-opacity duration-300 dark:bg-blue-400",
-                  unreadState === "fading" ? "opacity-0" : "opacity-100",
-                )} />
-              </button>
-            ) : onArchive ? (
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onArchive(); }}
-                disabled={archiveDisabled}
-                className="inline-flex h-4 w-4 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
-                aria-label="Dismiss from inbox"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <span className="inline-flex h-4 w-4" aria-hidden="true" />
-            )}
-          </span>
-        )}
       </div>
       <div className="mt-3 flex gap-2 sm:hidden">
         <Button
@@ -284,11 +284,40 @@ function ApprovalInboxRow({
       className,
     )}>
       <div className="flex items-start gap-2 sm:items-center">
+        {showUnreadSlot ? (
+          <span className="hidden sm:inline-flex h-4 w-4 shrink-0 items-center justify-center self-center">
+            {showUnreadDot ? (
+              <button
+                type="button"
+                onClick={onMarkRead}
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-blue-500/20"
+                aria-label="Mark as read"
+              >
+                <span className={cn(
+                  "block h-2 w-2 rounded-full bg-blue-600 transition-opacity duration-300 dark:bg-blue-400",
+                  unreadState === "fading" ? "opacity-0" : "opacity-100",
+                )} />
+              </button>
+            ) : onArchive ? (
+              <button
+                type="button"
+                onClick={onArchive}
+                disabled={archiveDisabled}
+                className="inline-flex h-4 w-4 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
+                aria-label="Dismiss from inbox"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <span className="inline-flex h-4 w-4" aria-hidden="true" />
+            )}
+          </span>
+        ) : null}
         <Link
           to={`/approvals/${approval.id}`}
           className="flex min-w-0 flex-1 items-start gap-2 no-underline text-inherit transition-colors hover:bg-accent/50"
         >
-          <span className="hidden h-2 w-2 shrink-0 sm:inline-flex" aria-hidden="true" />
+          {!showUnreadSlot && <span className="hidden h-2 w-2 shrink-0 sm:inline-flex" aria-hidden="true" />}
           <span className="hidden h-3.5 w-3.5 shrink-0 sm:inline-flex" aria-hidden="true" />
           <span className="mt-0.5 shrink-0 rounded-md bg-muted p-1.5 sm:mt-0">
             <Icon className="h-4 w-4 text-muted-foreground" />
@@ -325,35 +354,6 @@ function ApprovalInboxRow({
             </Button>
           </div>
         ) : null}
-        {showUnreadSlot && (
-          <span className="hidden sm:inline-flex h-4 w-4 shrink-0 items-center justify-center self-center">
-            {showUnreadDot ? (
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onMarkRead?.(); }}
-                className="inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-blue-500/20"
-                aria-label="Mark as read"
-              >
-                <span className={cn(
-                  "block h-2 w-2 rounded-full bg-blue-600 transition-opacity duration-300 dark:bg-blue-400",
-                  unreadState === "fading" ? "opacity-0" : "opacity-100",
-                )} />
-              </button>
-            ) : onArchive ? (
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onArchive(); }}
-                disabled={archiveDisabled}
-                className="inline-flex h-4 w-4 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
-                aria-label="Dismiss from inbox"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <span className="inline-flex h-4 w-4" aria-hidden="true" />
-            )}
-          </span>
-        )}
       </div>
       {showResolutionButtons ? (
         <div className="mt-3 flex gap-2 sm:hidden">
@@ -414,8 +414,37 @@ function JoinRequestInboxRow({
       className,
     )}>
       <div className="flex items-start gap-2 sm:items-center">
+        {showUnreadSlot ? (
+          <span className="hidden sm:inline-flex h-4 w-4 shrink-0 items-center justify-center self-center">
+            {showUnreadDot ? (
+              <button
+                type="button"
+                onClick={onMarkRead}
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-blue-500/20"
+                aria-label="Mark as read"
+              >
+                <span className={cn(
+                  "block h-2 w-2 rounded-full bg-blue-600 transition-opacity duration-300 dark:bg-blue-400",
+                  unreadState === "fading" ? "opacity-0" : "opacity-100",
+                )} />
+              </button>
+            ) : onArchive ? (
+              <button
+                type="button"
+                onClick={onArchive}
+                disabled={archiveDisabled}
+                className="inline-flex h-4 w-4 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
+                aria-label="Dismiss from inbox"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <span className="inline-flex h-4 w-4" aria-hidden="true" />
+            )}
+          </span>
+        ) : null}
         <div className="flex min-w-0 flex-1 items-start gap-2">
-          <span className="hidden h-2 w-2 shrink-0 sm:inline-flex" aria-hidden="true" />
+          {!showUnreadSlot && <span className="hidden h-2 w-2 shrink-0 sm:inline-flex" aria-hidden="true" />}
           <span className="hidden h-3.5 w-3.5 shrink-0 sm:inline-flex" aria-hidden="true" />
           <span className="mt-0.5 shrink-0 rounded-md bg-muted p-1.5 sm:mt-0">
             <UserPlus className="h-4 w-4 text-muted-foreground" />
@@ -449,35 +478,6 @@ function JoinRequestInboxRow({
             Reject
           </Button>
         </div>
-        {showUnreadSlot && (
-          <span className="hidden sm:inline-flex h-4 w-4 shrink-0 items-center justify-center self-center">
-            {showUnreadDot ? (
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onMarkRead?.(); }}
-                className="inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-blue-500/20"
-                aria-label="Mark as read"
-              >
-                <span className={cn(
-                  "block h-2 w-2 rounded-full bg-blue-600 transition-opacity duration-300 dark:bg-blue-400",
-                  unreadState === "fading" ? "opacity-0" : "opacity-100",
-                )} />
-              </button>
-            ) : onArchive ? (
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onArchive(); }}
-                disabled={archiveDisabled}
-                className="inline-flex h-4 w-4 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
-                aria-label="Dismiss from inbox"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <span className="inline-flex h-4 w-4" aria-hidden="true" />
-            )}
-          </span>
-        )}
       </div>
       <div className="mt-3 flex gap-2 sm:hidden">
         <Button
