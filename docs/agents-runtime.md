@@ -1,7 +1,7 @@
 # Agent Runtime Guide
 
-Status: User-facing guide  
-Last updated: 2026-02-17  
+Status: User-facing guide
+Last updated: 2026-03-26
 Audience: Operators setting up and running agents in Paperclip
 
 ## 1. What this system does
@@ -32,14 +32,19 @@ If an agent is already running, new wakeups are merged (coalesced) instead of la
 
 ## 3.1 Adapter choice
 
-Common choices:
+Built-in adapters:
 
 - `claude_local`: runs your local `claude` CLI
 - `codex_local`: runs your local `codex` CLI
+- `opencode_local`: runs your local `opencode` CLI
+- `hermes_local`: runs your local `hermes` CLI
+- `cursor`: runs Cursor in background mode
+- `pi_local`: runs an embedded Pi agent locally
+- `openclaw_gateway`: connects to an OpenClaw gateway endpoint
 - `process`: generic shell command adapter
 - `http`: calls an external HTTP endpoint
 
-For `claude_local` and `codex_local`, Paperclip assumes the CLI is already installed and authenticated on the host machine.
+For local CLI adapters (`claude_local`, `codex_local`, `opencode_local`, `hermes_local`), Paperclip assumes the CLI is already installed and authenticated on the host machine.
 
 ## 3.2 Runtime behavior
 
@@ -66,6 +71,7 @@ For local adapters, set:
 You can set:
 
 - `promptTemplate`: used for every run (first run and resumed sessions)
+- `bootstrapPromptTemplate`: used only on the first run of a new session (before the agent has any prior context)
 
 Templates support variables like `{{agent.id}}`, `{{agent.name}}`, and run context values.
 
@@ -133,7 +139,7 @@ If the connection drops, the UI reconnects automatically.
 
 If runs fail repeatedly:
 
-1. Check adapter command availability (`claude`/`codex` installed and logged in).
+1. Check adapter command availability (e.g. `claude`/`codex`/`opencode`/`hermes` installed and logged in).
 2. Verify `cwd` exists and is accessible.
 3. Inspect run error + stderr excerpt, then full log.
 4. Confirm timeout is not too low.
@@ -166,9 +172,9 @@ Start with least privilege where possible, and avoid exposing secrets in broad r
 
 ## 10. Minimal setup checklist
 
-1. Choose adapter (`claude_local` or `codex_local`).
-2. Set `cwd` to the target workspace.
-3. Add bootstrap + normal prompt templates.
+1. Choose adapter (e.g. `claude_local`, `codex_local`, `opencode_local`, `hermes_local`, `cursor`, or `openclaw_gateway`).
+2. Set `cwd` to the target workspace (for local adapters).
+3. Optionally add prompt templates (`promptTemplate` and/or `bootstrapPromptTemplate`).
 4. Configure heartbeat policy (timer and/or assignment wakeups).
 5. Trigger a manual wakeup.
 6. Confirm run succeeds and session/token usage is recorded.
