@@ -125,18 +125,13 @@ export function LiveRunWidget({ issueId, companyId }: LiveRunWidgetProps) {
                         Idle
                       </span>
                     )}
-                    {run.lastOutputAt && isRunActive(run.status) && (
+                    {isRunActive(run.status) && run.lastOutputAt ? (
                       <span title={`Last output: ${formatDateTime(run.lastOutputAt)}`}>
                         Last output {relativeTime(run.lastOutputAt)}
                       </span>
-                    )}
-                    {run.finishedAt && !isRunActive(run.status) && (
+                    ) : run.finishedAt ? (
                       <span>{formatDateTime(run.finishedAt)}</span>
-                    )}
-                    {!run.lastOutputAt && isRunActive(run.status) && (
-                      <span>{formatDateTime(run.startedAt ?? run.createdAt)}</span>
-                    )}
-                    {!run.finishedAt && !isRunActive(run.status) && !run.lastOutputAt && (
+                    ) : (
                       <span>{formatDateTime(run.startedAt ?? run.createdAt)}</span>
                     )}
                   </div>

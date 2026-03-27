@@ -2517,6 +2517,10 @@ export function heartbeatService(db: Db) {
           await db.update(heartbeatRuns)
             .set({ lastOutputAt: lastOutputAtLatest, updatedAt: new Date() })
             .where(eq(heartbeatRuns.id, runId));
+          // Clear idle_warning if set — output resumed
+          await db.update(heartbeatRuns)
+            .set({ errorCode: null, error: null })
+            .where(and(eq(heartbeatRuns.id, runId), eq(heartbeatRuns.errorCode, IDLE_WARNING_ERROR_CODE)));
           lastOutputAtTimer = setTimeout(() => {
             lastOutputAtFlushPending = false;
             lastOutputAtTimer = null;
