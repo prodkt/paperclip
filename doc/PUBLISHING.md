@@ -108,6 +108,13 @@ Notes:
 - `prepack` automatically rewrites `ui/package.json` to the lean publish manifest, and `postpack` restores the dev manifest after the command finishes.
 - If `npm view @paperclipai/ui version` already returns the same version that is in [`ui/package.json`](../ui/package.json), do not republish. Bump the version or use the normal repo-wide release flow in [`scripts/release.sh`](../scripts/release.sh).
 
+If the first real publish returns npm `E404`, check npm-side prerequisites before retrying:
+
+- `npm whoami` must succeed first. An expired or missing npm login will block the publish.
+- For an organization-scoped package like `@paperclipai/ui`, the `paperclipai` npm organization must exist and the publisher must be a member with permission to publish to that scope.
+- The initial publish must include `--access public` for a public scoped package.
+- npm also requires either account 2FA for publishing or a granular token that is allowed to bypass 2FA.
+
 ## Version formats
 
 Paperclip uses calendar versions:
