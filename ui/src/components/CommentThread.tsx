@@ -10,6 +10,7 @@ import { MarkdownEditor, type MarkdownEditorRef, type MentionOption } from "./Ma
 import { StatusBadge } from "./StatusBadge";
 import { AgentIcon } from "./AgentIconPicker";
 import { formatDateTime } from "../lib/utils";
+import { restoreSubmittedCommentDraft } from "../lib/comment-submit-draft";
 import { PluginSlotOutlet } from "@/plugins/slots";
 
 interface CommentWithRunMeta extends IssueComment {
@@ -420,17 +421,24 @@ export function CommentThread({
     if (!trimmed) return;
     const hasReassignment = enableReassign && reassignTarget !== currentAssigneeValue;
     const reassignment = hasReassignment ? parseReassignment(reassignTarget) : null;
+    const submittedBody = trimmed;
 
     setSubmitting(true);
+    setBody("");
     try {
       // TODO: wire an explicit "send + interrupt" action through the composer if we expose it in the UI.
-      await onAdd(trimmed, reopen ? true : undefined, reassignment ?? undefined);
-      setBody("");
+      await onAdd(submittedBody, reopen ? true : undefined, reassignment ?? undefined);
       if (draftKey) clearDraft(draftKey);
       setReopen(true);
       setReassignTarget(effectiveSuggestedAssigneeValue);
     } catch {
-      // Parent mutation handlers surface the failure and keep the draft intact.
+      setBody((current) =>
+        restoreSubmittedCommentDraft({
+          currentBody: current,
+          submittedBody,
+        }),
+      );
+      // Parent mutation handlers surface the failure and the draft is restored for retry.
     } finally {
       setSubmitting(false);
     }
