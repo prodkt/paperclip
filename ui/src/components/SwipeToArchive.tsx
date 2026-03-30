@@ -6,23 +6,27 @@ interface SwipeToArchiveProps {
   children: ReactNode;
   onArchive: () => void;
   disabled?: boolean;
+  selected?: boolean;
   className?: string;
 }
 
-const COMMIT_THRESHOLD = 0.4;
-const MAX_SWIPE = 0.92;
-const COMMIT_DELAY_MS = 210;
+const COMMIT_THRESHOLD = 0.32;
+const MAX_SWIPE = 0.88;
+const COMMIT_DELAY_MS = 140;
+const SELECTED_ROW_BACKGROUND = "hsl(var(--muted))";
 
 export function SwipeToArchive({
   children,
   onArchive,
   disabled = false,
+  selected = false,
   className,
 }: SwipeToArchiveProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const widthRef = useRef(0);
   const timeoutRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
   const [offsetX, setOffsetX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isCollapsing, setIsCollapsing] = useState(false);
@@ -68,6 +72,7 @@ export function SwipeToArchive({
     widthRef.current = node?.offsetWidth ?? 0;
     setLockedHeight(node?.offsetHeight ?? null);
     setIsCollapsing(false);
+    suppressClickRef.current = false;
     startPointRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
@@ -86,6 +91,7 @@ export function SwipeToArchive({
         startPointRef.current = null;
         return;
       }
+      suppressClickRef.current = true;
     }
 
     if (deltaX >= 0) {
@@ -127,6 +133,12 @@ export function SwipeToArchive({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
+      onClickCapture={(event) => {
+        if (!suppressClickRef.current) return;
+        event.preventDefault();
+        event.stopPropagation();
+        suppressClickRef.current = false;
+      }}
     >
       <div
         aria-hidden="true"
@@ -139,10 +151,12 @@ export function SwipeToArchive({
         </span>
       </div>
       <div
+        data-inbox-row-surface
         className="relative bg-card will-change-transform"
         style={{
           transform: `translate3d(${offsetX}px, 0, 0)`,
           transition: isDragging ? "none" : "transform 180ms ease-out",
+          backgroundColor: selected ? SELECTED_ROW_BACKGROUND : undefined,
         }}
       >
         {children}
