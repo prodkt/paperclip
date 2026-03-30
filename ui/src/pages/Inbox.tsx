@@ -1336,9 +1336,9 @@ export function Inbox() {
                 if (showTodayDivider) {
                   elements.push(
                     <div key="today-divider" className="flex items-center gap-3 px-4 my-2">
-                      <div className="flex-1 border-t border-zinc-600" />
-                      <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                        Today
+                      <div className="flex-1 border-t border-border" />
+                      <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                        Earlier
                       </span>
                     </div>,
                   );

@@ -423,6 +423,7 @@ export function CommentThread({
 
     setSubmitting(true);
     try {
+      // TODO: wire an explicit "send + interrupt" action through the composer if we expose it in the UI.
       await onAdd(trimmed, reopen ? true : undefined, reassignment ?? undefined);
       setBody("");
       if (draftKey) clearDraft(draftKey);

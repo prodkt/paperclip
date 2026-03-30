@@ -13,7 +13,7 @@ interface SwipeToArchiveProps {
 const COMMIT_THRESHOLD = 0.32;
 const MAX_SWIPE = 0.88;
 const COMMIT_DELAY_MS = 140;
-const SELECTED_ROW_BACKGROUND = "#f3f4f6";
+const SELECTED_ROW_BACKGROUND = "hsl(var(--muted))";
 
 export function SwipeToArchive({
   children,
