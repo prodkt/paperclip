@@ -114,10 +114,10 @@ export function stripWorkspaceRuntimeFromExecutionRunConfig(config: Record<strin
 export function buildRealizedExecutionWorkspaceFromPersisted(input: {
   base: ExecutionWorkspaceInput;
   workspace: ExecutionWorkspace;
-}): RealizedExecutionWorkspace {
+}): RealizedExecutionWorkspace | null {
   const cwd = readNonEmptyString(input.workspace.cwd) ?? readNonEmptyString(input.workspace.providerRef);
   if (!cwd) {
-    throw new Error(`Execution workspace ${input.workspace.id} has no local path to reuse.`);
+    return null;
   }
 
   const strategy = input.workspace.strategyType === "git_worktree" ? "git_worktree" : "project_primary";
@@ -2191,12 +2191,13 @@ export function heartbeatService(db: Db) {
       repoUrl: resolvedWorkspace.repoUrl,
       repoRef: resolvedWorkspace.repoRef,
     } satisfies ExecutionWorkspaceInput;
-    const executionWorkspace = shouldReuseExisting && existingExecutionWorkspace
+    const reusedExecutionWorkspace = shouldReuseExisting && existingExecutionWorkspace
       ? buildRealizedExecutionWorkspaceFromPersisted({
           base: executionWorkspaceBase,
           workspace: existingExecutionWorkspace,
         })
-      : await realizeExecutionWorkspace({
+      : null;
+    const executionWorkspace = reusedExecutionWorkspace ?? await realizeExecutionWorkspace({
           base: executionWorkspaceBase,
           config: runtimeConfig,
           issue: issueRef,

@@ -284,6 +284,40 @@ describe("realizeExecutionWorkspace", () => {
     expect(path.basename(realized.cwd)).toBe(realized.branchName);
   });
 
+  it("preserves intentional slashes and dots from the branch template", async () => {
+    const repoRoot = await createTempRepo();
+
+    const realized = await realizeExecutionWorkspace({
+      base: {
+        baseCwd: repoRoot,
+        source: "project_primary",
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+        repoUrl: null,
+        repoRef: "HEAD",
+      },
+      config: {
+        workspaceStrategy: {
+          type: "git_worktree",
+          branchTemplate: "release/{{issue.identifier}}.{{slug}}",
+        },
+      },
+      issue: {
+        id: "issue-template-safe",
+        identifier: "PAP-992",
+        title: "Hotfix / April.1",
+      },
+      agent: {
+        id: "agent-1",
+        name: "Codex Coder",
+        companyId: "company-1",
+      },
+    });
+
+    expect(realized.branchName).toBe("release/PAP-992.hotfix-april-1");
+    expect(path.basename(realized.cwd)).toBe("PAP-992.hotfix-april-1");
+  });
+
   it("runs a configured provision command inside the derived worktree", async () => {
     const repoRoot = await createTempRepo();
     await fs.mkdir(path.join(repoRoot, "scripts"), { recursive: true });

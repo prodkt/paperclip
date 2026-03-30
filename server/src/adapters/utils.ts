@@ -38,6 +38,7 @@ export function buildInvocationEnvForLogs(
   env: Record<string, string>,
   options: BuildInvocationEnvForLogsOptions = {},
 ): Record<string, string> {
+  // TODO: Remove this fallback once @paperclipai/adapter-utils exports buildInvocationEnvForLogs everywhere we consume it.
   const maybeBuildInvocationEnvForLogs = (
     serverUtils as typeof serverUtils & {
       buildInvocationEnvForLogs?: (

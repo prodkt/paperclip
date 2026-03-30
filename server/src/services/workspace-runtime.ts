@@ -231,9 +231,9 @@ function renderWorkspaceTemplate(template: string, input: {
 function sanitizeBranchName(value: string): string {
   return value
     .trim()
-    .replace(/[^A-Za-z0-9_-]+/g, "-")
+    .replace(/[^A-Za-z0-9._/-]+/g, "-")
     .replace(/-+/g, "-")
-    .replace(/^[-_]+|[-_]+$/g, "")
+    .replace(/^[-/.]+|[-/.]+$/g, "")
     .slice(0, 120) || "paperclip-work";
 }
 
