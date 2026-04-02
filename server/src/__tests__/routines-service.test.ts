@@ -466,6 +466,54 @@ describeEmbeddedPostgres("routine service live-execution coalescing", () => {
     ).rejects.toThrow(/require defaults for required variables/i);
   });
 
+  it("treats malformed stored defaults as missing when validating schedule triggers", async () => {
+    const { companyId, agentId, projectId, svc } = await seedFixture();
+    const variableRoutine = await svc.create(
+      companyId,
+      {
+        projectId,
+        goalId: null,
+        parentIssueId: null,
+        title: "ship check",
+        description: "Review {{approved}}",
+        assigneeAgentId: agentId,
+        priority: "medium",
+        status: "active",
+        concurrencyPolicy: "coalesce_if_active",
+        catchUpPolicy: "skip_missed",
+        variables: [
+          { name: "approved", label: null, type: "boolean", defaultValue: true, required: true, options: [] },
+        ],
+      },
+      {},
+    );
+
+    await db
+      .update(routines)
+      .set({
+        variables: [
+          {
+            name: "approved",
+            label: null,
+            type: "boolean",
+            defaultValue: "definitely",
+            required: true,
+            options: [],
+          },
+        ],
+      })
+      .where(eq(routines.id, variableRoutine.id));
+
+    await expect(
+      svc.createTrigger(variableRoutine.id, {
+        kind: "schedule",
+        label: "daily",
+        cronExpression: "0 10 * * *",
+        timezone: "UTC",
+      }, {}),
+    ).rejects.toThrow(/require defaults for required variables/i);
+  });
+
   it("serializes concurrent dispatches until the first execution issue is linked to a queued run", async () => {
     const { routine, svc } = await seedFixture({
       wakeup: async (wakeupAgentId, wakeupOpts) => {

@@ -213,7 +213,13 @@ function sanitizeRoutineVariableInputs(
 function assertScheduleCompatibleVariables(variables: RoutineVariable[]) {
   const missingDefaults = variables
     .filter((variable) => variable.required)
-    .filter((variable) => isMissingRoutineVariableValue(normalizeRoutineVariableValue(variable, variable.defaultValue)))
+    .filter((variable) => {
+      try {
+        return isMissingRoutineVariableValue(normalizeRoutineVariableValue(variable, variable.defaultValue));
+      } catch {
+        return true;
+      }
+    })
     .map((variable) => variable.name);
   if (missingDefaults.length > 0) {
     throw unprocessable(

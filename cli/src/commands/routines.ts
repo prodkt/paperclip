@@ -197,10 +197,14 @@ async function openConfiguredDb(configPath: string): Promise<{
       await ensurePostgresDatabase(adminConnectionString, "paperclip");
       const connectionString = `postgres://paperclip:paperclip@127.0.0.1:${embeddedHandle.port}/paperclip`;
       await applyPendingMigrations(connectionString);
+      const db = createDb(connectionString) as ClosableDb;
       return {
-        db: createDb(connectionString) as ClosableDb,
+        db,
         stop: async () => {
-          await closeDb(createDb(connectionString) as ClosableDb);
+          await closeDb(db);
+          if (embeddedHandle?.startedByThisProcess) {
+            await embeddedHandle.stop().catch(() => undefined);
+          }
         },
       };
     }

@@ -7,7 +7,10 @@ import {
   ROUTINE_TRIGGER_SIGNING_MODES,
   ROUTINE_VARIABLE_TYPES,
 } from "../constants.js";
-import { issueExecutionWorkspaceSettingsSchema } from "./issue.js";
+import {
+  ISSUE_EXECUTION_WORKSPACE_PREFERENCES,
+  issueExecutionWorkspaceSettingsSchema,
+} from "./issue.js";
 
 const routineVariableValueSchema = z.union([z.string(), z.number().finite(), z.boolean()]);
 
@@ -104,14 +107,7 @@ export const runRoutineSchema = z.object({
   idempotencyKey: z.string().trim().max(255).optional().nullable(),
   source: z.enum(["manual", "api"]).optional().default("manual"),
   executionWorkspaceId: z.string().uuid().optional().nullable(),
-  executionWorkspacePreference: z.enum([
-    "inherit",
-    "shared_workspace",
-    "isolated_workspace",
-    "operator_branch",
-    "reuse_existing",
-    "agent_default",
-  ]).optional().nullable(),
+  executionWorkspacePreference: z.enum(ISSUE_EXECUTION_WORKSPACE_PREFERENCES).optional().nullable(),
   executionWorkspaceSettings: issueExecutionWorkspaceSettingsSchema.optional().nullable(),
 });
 
