@@ -10,26 +10,8 @@ doc/PUBLISHING.md @cryppadotta @devinfoley
 doc/RELEASE-AUTOMATION-SETUP.md @cryppadotta @devinfoley
 
 # Package files — dependency changes require review
+# package.json matches recursively at all depths (covers root + all workspaces)
 package.json @cryppadotta @devinfoley
 pnpm-lock.yaml @cryppadotta @devinfoley
 pnpm-workspace.yaml @cryppadotta @devinfoley
 .npmrc @cryppadotta @devinfoley
-cli/package.json @cryppadotta @devinfoley
-server/package.json @cryppadotta @devinfoley
-ui/package.json @cryppadotta @devinfoley
-packages/adapter-utils/package.json @cryppadotta @devinfoley
-packages/adapters/claude-local/package.json @cryppadotta @devinfoley
-packages/adapters/codex-local/package.json @cryppadotta @devinfoley
-packages/adapters/cursor-local/package.json @cryppadotta @devinfoley
-packages/adapters/gemini-local/package.json @cryppadotta @devinfoley
-packages/adapters/openclaw-gateway/package.json @cryppadotta @devinfoley
-packages/adapters/opencode-local/package.json @cryppadotta @devinfoley
-packages/adapters/pi-local/package.json @cryppadotta @devinfoley
-packages/db/package.json @cryppadotta @devinfoley
-packages/plugins/create-paperclip-plugin/package.json @cryppadotta @devinfoley
-packages/plugins/examples/plugin-authoring-smoke-example/package.json @cryppadotta @devinfoley
-packages/plugins/examples/plugin-file-browser-example/package.json @cryppadotta @devinfoley
-packages/plugins/examples/plugin-hello-world-example/package.json @cryppadotta @devinfoley
-packages/plugins/examples/plugin-kitchen-sink-example/package.json @cryppadotta @devinfoley
-packages/plugins/sdk/package.json @cryppadotta @devinfoley
-packages/shared/package.json @cryppadotta @devinfoley
