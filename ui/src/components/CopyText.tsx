@@ -27,10 +27,13 @@ export function CopyText({ text, children, className, copiedLabel = "Copied!" }:
         textarea.style.position = "fixed";
         textarea.style.left = "-9999px";
         document.body.appendChild(textarea);
-        textarea.select();
-        const success = document.execCommand("copy");
-        document.body.removeChild(textarea);
-        if (!success) throw new Error("execCommand copy failed");
+        try {
+          textarea.select();
+          const success = document.execCommand("copy");
+          if (!success) throw new Error("execCommand copy failed");
+        } finally {
+          document.body.removeChild(textarea);
+        }
       }
       setLabel(copiedLabel);
     } catch {
