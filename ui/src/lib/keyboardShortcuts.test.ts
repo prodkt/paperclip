@@ -39,7 +39,6 @@ describe("keyboardShortcuts helpers", () => {
 
     expect(hasBlockingShortcutDialog(root)).toBe(false);
   });
-
   it("archives only the first clean y press", () => {
     const button = document.createElement("button");
 
