@@ -45,7 +45,7 @@ export function companySkillRoutes(db: Db) {
     if (skill.sourceType !== "github") {
       return null;
     }
-    const hostname = asString(skill.metadata?.hostname) ?? "github.com";
+    const hostname = asString(skill.metadata?.hostname);
     if (hostname !== "github.com") {
       return null;
     }

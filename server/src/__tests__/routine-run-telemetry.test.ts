@@ -22,7 +22,7 @@ import {
 const mockTelemetryClient = vi.hoisted(() => ({ track: vi.fn() }));
 const mockTrackRoutineRun = vi.hoisted(() => vi.fn());
 
-vi.mock("../telemetry.ts", () => ({
+vi.mock("../telemetry.js", () => ({
   getTelemetryClient: () => mockTelemetryClient,
 }));
 

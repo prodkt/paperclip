@@ -177,6 +177,48 @@ describe("company skill mutation permissions", () => {
     });
   });
 
+  it("does not expose a skill reference when GitHub metadata is missing", async () => {
+    mockCompanySkillService.importFromSource.mockResolvedValue({
+      imported: [
+        {
+          id: "skill-1",
+          companyId: "company-1",
+          key: "unknown/private-skill",
+          slug: "private-skill",
+          name: "Private Skill",
+          description: null,
+          markdown: "# Private Skill",
+          sourceType: "github",
+          sourceLocator: "https://github.com/acme/private-skill",
+          sourceRef: null,
+          trustLevel: "markdown_only",
+          compatibility: "compatible",
+          fileInventory: [],
+          metadata: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      warnings: [],
+    });
+
+    const res = await request(createApp({
+      type: "board",
+      userId: "local-board",
+      companyIds: ["company-1"],
+      source: "local_implicit",
+      isInstanceAdmin: false,
+    }))
+      .post("/api/companies/company-1/skills/import")
+      .send({ source: "https://github.com/acme/private-skill" });
+
+    expect(res.status, JSON.stringify(res.body)).toBe(201);
+    expect(mockTrackSkillImported).toHaveBeenCalledWith(expect.anything(), {
+      sourceType: "github",
+      skillRef: null,
+    });
+  });
+
   it("blocks same-company agents without management permission from mutating company skills", async () => {
     mockAgentService.getById.mockResolvedValue({
       id: "agent-1",
