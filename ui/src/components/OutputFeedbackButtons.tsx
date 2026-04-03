@@ -216,6 +216,7 @@ export function OutputFeedbackButtons({
           <DialogFooter>
             <Button
               type="button"
+              variant="outline"
               disabled={!pendingVote || isSaving}
               onClick={() => {
                 if (!pendingVote) return;
