@@ -12,6 +12,10 @@ const MODIFIER_ONLY_KEYS = new Set(["Shift", "Meta", "Control", "Alt"]);
 
 export type InboxQuickArchiveKeyAction = "ignore" | "archive" | "disarm";
 
+export function normalizeKeyboardShortcutKey(key: string): string {
+  return key.length === 1 ? key.toLowerCase() : key;
+}
+
 export function isKeyboardShortcutTextInputTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
@@ -49,6 +53,6 @@ export function resolveInboxQuickArchiveKeyAction({
   if (defaultPrevented) return "disarm";
   if (metaKey || ctrlKey || altKey || isModifierOnlyKey(key)) return "ignore";
   if (hasOpenDialog || isKeyboardShortcutTextInputTarget(target)) return "disarm";
-  if (key === "y") return "archive";
+  if (normalizeKeyboardShortcutKey(key) === "y") return "archive";
   return "disarm";
 }

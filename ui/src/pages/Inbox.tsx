@@ -22,7 +22,11 @@ import {
   createIssueDetailLocationState,
   createIssueDetailPath,
 } from "../lib/issueDetailBreadcrumb";
-import { hasBlockingShortcutDialog, isKeyboardShortcutTextInputTarget } from "../lib/keyboardShortcuts";
+import {
+  hasBlockingShortcutDialog,
+  isKeyboardShortcutTextInputTarget,
+  normalizeKeyboardShortcutKey,
+} from "../lib/keyboardShortcuts";
 import { EmptyState } from "../components/EmptyState";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { IssueRow } from "../components/IssueRow";
@@ -1413,6 +1417,7 @@ export function Inbox() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
+      const key = normalizeKeyboardShortcutKey(e.key);
 
       // Don't capture when typing in inputs/textareas or with modifier keys
       const target = e.target;
@@ -1436,7 +1441,7 @@ export function Inbox() {
       const itemCount = st.workItems.length;
       if (itemCount === 0) return;
 
-      switch (e.key) {
+      switch (key) {
         case "j": {
           e.preventDefault();
           setSelectedIndex((prev) => getInboxKeyboardSelectionIndex(prev, itemCount, "next"));
@@ -1464,7 +1469,7 @@ export function Inbox() {
           }
           break;
         }
-        case "U": {
+        case "u": {
           if (st.selectedIndex < 0 || st.selectedIndex >= itemCount) return;
           e.preventDefault();
           const item = st.workItems[st.selectedIndex];

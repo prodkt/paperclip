@@ -1,5 +1,8 @@
 import { useEffect } from "react";
-import { isKeyboardShortcutTextInputTarget } from "../lib/keyboardShortcuts";
+import {
+  isKeyboardShortcutTextInputTarget,
+  normalizeKeyboardShortcutKey,
+} from "../lib/keyboardShortcuts";
 
 interface ShortcutHandlers {
   enabled?: boolean;
@@ -18,25 +21,27 @@ export function useKeyboardShortcuts({
     if (!enabled) return;
 
     function handleKeyDown(e: KeyboardEvent) {
+      const key = normalizeKeyboardShortcutKey(e.key);
+
       // Don't fire shortcuts when typing in inputs
       if (isKeyboardShortcutTextInputTarget(e.target)) {
         return;
       }
 
       // C → New Issue
-      if (e.key === "c" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (key === "c" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         onNewIssue?.();
       }
 
       // [ → Toggle Sidebar
-      if (e.key === "[" && !e.metaKey && !e.ctrlKey) {
+      if (key === "[" && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         onToggleSidebar?.();
       }
 
       // ] → Toggle Panel
-      if (e.key === "]" && !e.metaKey && !e.ctrlKey) {
+      if (key === "]" && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         onTogglePanel?.();
       }

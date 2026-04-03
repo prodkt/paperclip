@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   hasBlockingShortcutDialog,
   isKeyboardShortcutTextInputTarget,
+  normalizeKeyboardShortcutKey,
   resolveInboxQuickArchiveKeyAction,
 } from "./keyboardShortcuts";
 
@@ -39,6 +40,14 @@ describe("keyboardShortcuts helpers", () => {
 
     expect(hasBlockingShortcutDialog(root)).toBe(false);
   });
+
+  it("normalizes single-character shortcuts without changing named keys", () => {
+    expect(normalizeKeyboardShortcutKey("C")).toBe("c");
+    expect(normalizeKeyboardShortcutKey("Y")).toBe("y");
+    expect(normalizeKeyboardShortcutKey("[")).toBe("[");
+    expect(normalizeKeyboardShortcutKey("Enter")).toBe("Enter");
+  });
+
   it("archives only the first clean y press", () => {
     const button = document.createElement("button");
 
@@ -46,6 +55,21 @@ describe("keyboardShortcuts helpers", () => {
       armed: true,
       defaultPrevented: false,
       key: "y",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      target: button,
+      hasOpenDialog: false,
+    })).toBe("archive");
+  });
+
+  it("treats uppercase shortcut letters the same as lowercase", () => {
+    const button = document.createElement("button");
+
+    expect(resolveInboxQuickArchiveKeyAction({
+      armed: true,
+      defaultPrevented: false,
+      key: "Y",
       metaKey: false,
       ctrlKey: false,
       altKey: false,

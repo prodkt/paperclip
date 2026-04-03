@@ -7,6 +7,7 @@ import { useSidebar } from "../context/SidebarContext";
 import { issuesApi } from "../api/issues";
 import { agentsApi } from "../api/agents";
 import { projectsApi } from "../api/projects";
+import { normalizeKeyboardShortcutKey } from "../lib/keyboardShortcuts";
 import { queryKeys } from "../lib/queryKeys";
 import {
   CommandDialog,
@@ -43,7 +44,7 @@ export function CommandPalette() {
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+      if (normalizeKeyboardShortcutKey(e.key) === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setOpen(true);
         if (isMobile) setSidebarOpen(false);
