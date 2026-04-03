@@ -181,7 +181,7 @@ Votes you choose to share are sent to the Telemetry Backend immediately from the
 - App server responsibility: build the bundle, POST it to Telemetry Backend, update trace status
 - Telemetry Backend responsibility: authenticate the request, validate payload shape, compress/store the bundle, return the final object key
 - Retry behavior: failed uploads move to `failed` with an error message in `failureReason`, and the worker retries them on later ticks
-- Configuration requirement: remote export only works when `PAPERCLIP_FEEDBACK_EXPORT_BACKEND_URL` or `PAPERCLIP_TELEMETRY_BACKEND_URL` is configured on the app server
+- Default endpoint: when no feedback export backend URL is configured, Paperclip falls back to `https://telemetry.paperclip.ing`
 
 Exported objects use a deterministic key pattern so they are easy to inspect:
 
