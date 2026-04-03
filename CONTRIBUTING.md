@@ -57,7 +57,7 @@ We use [Greptile](https://greptile.com) for automated code review. Your PR must 
 
 ## Writing a Good PR message
 
-Your PR description must follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md). The most important part is the "thinking path" at the top — it explains from the top of the project down to what you fixed. E.g.:
+Your PR description must follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md). All sections are required. The "thinking path" at the top explains from the top of the project down to what you fixed. E.g.:
 
 ### Thinking Path Example 1:
 
