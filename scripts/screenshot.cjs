@@ -74,8 +74,8 @@ const origin = new URL(url).origin;
 
     const page = await context.newPage();
     // Scope the auth header to the Paperclip origin only
-    await page.route(`${origin}/**`, (route) => {
-      route.continue({
+    await page.route(`${origin}/**`, async (route) => {
+      await route.continue({
         headers: { ...route.request().headers(), Authorization: `Bearer ${cred.token}` },
       });
     });
