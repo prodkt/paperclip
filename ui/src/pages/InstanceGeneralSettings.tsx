@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PatchInstanceGeneralSettings } from "@paperclipai/shared";
-import { SlidersHorizontal } from "lucide-react";
+import { LogOut, SlidersHorizontal } from "lucide-react";
+import { authApi } from "@/api/auth";
 import { instanceSettingsApi } from "@/api/instanceSettings";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
+import { useNavigate } from "../lib/router";
 import { queryKeys } from "../lib/queryKeys";
 import { cn } from "../lib/utils";
 
@@ -12,7 +14,18 @@ const FEEDBACK_TERMS_URL = import.meta.env.VITE_FEEDBACK_TERMS_URL?.trim() || "h
 export function InstanceGeneralSettings() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const signOutMutation = useMutation({
+    mutationFn: authApi.signOut,
+    onSuccess: () => {
+      navigate("/auth", { replace: true });
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : "Failed to sign out");
+    },
+  });
 
   useEffect(() => {
     setBreadcrumbs([
@@ -211,6 +224,26 @@ export function InstanceGeneralSettings() {
             <code>"prompt"</code>. Unset and <code>"prompt"</code> both mean no default has been
             chosen yet.
           </p>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1.5">
+            <h2 className="text-sm font-semibold">Log out</h2>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Sign out of this Paperclip instance. You will be redirected to the login page.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={signOutMutation.isPending}
+            className="inline-flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => signOutMutation.mutate()}
+          >
+            <LogOut className="h-4 w-4" />
+            {signOutMutation.isPending ? "Signing out…" : "Log out"}
+          </button>
         </div>
       </section>
     </div>
