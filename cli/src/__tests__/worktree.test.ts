@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   copyGitHooksToWorktreeGitDir,
@@ -553,6 +554,39 @@ describe("worktree helpers", () => {
       expect(fs.readFileSync(targetTokensPath, "utf8")).toBe("secret-token\n");
     } finally {
       execFileSync("git", ["worktree", "remove", "--force", worktreePath], { cwd: repoRoot, stdio: "ignore" });
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores symlinked node_modules paths in git worktrees", () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-worktree-gitignore-"));
+    const repoRoot = path.join(tempRoot, "repo");
+    const sharedRoot = path.join(tempRoot, "shared");
+    const repoGitignorePath = fileURLToPath(new URL("../../../.gitignore", import.meta.url));
+
+    try {
+      fs.mkdirSync(repoRoot, { recursive: true });
+      fs.mkdirSync(path.join(sharedRoot, "node_modules"), { recursive: true });
+      fs.mkdirSync(path.join(sharedRoot, "packages", "db", "node_modules"), { recursive: true });
+      fs.mkdirSync(path.join(repoRoot, "packages", "db"), { recursive: true });
+      fs.writeFileSync(path.join(repoRoot, ".gitignore"), fs.readFileSync(repoGitignorePath, "utf8"), "utf8");
+
+      fs.symlinkSync(path.join(sharedRoot, "node_modules"), path.join(repoRoot, "node_modules"));
+      fs.symlinkSync(
+        path.join(sharedRoot, "packages", "db", "node_modules"),
+        path.join(repoRoot, "packages", "db", "node_modules"),
+      );
+
+      execFileSync("git", ["init"], { cwd: repoRoot, stdio: "ignore" });
+
+      const ignored = execFileSync("git", ["check-ignore", "-v", "node_modules", "packages/db/node_modules"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      });
+
+      expect(ignored).toContain(".gitignore:1:node_modules\tnode_modules");
+      expect(ignored).toContain(".gitignore:1:node_modules\tpackages/db/node_modules");
+    } finally {
       fs.rmSync(tempRoot, { recursive: true, force: true });
     }
   });
