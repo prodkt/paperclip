@@ -600,14 +600,19 @@ export { deriveProjectUrlKey, normalizeProjectUrlKey, hasNonAsciiContent } from 
 export {
   AGENT_MENTION_SCHEME,
   PROJECT_MENTION_SCHEME,
+  SKILL_MENTION_SCHEME,
   buildAgentMentionHref,
   buildProjectMentionHref,
+  buildSkillMentionHref,
   extractAgentMentionIds,
+  extractSkillMentionIds,
   parseAgentMentionHref,
   parseProjectMentionHref,
+  parseSkillMentionHref,
   extractProjectMentionIds,
   type ParsedAgentMention,
   type ParsedProjectMention,
+  type ParsedSkillMention,
 } from "./project-mentions.js";
 
 export {

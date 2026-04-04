@@ -29,6 +29,7 @@ import {
   type RealmPlugin,
 } from "@mdxeditor/editor";
 import { buildAgentMentionHref, buildProjectMentionHref } from "@paperclipai/shared";
+import { Boxes } from "lucide-react";
 import { AgentIcon } from "./AgentIconPicker";
 import { applyMentionChipDecoration, clearMentionChipDecoration, parseMentionChipHref } from "../lib/mention-chips";
 import { MentionAwareLinkNode, mentionAwareLinkNodeReplacement } from "../lib/mention-aware-link-node";
@@ -37,6 +38,7 @@ import { looksLikeMarkdownPaste } from "../lib/markdownPaste";
 import { normalizeMarkdown } from "../lib/normalize-markdown";
 import { pasteNormalizationPlugin } from "../lib/paste-normalization";
 import { cn } from "../lib/utils";
+import { useEditorAutocomplete, type SkillCommandOption } from "../context/EditorAutocompleteContext";
 
 /* ---- Mention types ---- */
 
@@ -84,6 +86,8 @@ function isSafeMarkdownLinkUrl(url: string): boolean {
 /* ---- Mention detection helpers ---- */
 
 interface MentionState {
+  trigger: "mention" | "skill";
+  marker: "@" | "/";
   query: string;
   top: number;
   left: number;
@@ -94,6 +98,8 @@ interface MentionState {
   atPos: number;
   endPos: number;
 }
+
+type AutocompleteOption = MentionOption | SkillCommandOption;
 
 interface MentionMenuViewport {
   offsetLeft: number;
@@ -146,13 +152,17 @@ function detectMention(container: HTMLElement): MentionState | null {
   const text = textNode.textContent ?? "";
   const offset = range.startOffset;
 
-  // Walk backwards from cursor to find @
+  // Walk backwards from cursor to find an autocomplete trigger.
   let atPos = -1;
+  let trigger: MentionState["trigger"] | null = null;
+  let marker: MentionState["marker"] | null = null;
   for (let i = offset - 1; i >= 0; i--) {
     const ch = text[i];
-    if (ch === "@") {
+    if (ch === "@" || ch === "/") {
       if (i === 0 || /\s/.test(text[i - 1])) {
         atPos = i;
+        trigger = ch === "@" ? "mention" : "skill";
+        marker = ch;
       }
       break;
     }
@@ -171,6 +181,8 @@ function detectMention(container: HTMLElement): MentionState | null {
   const containerRect = container.getBoundingClientRect();
 
   return {
+    trigger: trigger ?? "mention",
+    marker: marker ?? "@",
     query,
     top: rect.bottom - containerRect.top,
     left: rect.left - containerRect.left,
@@ -242,10 +254,18 @@ function mentionMarkdown(option: MentionOption): string {
   return `[@${option.name}](${buildAgentMentionHref(agentId, option.agentIcon ?? null)}) `;
 }
 
-/** Replace `@<query>` in the markdown string with the selected mention token. */
-function applyMention(markdown: string, query: string, option: MentionOption): string {
-  const search = `@${query}`;
-  const replacement = mentionMarkdown(option);
+function skillMarkdown(option: SkillCommandOption): string {
+  return `[/${option.slug}](${option.href}) `;
+}
+
+function autocompleteMarkdown(option: AutocompleteOption): string {
+  return option.kind === "skill" ? skillMarkdown(option) : mentionMarkdown(option);
+}
+
+/** Replace the active autocomplete token in the markdown string with the selected token. */
+function applyMention(markdown: string, state: MentionState, option: AutocompleteOption): string {
+  const search = `${state.marker}${state.query}`;
+  const replacement = autocompleteMarkdown(option);
   const idx = markdown.lastIndexOf(search);
   if (idx === -1) return markdown;
   return markdown.slice(0, idx) + replacement + markdown.slice(idx + search.length);
@@ -265,6 +285,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
   mentions,
   onSubmit,
 }: MarkdownEditorProps, forwardedRef) {
+  const { slashCommands } = useEditorAutocomplete();
   const containerRef = useRef<HTMLDivElement>(null);
   const ref = useRef<MDXEditorMethods>(null);
   const valueRef = useRef(value);
@@ -289,7 +310,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
   const [mentionState, setMentionState] = useState<MentionState | null>(null);
   const mentionStateRef = useRef<MentionState | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
-  const mentionActive = mentionState !== null && mentions && mentions.length > 0;
+  const mentionActive = mentionState !== null && (
+    (mentionState.trigger === "mention" && Boolean(mentions?.length))
+    || (mentionState.trigger === "skill" && slashCommands.length > 0)
+  );
   const mentionOptionByKey = useMemo(() => {
     const map = new Map<string, MentionOption>();
     for (const mention of mentions ?? []) {
@@ -304,11 +328,20 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
     return map;
   }, [mentions]);
 
-  const filteredMentions = useMemo(() => {
-    if (!mentionState || !mentions) return [];
-    const q = mentionState.query.toLowerCase();
+  const filteredMentions = useMemo<AutocompleteOption[]>(() => {
+    if (!mentionState) return [];
+    const q = mentionState.query.trim().toLowerCase();
+    if (mentionState.trigger === "skill") {
+      return slashCommands
+        .filter((command) => {
+          if (!q) return true;
+          return command.aliases.some((alias) => alias.toLowerCase().includes(q));
+        })
+        .slice(0, 8);
+    }
+    if (!mentions) return [];
     return mentions.filter((m) => m.name.toLowerCase().includes(q)).slice(0, 8);
-  }, [mentionState?.query, mentions]);
+  }, [mentionState, mentions, slashCommands]);
 
   const setEditorRef = useCallback((instance: MDXEditorMethods | null) => {
     ref.current = instance;
@@ -420,6 +453,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
         continue;
       }
 
+      if (parsed.kind === "skill") {
+        applyMentionChipDecoration(link, parsed);
+        continue;
+      }
+
       const option = mentionOptionByKey.get(`agent:${parsed.agentId}`);
       applyMentionChipDecoration(link, {
         ...parsed,
@@ -430,12 +468,30 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 
   // Mention detection: listen for selection changes and input events
   const checkMention = useCallback(() => {
-    if (!mentions || mentions.length === 0 || !containerRef.current) {
+    if (!containerRef.current || isSelectionInsideCodeLikeElement(containerRef.current)) {
       mentionStateRef.current = null;
       setMentionState(null);
       return;
     }
     const result = detectMention(containerRef.current);
+    if (
+      result
+      && result.trigger === "mention"
+      && (!mentions || mentions.length === 0)
+    ) {
+      mentionStateRef.current = null;
+      setMentionState(null);
+      return;
+    }
+    if (
+      result
+      && result.trigger === "skill"
+      && slashCommands.length === 0
+    ) {
+      mentionStateRef.current = null;
+      setMentionState(null);
+      return;
+    }
     mentionStateRef.current = result;
     if (result) {
       setMentionState(result);
@@ -443,10 +499,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
     } else {
       setMentionState(null);
     }
-  }, [mentions]);
+  }, [mentions, slashCommands.length]);
 
   useEffect(() => {
-    if (!mentions || mentions.length === 0) return;
+    if ((!mentions || mentions.length === 0) && slashCommands.length === 0) return;
 
     const el = containerRef.current;
     // Listen for input events on the container so mention detection
@@ -459,7 +515,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
       document.removeEventListener("selectionchange", checkMention);
       el?.removeEventListener("input", onInput, true);
     };
-  }, [checkMention, mentions]);
+  }, [checkMention, mentions, slashCommands.length]);
 
   useEffect(() => {
     if (!mentionActive) return;
@@ -496,13 +552,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
   }, [decorateProjectMentions, value]);
 
   const selectMention = useCallback(
-    (option: MentionOption) => {
+    (option: AutocompleteOption) => {
       // Read from ref to avoid stale-closure issues (selectionchange can
       // update state between the last render and this callback firing).
       const state = mentionStateRef.current;
       if (!state) return;
       const current = latestValueRef.current;
-      const next = applyMention(current, state.query, option);
+      const next = applyMention(current, state, option);
       if (next !== current) {
         latestValueRef.current = next;
         echoIgnoreMarkdownRef.current = next;
@@ -517,17 +573,20 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
           decorateProjectMentions();
           editable.focus();
 
-          const mentionHref = option.kind === "project" && option.projectId
-            ? buildProjectMentionHref(option.projectId, option.projectColor ?? null)
-            : buildAgentMentionHref(
-                option.agentId ?? option.id.replace(/^agent:/, ""),
-                option.agentIcon ?? null,
-              );
+          const mentionHref = option.kind === "skill"
+            ? option.href
+            : option.kind === "project" && option.projectId
+              ? buildProjectMentionHref(option.projectId, option.projectColor ?? null)
+              : buildAgentMentionHref(
+                  option.agentId ?? option.id.replace(/^agent:/, ""),
+                  option.agentIcon ?? null,
+                );
+          const expectedLabel = option.kind === "skill" ? `/${option.slug}` : `@${option.name}`;
           const matchingMentions = Array.from(editable.querySelectorAll("a"))
             .filter((node): node is HTMLAnchorElement => node instanceof HTMLAnchorElement)
             .filter((link) => {
               const href = link.getAttribute("href") ?? "";
-              return href === mentionHref && link.textContent === `@${option.name}`;
+              return href === mentionHref && link.textContent === expectedLabel;
             });
           const containerRect = containerRef.current?.getBoundingClientRect();
           const target = matchingMentions.sort((a, b) => {
@@ -729,7 +788,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
                 }}
                 onMouseEnter={() => setMentionIndex(i)}
               >
-                {option.kind === "project" && option.projectId ? (
+                {option.kind === "skill" ? (
+                  <Boxes className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                ) : option.kind === "project" && option.projectId ? (
                   <span
                     className="inline-flex h-2 w-2 rounded-full border border-border/50"
                     style={{ backgroundColor: option.projectColor ?? "#64748b" }}
@@ -740,10 +801,15 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
                     className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
                   />
                 )}
-                <span>{option.name}</span>
+                <span>{option.kind === "skill" ? `/${option.slug}` : option.name}</span>
                 {option.kind === "project" && option.projectId && (
                   <span className="ml-auto text-[10px] uppercase tracking-wide text-muted-foreground">
                     Project
+                  </span>
+                )}
+                {option.kind === "skill" && (
+                  <span className="ml-auto text-[10px] uppercase tracking-wide text-muted-foreground">
+                    Skill
                   </span>
                 )}
               </button>
