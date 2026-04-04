@@ -12,11 +12,18 @@ export function normalizeMarkdown(text: string): string {
 
   // Find minimum indentation across non-empty lines
   let minIndent = Infinity;
+  let indentStyle: "spaces" | "tabs" | null = null;
   for (const line of lines) {
     if (line.trim() === "") continue;
     const match = line.match(/^(\s+)/);
     if (match) {
-      minIndent = Math.min(minIndent, match[1].length);
+      const leadingWhitespace = match[1];
+      const currentStyle = leadingWhitespace.includes("\t") ? "tabs" : "spaces";
+      if (indentStyle && indentStyle !== currentStyle) {
+        return result;
+      }
+      indentStyle = currentStyle;
+      minIndent = Math.min(minIndent, leadingWhitespace.length);
     } else {
       minIndent = 0;
       break;

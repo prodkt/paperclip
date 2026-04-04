@@ -1,5 +1,6 @@
 import { createRootEditorSubscription$, realmPlugin } from "@mdxeditor/editor";
 import { COMMAND_PRIORITY_CRITICAL, PASTE_COMMAND } from "lexical";
+import { looksLikeMarkdownPaste } from "./markdownPaste";
 import { normalizeMarkdown } from "./normalize-markdown";
 
 /**
@@ -31,6 +32,10 @@ export const pasteNormalizationPlugin = realmPlugin({
             // If there's HTML content, the source app already formatted it —
             // let the default paste handler deal with rich content as-is.
             if (clipboardData.getData("text/html")) return false;
+
+            // Markdown-looking pastes are handled by MarkdownEditor.tsx via
+            // insertMarkdown(), so the plugin only owns the plain-text fallback.
+            if (looksLikeMarkdownPaste(text)) return false;
 
             const cleaned = normalizeMarkdown(text);
             if (cleaned === text) return false;

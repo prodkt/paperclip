@@ -51,4 +51,9 @@ describe("normalizeMarkdown", () => {
     const expected = "base\n  nested\nback\n    deep";
     expect(normalizeMarkdown(input)).toBe(expected);
   });
+
+  it("leaves mixed tab and space indentation unchanged", () => {
+    const input = "\t# Title\n    body\n\t- item";
+    expect(normalizeMarkdown(input)).toBe(input);
+  });
 });
