@@ -779,6 +779,8 @@ function enrichWakeContextSnapshot(input: {
     contextSnapshot[WAKE_COMMENT_IDS_KEY] = wakeCommentIds;
     contextSnapshot.commentId = latestCommentId;
     contextSnapshot.wakeCommentId = latestCommentId;
+    // Once comment ids are normalized into the snapshot, rebuild the structured
+    // wake payload from those ids later instead of carrying forward stale data.
     delete contextSnapshot[PAPERCLIP_WAKE_PAYLOAD_KEY];
   } else if (!readNonEmptyString(contextSnapshot["wakeCommentId"]) && wakeCommentId) {
     contextSnapshot.wakeCommentId = wakeCommentId;
@@ -814,6 +816,8 @@ export function mergeCoalescedContextSnapshot(
     merged[WAKE_COMMENT_IDS_KEY] = mergedCommentIds;
     merged.commentId = latestCommentId;
     merged.wakeCommentId = latestCommentId;
+    // The merged context should carry canonical comment ids; the next wake will
+    // regenerate any structured payload from those ids.
     delete merged[PAPERCLIP_WAKE_PAYLOAD_KEY];
   }
   return merged;
