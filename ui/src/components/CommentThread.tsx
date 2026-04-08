@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type {
   Agent,
@@ -728,26 +728,27 @@ export const CommentThread = memo(function CommentThread({
     }
   }
 
-  async function handleFeedbackVote(
-    commentId: string,
-    vote: FeedbackVoteValue,
-    options?: { allowSharing?: boolean; reason?: string },
-  ) {
-    if (!onVote) return;
-    setVotingTargetId(commentId);
-    try {
-      await onVote(commentId, vote, options);
-    } finally {
-      setVotingTargetId(null);
-    }
-  }
+  const handleFeedbackVote = useCallback(
+    async (
+      commentId: string,
+      vote: FeedbackVoteValue,
+      options?: { allowSharing?: boolean; reason?: string },
+    ) => {
+      if (!onVote) return;
+      setVotingTargetId(commentId);
+      try {
+        await onVote(commentId, vote, options);
+      } finally {
+        setVotingTargetId(null);
+      }
+    },
+    [onVote],
+  );
 
   const canSubmit = !submitting && !!body.trim();
 
-  return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold">Timeline ({timeline.length + queuedComments.length})</h3>
-
+  const timelineSection = useMemo(
+    () => (
       <TimelineList
         timeline={timeline}
         agentMap={agentMap}
@@ -761,6 +762,20 @@ export const CommentThread = memo(function CommentThread({
         highlightCommentId={highlightCommentId}
         feedbackTermsUrl={feedbackTermsUrl}
       />
+    ),
+    [
+      timeline, agentMap, currentUserId, companyId, projectId,
+      feedbackVoteByTargetId, feedbackDataSharingPreference,
+      onVote, handleFeedbackVote, votingTargetId, highlightCommentId,
+      feedbackTermsUrl,
+    ],
+  );
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold">Timeline ({timeline.length + queuedComments.length})</h3>
+
+      {timelineSection}
 
       {liveRunSlot}
 
