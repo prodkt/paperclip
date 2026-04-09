@@ -222,6 +222,18 @@ async function flush() {
   });
 }
 
+async function waitForValue<T>(getValue: () => T | null | undefined, attempts = 10): Promise<T> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const value = getValue();
+    if (value != null) {
+      return value;
+    }
+    await flush();
+  }
+
+  throw new Error("Timed out waiting for value");
+}
+
 function renderDialog(container: HTMLDivElement) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -421,13 +433,13 @@ describe("NewIssueDialog", () => {
 
     expect(container.textContent).not.toContain("will no longer use the parent issue workspace");
 
-    const selects = Array.from(container.querySelectorAll("select"));
-    const modeSelect = selects[0] as HTMLSelectElement | undefined;
-    expect(modeSelect).not.toBeUndefined();
+    const modeSelect = await waitForValue(
+      () => container.querySelector("select") as HTMLSelectElement | null,
+    );
 
     await act(async () => {
-      modeSelect!.value = "shared_workspace";
-      modeSelect!.dispatchEvent(new Event("change", { bubbles: true }));
+      modeSelect.value = "shared_workspace";
+      modeSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
     await flush();
 
