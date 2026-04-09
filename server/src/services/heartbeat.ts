@@ -1998,7 +1998,7 @@ export function heartbeatService(db: Db) {
     }
 
     const wakeReason = readNonEmptyString(contextSnapshot.wakeReason);
-    if (wakeReason === "issue_commented" || wakeReason === "issue_comment_mentioned") {
+    if (wakeReason === "issue_commented" || wakeReason === "issue_comment_mentioned" || wakeReason === "issue_reopened_via_comment") {
       if (run.issueCommentStatus !== "not_applicable") {
         await patchRunIssueCommentStatus(run.id, {
           issueCommentStatus: "not_applicable",
