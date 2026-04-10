@@ -309,11 +309,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const dangerouslySkipPermissions = asBoolean(config.dangerouslySkipPermissions, true);
   const instructionsFilePath = asString(config.instructionsFilePath, "").trim();
   const instructionsFileDir = instructionsFilePath ? `${path.dirname(instructionsFilePath)}/` : "";
-  const commandNotes = instructionsFilePath
-    ? [
-        `Injected agent instructions via --append-system-prompt-file ${instructionsFilePath} (with path directive appended)`,
-      ]
-    : [];
 
   const runtimeConfig = await buildClaudeRuntimeConfig({
     runId,
@@ -351,7 +346,11 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   if (instructionsFilePath) {
     try {
       const instructionsContent = await fs.readFile(instructionsFilePath, "utf-8");
-      const pathDirective = `\nThe above agent instructions were loaded from ${instructionsFilePath}. Resolve any relative file references from ${instructionsFileDir}.`;
+      const pathDirective =
+        `\nThe above agent instructions were loaded from ${instructionsFilePath}. ` +
+        `Resolve any relative file references from ${instructionsFileDir}. ` +
+        `This base directory is authoritative for sibling instruction files such as ` +
+        `./HEARTBEAT.md, ./SOUL.md, and ./TOOLS.md; do not resolve those from the parent agent directory.`;
       combinedInstructionsContents = instructionsContent + pathDirective;
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
@@ -361,19 +360,19 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       );
     }
   }
-  const promptBundle = await prepareClaudePromptBundle({
-    companyId: agent.companyId,
-    skills: claudeSkillEntries.filter((entry) => desiredSkillNames.has(entry.key)),
-    instructionsContents: combinedInstructionsContents,
-    onLog,
-  });
-  const effectiveInstructionsFilePath = promptBundle.instructionsFilePath ?? undefined;
-  commandNotes.push(`Using stable Claude prompt bundle ${promptBundle.bundleKey}.`);
-
   const runtimeSessionParams = parseObject(runtime.sessionParams);
   const runtimeSessionId = asString(runtimeSessionParams.sessionId, runtime.sessionId ?? "");
   const runtimeSessionCwd = asString(runtimeSessionParams.cwd, "");
   const runtimePromptBundleKey = asString(runtimeSessionParams.promptBundleKey, "");
+
+  let promptBundle = await prepareClaudePromptBundle({
+    companyId: agent.companyId,
+    skills: claudeSkillEntries.filter((entry) => desiredSkillNames.has(entry.key)),
+    instructionsContents: combinedInstructionsContents,
+    onLog,
+    materializeInstructions: runtimeSessionId.length === 0,
+  });
+  let effectiveInstructionsFilePath = promptBundle.instructionsFilePath ?? undefined;
   const hasMatchingPromptBundle =
     runtimePromptBundleKey.length === 0 || runtimePromptBundleKey === promptBundle.bundleKey;
   const canResumeSession =
@@ -397,6 +396,20 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       `[paperclip] Claude session "${runtimeSessionId}" was saved for prompt bundle "${runtimePromptBundleKey}" and will not be resumed with "${promptBundle.bundleKey}".\n`,
     );
   }
+
+  const ensureMaterializedInstructionsFilePath = async () => {
+    if (!combinedInstructionsContents) return undefined;
+    if (effectiveInstructionsFilePath) return effectiveInstructionsFilePath;
+    promptBundle = await prepareClaudePromptBundle({
+      companyId: agent.companyId,
+      skills: claudeSkillEntries.filter((entry) => desiredSkillNames.has(entry.key)),
+      instructionsContents: combinedInstructionsContents,
+      onLog,
+      materializeInstructions: true,
+    });
+    effectiveInstructionsFilePath = promptBundle.instructionsFilePath ?? undefined;
+    return effectiveInstructionsFilePath;
+  };
   const bootstrapPromptTemplate = asString(config.bootstrapPromptTemplate, "");
   const templateData = {
     agentId: agent.id,
@@ -429,7 +442,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     heartbeatPromptChars: renderedPrompt.length,
   };
 
-  const buildClaudeArgs = (resumeSessionId: string | null) => {
+  const buildClaudeArgs = (resumeSessionId: string | null, instructionsPath?: string) => {
     const args = ["--print", "-", "--output-format", "stream-json", "--verbose"];
     if (resumeSessionId) args.push("--resume", resumeSessionId);
     if (dangerouslySkipPermissions) args.push("--dangerously-skip-permissions");
@@ -442,8 +455,8 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     }
     if (effort) args.push("--effort", effort);
     if (maxTurns > 0) args.push("--max-turns", String(maxTurns));
-    if (effectiveInstructionsFilePath) {
-      args.push("--append-system-prompt-file", effectiveInstructionsFilePath);
+    if (!resumeSessionId && instructionsPath) {
+      args.push("--append-system-prompt-file", instructionsPath);
     }
     args.push("--add-dir", promptBundle.addDir);
     if (extraArgs.length > 0) args.push(...extraArgs);
@@ -467,7 +480,14 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   };
 
   const runAttempt = async (resumeSessionId: string | null) => {
-    const args = buildClaudeArgs(resumeSessionId);
+    const instructionsPath = resumeSessionId ? undefined : await ensureMaterializedInstructionsFilePath();
+    const args = buildClaudeArgs(resumeSessionId, instructionsPath);
+    const commandNotes =
+      !resumeSessionId && instructionsPath
+        ? [
+            `Injected agent instructions via --append-system-prompt-file ${instructionsPath} (with path directive appended)`,
+          ]
+        : [];
     if (onMeta) {
       await onMeta({
         adapterType: "claude_local",

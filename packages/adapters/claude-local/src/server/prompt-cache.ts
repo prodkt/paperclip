@@ -134,8 +134,9 @@ export async function prepareClaudePromptBundle(input: {
   skills: SkillEntry[];
   instructionsContents: string | null;
   onLog: AdapterExecutionContext["onLog"];
+  materializeInstructions?: boolean;
 }): Promise<ClaudePromptBundle> {
-  const { companyId, skills, instructionsContents, onLog } = input;
+  const { companyId, skills, instructionsContents, onLog, materializeInstructions = true } = input;
   const bundleKey = await buildClaudePromptBundleKey({
     skills,
     instructionsContents,
@@ -159,7 +160,7 @@ export async function prepareClaudePromptBundle(input: {
   const instructionsFilePath = instructionsContents
     ? path.join(rootDir, "agent-instructions.md")
     : null;
-  if (instructionsFilePath && instructionsContents) {
+  if (materializeInstructions && instructionsFilePath && instructionsContents) {
     await ensureReadableFile(instructionsFilePath, instructionsContents);
   }
 
@@ -167,6 +168,6 @@ export async function prepareClaudePromptBundle(input: {
     bundleKey,
     rootDir,
     addDir: rootDir,
-    instructionsFilePath,
+    instructionsFilePath: materializeInstructions ? instructionsFilePath : null,
   };
 }
