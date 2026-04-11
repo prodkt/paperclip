@@ -12,7 +12,7 @@ import {
   stringifyPaperclipWakePayload,
 } from "@paperclipai/adapter-utils/server-utils";
 import crypto, { randomUUID } from "node:crypto";
-import { WebSocket } from "ws";
+import WebSocket from "ws";
 
 type SessionKeyStrategy = "fixed" | "issue" | "run";
 

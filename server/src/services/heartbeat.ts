@@ -6,6 +6,7 @@ import { and, asc, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import type { BillingType, ExecutionWorkspace, ExecutionWorkspaceConfig } from "@paperclipai/shared";
 import {
+  activityLog,
   agents,
   agentRuntimeState,
   agentTaskSessions,
@@ -3579,31 +3580,50 @@ export function heartbeatService(db: Db) {
   }
 
   async function releaseIssueExecutionAndPromote(run: typeof heartbeatRuns.$inferSelect) {
+    const runContext = parseObject(run.contextSnapshot);
+    const contextIssueId = readNonEmptyString(runContext.issueId);
     const promotedRun = await db.transaction(async (tx) => {
-      await tx.execute(
-        sql`select id from issues where company_id = ${run.companyId} and execution_run_id = ${run.id} for update`,
-      );
+      if (contextIssueId) {
+        await tx.execute(
+          sql`select id from issues where company_id = ${run.companyId} and id = ${contextIssueId} for update`,
+        );
+      } else {
+        await tx.execute(
+          sql`select id from issues where company_id = ${run.companyId} and execution_run_id = ${run.id} for update`,
+        );
+      }
 
-      const issue = await tx
+      let issue = await tx
         .select({
           id: issues.id,
           companyId: issues.companyId,
+          identifier: issues.identifier,
+          status: issues.status,
+          executionRunId: issues.executionRunId,
         })
         .from(issues)
-        .where(and(eq(issues.companyId, run.companyId), eq(issues.executionRunId, run.id)))
+        .where(
+          and(
+            eq(issues.companyId, run.companyId),
+            contextIssueId ? eq(issues.id, contextIssueId) : eq(issues.executionRunId, run.id),
+          ),
+        )
         .then((rows) => rows[0] ?? null);
 
       if (!issue) return;
+      if (issue.executionRunId && issue.executionRunId !== run.id) return null;
 
-      await tx
-        .update(issues)
-        .set({
-          executionRunId: null,
-          executionAgentNameKey: null,
-          executionLockedAt: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(issues.id, issue.id));
+      if (issue.executionRunId === run.id) {
+        await tx
+          .update(issues)
+          .set({
+            executionRunId: null,
+            executionAgentNameKey: null,
+            executionLockedAt: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(issues.id, issue.id));
+      }
 
       while (true) {
         const deferred = await tx
@@ -3650,6 +3670,50 @@ export function heartbeatService(db: Db) {
         const deferredPayload = parseObject(deferred.payload);
         const deferredContextSeed = parseObject(deferredPayload[DEFERRED_WAKE_CONTEXT_KEY]);
         const promotedContextSeed: Record<string, unknown> = { ...deferredContextSeed };
+        const deferredCommentIds = extractWakeCommentIds(deferredContextSeed);
+        const shouldReopenDeferredCommentWake =
+          deferredCommentIds.length > 0 && (issue.status === "done" || issue.status === "cancelled");
+
+        if (shouldReopenDeferredCommentWake) {
+          const reopenedFromStatus = issue.status;
+          const reopenedIssue = await issuesSvc.update(
+            issue.id,
+            {
+              status: "todo",
+              executionState: null,
+            },
+            tx,
+          );
+          if (reopenedIssue) {
+            issue = {
+              ...issue,
+              identifier: reopenedIssue.identifier,
+              status: reopenedIssue.status,
+              executionRunId: reopenedIssue.executionRunId,
+            };
+            if (!readNonEmptyString(promotedContextSeed.reopenedFrom)) {
+              promotedContextSeed.reopenedFrom = reopenedFromStatus;
+            }
+            await tx.insert(activityLog).values({
+              companyId: issue.companyId,
+              actorType: "system",
+              actorId: "heartbeat",
+              agentId: deferred.agentId,
+              runId: run.id,
+              action: "issue.updated",
+              entityType: "issue",
+              entityId: issue.id,
+              details: {
+                status: "todo",
+                reopened: true,
+                reopenedFrom: reopenedFromStatus,
+                source: "deferred_comment_wake",
+                identifier: issue.identifier,
+              },
+            });
+          }
+        }
+
         const promotedReason = readNonEmptyString(deferred.reason) ?? "issue_execution_promoted";
         const promotedSource =
           (readNonEmptyString(deferred.source) as WakeupOptions["source"]) ?? "automation";

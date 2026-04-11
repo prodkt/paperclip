@@ -2069,6 +2069,58 @@ export function issueRoutes(
     res.json(comment);
   });
 
+  router.delete("/issues/:id/comments/:commentId", async (req, res) => {
+    const id = req.params.id as string;
+    const commentId = req.params.commentId as string;
+    const issue = await svc.getById(id);
+    if (!issue) {
+      res.status(404).json({ error: "Issue not found" });
+      return;
+    }
+    assertCompanyAccess(req, issue.companyId);
+    if (req.actor.type !== "board") {
+      res.status(403).json({ error: "Only board users can delete comments" });
+      return;
+    }
+
+    const comment = await svc.getComment(commentId);
+    if (!comment || comment.issueId !== id) {
+      res.status(404).json({ error: "Comment not found" });
+      return;
+    }
+
+    const actor = getActorInfo(req);
+    if (comment.authorUserId !== actor.actorId) {
+      res.status(403).json({ error: "You can only delete your own comments" });
+      return;
+    }
+
+    const deletedComment = await svc.deleteComment(commentId);
+    if (!deletedComment) {
+      res.status(404).json({ error: "Comment not found" });
+      return;
+    }
+
+    await logActivity(db, {
+      companyId: issue.companyId,
+      actorType: actor.actorType,
+      actorId: actor.actorId,
+      agentId: actor.agentId,
+      runId: actor.runId,
+      action: "issue.comment_deleted",
+      entityType: "issue",
+      entityId: issue.id,
+      details: {
+        commentId: deletedComment.id,
+        bodySnippet: deletedComment.body.slice(0, 120),
+        identifier: issue.identifier,
+        issueTitle: issue.title,
+      },
+    });
+
+    res.json(deletedComment);
+  });
+
   router.get("/issues/:id/feedback-votes", async (req, res) => {
     const id = req.params.id as string;
     const issue = await svc.getById(id);

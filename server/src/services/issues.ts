@@ -2112,6 +2112,25 @@ export function issueService(db: Db) {
           return comment ? redactIssueComment(comment, censorUsernameInLogs) : null;
         })),
 
+    deleteComment: async (commentId: string) => {
+      const currentUserRedactionOptions = {
+        enabled: (await instanceSettings.getGeneral()).censorUsernameInLogs,
+      };
+      const [comment] = await db
+        .delete(issueComments)
+        .where(eq(issueComments.id, commentId))
+        .returning();
+
+      if (!comment) return null;
+
+      await db
+        .update(issues)
+        .set({ updatedAt: new Date() })
+        .where(eq(issues.id, comment.issueId));
+
+      return redactIssueComment(comment, currentUserRedactionOptions.enabled);
+    },
+
     addComment: async (
       issueId: string,
       body: string,
