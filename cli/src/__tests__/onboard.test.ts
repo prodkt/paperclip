@@ -127,6 +127,7 @@ describe("onboard", () => {
 
   it("supports authenticated/private quickstart bind presets", async () => {
     const configPath = createFreshConfigPath();
+    process.env.PAPERCLIP_TAILNET_BIND_HOST = "100.64.0.8";
 
     await onboard({ config: configPath, yes: true, invokedByRun: true, bind: "tailnet" });
 
@@ -134,7 +135,20 @@ describe("onboard", () => {
     expect(raw.server.deploymentMode).toBe("authenticated");
     expect(raw.server.exposure).toBe("private");
     expect(raw.server.bind).toBe("tailnet");
-    expect(raw.server.host).toBe("0.0.0.0");
+    expect(raw.server.host).toBe("100.64.0.8");
+  });
+
+  it("keeps tailnet quickstart on loopback until tailscale is available", async () => {
+    const configPath = createFreshConfigPath();
+    delete process.env.PAPERCLIP_TAILNET_BIND_HOST;
+
+    await onboard({ config: configPath, yes: true, invokedByRun: true, bind: "tailnet" });
+
+    const raw = JSON.parse(fs.readFileSync(configPath, "utf8")) as PaperclipConfig;
+    expect(raw.server.deploymentMode).toBe("authenticated");
+    expect(raw.server.exposure).toBe("private");
+    expect(raw.server.bind).toBe("tailnet");
+    expect(raw.server.host).toBe("127.0.0.1");
   });
 
   it("ignores deployment env overrides during --yes quickstart", async () => {

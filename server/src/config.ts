@@ -45,6 +45,8 @@ if (!isSameFile && existsSync(CWD_ENV_PATH)) {
 
 maybeRepairLegacyWorktreeConfigAndEnvFiles();
 
+const TAILSCALE_DETECT_TIMEOUT_MS = 3000;
+
 type DatabaseMode = "embedded-postgres" | "postgres";
 
 export interface Config {
@@ -94,6 +96,7 @@ function detectTailnetBindHost(): string | undefined {
     const stdout = execFileSync("tailscale", ["ip", "-4"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      timeout: TAILSCALE_DETECT_TIMEOUT_MS,
     });
     return stdout
       .split(/\r?\n/)

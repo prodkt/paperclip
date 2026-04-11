@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   ALL_INTERFACES_BIND_HOST,
   LOOPBACK_BIND_HOST,
@@ -10,6 +11,8 @@ import {
 } from "@paperclipai/shared";
 import type { AuthConfig, ServerConfig } from "./schema.js";
 
+const TAILSCALE_DETECT_TIMEOUT_MS = 3000;
+
 type BaseServerInput = {
   port: number;
   allowedHostnames: string[];
@@ -21,11 +24,35 @@ export function inferConfiguredBind(server?: Partial<ServerConfig>): BindMode {
   return inferBindModeFromHost(server?.customBindHost ?? server?.host);
 }
 
+export function detectTailnetBindHost(): string | undefined {
+  const explicit = process.env.PAPERCLIP_TAILNET_BIND_HOST?.trim();
+  if (explicit) return explicit;
+
+  try {
+    const stdout = execFileSync("tailscale", ["ip", "-4"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: TAILSCALE_DETECT_TIMEOUT_MS,
+    });
+    return stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find(Boolean);
+  } catch {
+    return undefined;
+  }
+}
+
 export function buildPresetServerConfig(
   bind: Exclude<BindMode, "custom">,
   input: BaseServerInput,
 ): { server: ServerConfig; auth: AuthConfig } {
-  const host = bind === "loopback" ? LOOPBACK_BIND_HOST : ALL_INTERFACES_BIND_HOST;
+  const host =
+    bind === "loopback"
+      ? LOOPBACK_BIND_HOST
+      : bind === "tailnet"
+        ? (detectTailnetBindHost() ?? LOOPBACK_BIND_HOST)
+        : ALL_INTERFACES_BIND_HOST;
 
   return {
     server: {

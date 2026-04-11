@@ -56,6 +56,9 @@ type OnboardOptions = {
 
 type OnboardDefaults = Pick<PaperclipConfig, "database" | "logging" | "server" | "auth" | "storage" | "secrets">;
 
+const TAILNET_BIND_WARNING =
+  "No Tailscale address was detected during setup. The saved config will stay on loopback until Tailscale is available or PAPERCLIP_TAILNET_BIND_HOST is set.";
+
 const ONBOARD_ENV_KEYS = [
   "PAPERCLIP_PUBLIC_URL",
   "DATABASE_URL",
@@ -476,6 +479,9 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
     });
     server = preset.server;
     auth = preset.auth;
+    if (opts.bind === "tailnet" && server.host === "127.0.0.1") {
+      p.log.warn(TAILNET_BIND_WARNING);
+    }
   }
 
   if (setupMode === "advanced") {
