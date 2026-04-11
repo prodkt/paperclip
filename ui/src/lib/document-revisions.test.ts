@@ -43,6 +43,18 @@ function createRevision(overrides: Partial<DocumentRevision> = {}): DocumentRevi
 }
 
 describe("deriveDocumentRevisionState", () => {
+  it("falls back to a synthetic current revision when no revision history has been fetched yet", () => {
+    const state = deriveDocumentRevisionState(createDocument({
+      latestRevisionId: null,
+      latestRevisionNumber: 0,
+      body: "# Draft plan",
+    }), []);
+
+    expect(state.currentRevision.id).toBe("document-1-latest");
+    expect(state.currentRevision.body).toBe("# Draft plan");
+    expect(state.revisions.map((revision) => revision.id)).toEqual(["document-1-latest"]);
+  });
+
   it("sorts fetched revisions newest-first even when the API payload is out of order", () => {
     const state = deriveDocumentRevisionState(createDocument(), [
       createRevision({ id: "revision-1", revisionNumber: 1, createdAt: new Date("2026-04-10T15:00:00.000Z") }),
