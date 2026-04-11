@@ -17,6 +17,10 @@ function parseEnvFile(contents: string): Record<string, string> {
       entries[key] = "";
       continue;
     }
+    if (value.startsWith("#")) {
+      entries[key] = "";
+      continue;
+    }
 
     if (
       (value.startsWith("\"") && value.endsWith("\"")) ||
@@ -31,6 +35,11 @@ function parseEnvFile(contents: string): Record<string, string> {
 
   return entries;
 }
+
+type WorktreeEnvBootstrapResult =
+  | { envPath: null; missingEnv: false }
+  | { envPath: string; missingEnv: true }
+  | { envPath: string; missingEnv: false };
 
 export function isLinkedGitWorktreeCheckout(rootDir: string): boolean {
   const gitMetadataPath = path.join(rootDir, ".git");
@@ -49,10 +58,7 @@ export function resolveWorktreeEnvFilePath(rootDir: string): string {
 export function bootstrapDevRunnerWorktreeEnv(
   rootDir: string,
   env: NodeJS.ProcessEnv = process.env,
-): {
-  envPath: string | null;
-  missingEnv: boolean;
-} {
+): WorktreeEnvBootstrapResult {
   if (!isLinkedGitWorktreeCheckout(rootDir)) {
     return {
       envPath: null,

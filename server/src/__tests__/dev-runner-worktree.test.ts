@@ -42,6 +42,7 @@ describe("dev-runner worktree env bootstrap", () => {
         "PAPERCLIP_INSTANCE_ID=feature-worktree",
         "PAPERCLIP_IN_WORKTREE=true",
         "PAPERCLIP_WORKTREE_NAME=feature-worktree",
+        "PAPERCLIP_OPTIONAL= # comment-only value",
         "",
       ].join("\n"),
       "utf8",
@@ -59,6 +60,7 @@ describe("dev-runner worktree env bootstrap", () => {
     expect(env.PAPERCLIP_HOME).toBe("/tmp/paperclip-worktrees");
     expect(env.PAPERCLIP_INSTANCE_ID).toBe("already-set");
     expect(env.PAPERCLIP_IN_WORKTREE).toBe("true");
+    expect(env.PAPERCLIP_OPTIONAL).toBe("");
   });
 
   it("reports uninitialized linked worktrees so dev runner can fail fast", () => {
