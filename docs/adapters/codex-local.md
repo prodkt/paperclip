@@ -41,7 +41,11 @@ When `fastMode` is enabled, Paperclip adds Codex config overrides equivalent to:
 
 Paperclip currently applies that only when the selected model is `gpt-5.4`. On other models, the toggle is preserved in config but ignored at execution time to avoid unsupported runs.
 
+## Managed `CODEX_HOME`
+
 When Paperclip is running inside a managed worktree instance (`PAPERCLIP_IN_WORKTREE=true`), the adapter instead uses a worktree-isolated `CODEX_HOME` under the Paperclip instance so Codex skills, sessions, logs, and other runtime state do not leak across checkouts. It seeds that isolated home from the user's main Codex home for shared auth/config continuity.
+
+## Manual Local CLI
 
 For manual local CLI usage outside heartbeat runs (for example running as `codexcoder` directly), use:
 

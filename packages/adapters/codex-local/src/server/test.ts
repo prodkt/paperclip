@@ -139,7 +139,7 @@ export async function testEnvironment(
         hint: "Use the `codex` CLI command to run the automatic login and installation probe.",
       });
     } else {
-      const execArgs = buildCodexExecArgs(config);
+      const execArgs = buildCodexExecArgs({ ...config, fastMode: false });
       const args = execArgs.args;
       if (execArgs.fastModeIgnoredReason) {
         checks.push({
