@@ -574,4 +574,5 @@ describe("heartbeat comment wake batching", () => {
       await gateway.close();
     }
   }, 20_000);
+
 });

@@ -17,7 +17,7 @@ import {
   projects,
   projectWorkspaces,
 } from "@paperclipai/db";
-import { conflict, notFound } from "../errors.js";
+import { conflict, HttpError, notFound } from "../errors.js";
 import { logger } from "../middleware/logger.js";
 import { publishLiveEvent } from "./live-events.js";
 import { getRunLogStore, type RunLogHandle } from "./run-log-store.js";
@@ -785,6 +785,10 @@ function shouldAutoCheckoutIssueForWake(input: {
   if (wakeReason.startsWith("execution_")) return false;
 
   return true;
+}
+
+function isCheckoutConflictError(error: unknown): boolean {
+  return error instanceof HttpError && error.status === 409 && error.message === "Issue checkout conflict";
 }
 
 function deriveCommentId(
@@ -2704,8 +2708,13 @@ export function heartbeatService(db: Db) {
         agentId: agent.id,
       })
     ) {
-      await issuesSvc.checkout(issueId, agent.id, ["todo", "backlog", "blocked"], run.id);
-      context[PAPERCLIP_HARNESS_CHECKOUT_KEY] = true;
+      try {
+        await issuesSvc.checkout(issueId, agent.id, ["todo", "backlog", "blocked"], run.id);
+        context[PAPERCLIP_HARNESS_CHECKOUT_KEY] = true;
+      } catch (error) {
+        if (!isCheckoutConflictError(error)) throw error;
+        context[PAPERCLIP_HARNESS_CHECKOUT_KEY] = false;
+      }
       issueContext = await getIssueExecutionContext(agent.companyId, issueId);
     }
     const issueAssigneeOverrides =
