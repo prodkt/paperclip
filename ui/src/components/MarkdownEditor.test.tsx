@@ -295,6 +295,10 @@ describe("MarkdownEditor", () => {
 
     await flush();
 
+    await vi.waitFor(() => {
+      expect(container.querySelector("textarea")).not.toBeNull();
+    });
+
     const textarea = container.querySelector("textarea");
     expect(textarea).not.toBeNull();
     expect(textarea?.value).toBe("Affected versions: <= v0.3.1");
