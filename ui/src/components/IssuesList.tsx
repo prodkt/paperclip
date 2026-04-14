@@ -49,9 +49,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { CircleDot, Plus, ArrowUpDown, Layers, Check, ChevronRight, List, Columns3, User, Search } from "lucide-react";
+import { CircleDot, Plus, ArrowUpDown, Layers, Check, ChevronRight, List, ListTree, Columns3, User, Search } from "lucide-react";
 import { KanbanBoard } from "./KanbanBoard";
 import { buildIssueTree, countDescendants } from "../lib/issue-tree";
+import { buildSubIssueDefaultsForViewer } from "../lib/subIssueDefaults";
 import type { Issue, Project } from "@paperclipai/shared";
 const ISSUE_SEARCH_DEBOUNCE_MS = 150;
 
@@ -62,6 +63,7 @@ export type IssueViewState = IssueFilterState & {
   sortDir: "asc" | "desc";
   groupBy: "status" | "priority" | "assignee" | "workspace" | "parent" | "none";
   viewMode: "list" | "board";
+  nestingEnabled: boolean;
   collapsedGroups: string[];
   collapsedParents: string[];
 };
@@ -72,6 +74,7 @@ const defaultViewState: IssueViewState = {
   sortDir: "desc",
   groupBy: "none",
   viewMode: "list",
+  nestingEnabled: true,
   collapsedGroups: [],
   collapsedParents: [],
 };
@@ -155,6 +158,7 @@ interface Agent {
 }
 
 type ProjectOption = Pick<Project, "id" | "name"> & Partial<Pick<Project, "color" | "workspaces" | "executionWorkspacePolicy" | "primaryWorkspace">>;
+type IssueListRequestFilters = NonNullable<Parameters<typeof issuesApi.list>[1]>;
 
 interface IssuesListProps {
   issues: Issue[];
@@ -168,9 +172,9 @@ interface IssuesListProps {
   issueLinkState?: unknown;
   initialAssignees?: string[];
   initialSearch?: string;
-  searchFilters?: {
-    participantAgentId?: string;
-  };
+  searchFilters?: Omit<IssueListRequestFilters, "q" | "projectId" | "limit" | "includeRoutineExecutions">;
+  baseCreateIssueDefaults?: Record<string, unknown>;
+  createIssueLabel?: string;
   enableRoutineVisibilityFilter?: boolean;
   onSearchChange?: (search: string) => void;
   onUpdateIssue: (id: string, data: Record<string, unknown>) => void;
@@ -251,6 +255,8 @@ export function IssuesList({
   initialAssignees,
   initialSearch,
   searchFilters,
+  baseCreateIssueDefaults,
+  createIssueLabel,
   enableRoutineVisibilityFilter = false,
   onSearchChange,
   onUpdateIssue,
@@ -524,8 +530,8 @@ export function IssuesList({
   }, [filtered, viewState.groupBy, agents, agentName, currentUserId, workspaceNameMap, issueTitleMap]);
 
   const newIssueDefaults = useCallback((groupKey?: string) => {
-    const defaults: Record<string, string> = {};
-    if (projectId) defaults.projectId = projectId;
+    const defaults: Record<string, unknown> = { ...(baseCreateIssueDefaults ?? {}) };
+    if (projectId && defaults.projectId === undefined) defaults.projectId = projectId;
     if (groupKey) {
       if (viewState.groupBy === "status") defaults.status = groupKey;
       else if (viewState.groupBy === "priority") defaults.priority = groupKey;
@@ -534,11 +540,19 @@ export function IssuesList({
         else defaults.assigneeAgentId = groupKey;
       }
       else if (viewState.groupBy === "parent" && groupKey !== "__no_parent") {
-        defaults.parentId = groupKey;
+        const parentIssue = issueById.get(groupKey);
+        if (parentIssue) Object.assign(defaults, buildSubIssueDefaultsForViewer(parentIssue, currentUserId));
+        else defaults.parentId = groupKey;
       }
     }
     return defaults;
-  }, [projectId, viewState.groupBy]);
+  }, [baseCreateIssueDefaults, currentUserId, issueById, projectId, viewState.groupBy]);
+
+  const createActionLabel = createIssueLabel ? `Create ${createIssueLabel}` : "Create Issue";
+  const createButtonLabel = createIssueLabel ? `New ${createIssueLabel}` : "New Issue";
+  const openCreateIssueDialog = useCallback((groupKey?: string) => {
+    openNewIssue(newIssueDefaults(groupKey));
+  }, [newIssueDefaults, openNewIssue]);
 
   const filterToWorkspace = useCallback((workspaceId: string) => {
     updateView({ workspaces: [workspaceId] });
@@ -570,9 +584,9 @@ export function IssuesList({
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <Button size="sm" variant="outline" onClick={() => openNewIssue(newIssueDefaults())}>
+          <Button size="sm" variant="outline" onClick={() => openCreateIssueDialog()}>
             <Plus className="h-4 w-4 sm:mr-1" />
-            <span className="hidden sm:inline">New Issue</span>
+            <span className="hidden sm:inline">{createButtonLabel}</span>
           </Button>
           <IssueSearchInput
             value={issueSearch}
@@ -601,6 +615,19 @@ export function IssuesList({
               <Columns3 className="h-3.5 w-3.5" />
             </button>
           </div>
+
+          {viewState.viewMode === "list" && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className={cn("hidden h-8 w-8 shrink-0 sm:inline-flex", viewState.nestingEnabled && "bg-accent")}
+              onClick={() => updateView({ nestingEnabled: !viewState.nestingEnabled })}
+              title={viewState.nestingEnabled ? "Disable parent-child nesting" : "Enable parent-child nesting"}
+            >
+              <ListTree className="h-3.5 w-3.5" />
+            </Button>
+          )}
 
           <IssueColumnPicker
             availableColumns={availableIssueColumns}
@@ -710,8 +737,8 @@ export function IssuesList({
         <EmptyState
           icon={CircleDot}
           message="No issues match the current filters or search."
-          action="Create Issue"
-          onAction={() => openNewIssue(newIssueDefaults())}
+          action={createActionLabel}
+          onAction={() => openCreateIssueDialog()}
         />
       )}
 
@@ -752,7 +779,7 @@ export function IssuesList({
                     variant="ghost"
                     size="icon-xs"
                     className="text-muted-foreground"
-                    onClick={() => openNewIssue(newIssueDefaults(group.key))}
+                    onClick={() => openCreateIssueDialog(group.key)}
                   >
                     <Plus className="h-3 w-3" />
                   </Button>
@@ -761,7 +788,9 @@ export function IssuesList({
             )}
             <CollapsibleContent>
               {(() => {
-                const { roots, childMap } = buildIssueTree(group.items);
+                const { roots, childMap } = viewState.nestingEnabled
+                  ? buildIssueTree(group.items)
+                  : { roots: group.items, childMap: new Map<string, Issue[]>() };
 
                 const renderIssueRow = (issue: Issue, depth: number) => {
                   const children = childMap.get(issue.id) ?? [];
@@ -863,15 +892,15 @@ export function IssuesList({
                                         <Identity name={agentName(issue.assigneeAgentId)!} size="sm" />
                                       ) : issue.assigneeUserId ? (
                                         <span className="inline-flex items-center gap-1.5 text-xs">
-                                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 bg-muted/30">
-                                            <User className="h-3 w-3" />
+                                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 bg-muted/30">
+                                            <User className="h-3.5 w-3.5" />
                                           </span>
                                           {formatAssigneeUserLabel(issue.assigneeUserId, currentUserId) ?? "User"}
                                         </span>
                                       ) : (
                                         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 bg-muted/30">
-                                            <User className="h-3 w-3" />
+                                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/35 bg-muted/30">
+                                            <User className="h-3.5 w-3.5" />
                                           </span>
                                           Assignee
                                         </span>
