@@ -226,6 +226,79 @@ describe("IssuesList", () => {
     });
   });
 
+  it("keeps server-side search scoped to the provided parent issue filters", async () => {
+    const localIssue = createIssue({ id: "issue-local", identifier: "PAP-1", title: "Local issue" });
+    const serverIssue = createIssue({ id: "issue-server", identifier: "PAP-2", title: "Server result" });
+
+    mockIssuesApi.list.mockResolvedValue([serverIssue]);
+
+    const { root } = renderWithQueryClient(
+      <IssuesList
+        issues={[localIssue]}
+        agents={[]}
+        projects={[]}
+        viewStateKey="paperclip:test-issues"
+        initialSearch="server"
+        searchFilters={{ parentId: "parent-1" }}
+        onUpdateIssue={() => undefined}
+      />,
+      container,
+    );
+
+    await waitForAssertion(() => {
+      expect(mockIssuesApi.list).toHaveBeenCalledWith("company-1", {
+        q: "server",
+        projectId: undefined,
+        parentId: "parent-1",
+      });
+      expect(container.textContent).toContain("Server result");
+      expect(container.textContent).not.toContain("Local issue");
+    });
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it("uses the supplied create defaults and label for sub-issue lists", async () => {
+    const { root } = renderWithQueryClient(
+      <IssuesList
+        issues={[createIssue()]}
+        agents={[]}
+        projects={[]}
+        viewStateKey="paperclip:test-issues"
+        baseCreateIssueDefaults={{ parentId: "parent-1", projectId: "project-1" }}
+        createIssueLabel="Sub-issue"
+        onUpdateIssue={() => undefined}
+      />,
+      container,
+    );
+
+    await waitForAssertion(() => {
+      const button = Array.from(container.querySelectorAll("button")).find(
+        (candidate) => candidate.textContent?.includes("New Sub-issue"),
+      );
+      expect(button).not.toBeUndefined();
+    });
+
+    await act(async () => {
+      const button = Array.from(container.querySelectorAll("button")).find(
+        (candidate) => candidate.textContent?.includes("New Sub-issue"),
+      );
+      button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(dialogState.openNewIssue).toHaveBeenCalledWith({
+      parentId: "parent-1",
+      projectId: "project-1",
+    });
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it("debounces search updates so typing does not notify the page on every keystroke", async () => {
     vi.useFakeTimers();
 
