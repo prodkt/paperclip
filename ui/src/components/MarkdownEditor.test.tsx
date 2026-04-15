@@ -19,7 +19,6 @@ const mdxEditorMockState = vi.hoisted(() => ({
   emitMountParseError: false,
   emitMountSilentEmptyState: false,
   markdownValues: [] as string[],
-  suppressHtmlProcessingValues: [] as boolean[],
 }));
 
 vi.mock("@mdxeditor/editor", async () => {
@@ -42,19 +41,16 @@ vi.mock("@mdxeditor/editor", async () => {
       onChange,
       onError,
       className,
-      suppressHtmlProcessing,
     }: {
       markdown: string;
       placeholder?: string;
       onChange?: (value: string) => void;
       onError?: (error: unknown) => void;
-      suppressHtmlProcessing?: boolean;
       className?: string;
     },
     forwardedRef: React.ForwardedRef<{ setMarkdown: (value: string) => void; focus: () => void } | null>,
   ) {
     mdxEditorMockState.markdownValues.push(markdown);
-    mdxEditorMockState.suppressHtmlProcessingValues.push(Boolean(suppressHtmlProcessing));
     const [content, setContent] = React.useState(markdown);
     const editableRef = React.useRef<HTMLDivElement>(null);
     const handle = React.useMemo(() => ({
@@ -63,16 +59,8 @@ vi.mock("@mdxeditor/editor", async () => {
     }), []);
 
     React.useEffect(() => {
-      if (!suppressHtmlProcessing && markdown.includes("<img ")) {
-        setContent("");
-        onError?.({
-          error: "Error parsing markdown: HTML-like formatting requires suppressHtmlProcessing",
-          source: markdown,
-        });
-        return;
-      }
       setContent(markdown);
-    }, [markdown, onError, suppressHtmlProcessing]);
+    }, [markdown]);
 
     React.useEffect(() => {
       setForwardedRef(forwardedRef, null);
@@ -177,7 +165,6 @@ describe("MarkdownEditor", () => {
     mdxEditorMockState.emitMountParseError = false;
     mdxEditorMockState.emitMountSilentEmptyState = false;
     mdxEditorMockState.markdownValues = [];
-    mdxEditorMockState.suppressHtmlProcessingValues = [];
   });
 
   it("applies async external value updates once the editor ref becomes ready", async () => {
@@ -251,7 +238,6 @@ describe("MarkdownEditor", () => {
     await flush();
     expect(mdxEditorMockState.markdownValues.at(-1)).toContain("![image](https://example.com/test.png)");
     expect(mdxEditorMockState.markdownValues.at(-1)).not.toContain("<img");
-    expect(mdxEditorMockState.suppressHtmlProcessingValues).toContain(false);
     expect(container.textContent).toContain("Before");
     expect(container.textContent).toContain("After");
 
@@ -276,9 +262,11 @@ describe("MarkdownEditor", () => {
     });
 
     await flush();
+
     await vi.waitFor(() => {
       expect(container.querySelector("textarea")).not.toBeNull();
     });
+
     const textarea = container.querySelector("textarea");
     expect(textarea).not.toBeNull();
     expect(textarea?.value).toBe("Affected versions: <= v0.3.1");
@@ -306,9 +294,11 @@ describe("MarkdownEditor", () => {
     });
 
     await flush();
+
     await vi.waitFor(() => {
       expect(container.querySelector("textarea")).not.toBeNull();
     });
+
     const textarea = container.querySelector("textarea");
     expect(textarea).not.toBeNull();
     expect(textarea?.value).toBe("Affected versions: <= v0.3.1");
@@ -319,6 +309,7 @@ describe("MarkdownEditor", () => {
       root.unmount();
     });
   });
+
   it("anchors the mention menu inside the visual viewport when mobile offsets are present", () => {
     expect(
       computeMentionMenuPosition(

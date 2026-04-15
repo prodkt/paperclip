@@ -708,19 +708,17 @@ export function IssueProperties({
     <span className="text-sm break-words min-w-0 inline">
       {parentIdentifier ? `${parentIdentifier} ` : ""}
       {parentTitle}
+      <Link
+        to={`/issues/${parentIdentifier ?? issue.parentId}`}
+        className="inline-flex items-center justify-center h-4 w-4 rounded hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground ml-0.5 align-middle"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ArrowUpRight className="h-3 w-3" />
+      </Link>
     </span>
   ) : (
     <span className="text-sm text-muted-foreground">No parent</span>
   );
-  const parentLink = issue.parentId ? (
-    <Link
-      to={`/issues/${parentIdentifier ?? issue.parentId}`}
-      className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <ArrowUpRight className="h-3 w-3" />
-    </Link>
-  ) : undefined;
   const parentOptions = (allIssues ?? [])
     .filter((candidate) => candidate.id !== issue.id)
     .filter((candidate) => !descendantIssueIds.has(candidate.id))
@@ -946,7 +944,6 @@ export function IssueProperties({
           triggerContent={parentTrigger}
           triggerClassName="min-w-0 max-w-full"
           popoverClassName="w-72"
-          extra={parentLink}
         >
           {parentContent}
         </PropertyPicker>

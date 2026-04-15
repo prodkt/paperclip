@@ -216,7 +216,7 @@ export function agentService(db: Db) {
     const rows = await db
       .select({
         agentId: costEvents.agentId,
-        spentMonthlyCents: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::int`,
+        spentMonthlyCents: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::double precision`,
       })
       .from(costEvents)
       .where(
@@ -619,25 +619,11 @@ export function agentService(db: Db) {
         .from(agentApiKeys)
         .where(eq(agentApiKeys.agentId, id)),
 
-    getKeyById: async (keyId: string) =>
-      db
-        .select({
-          id: agentApiKeys.id,
-          agentId: agentApiKeys.agentId,
-          companyId: agentApiKeys.companyId,
-          name: agentApiKeys.name,
-          createdAt: agentApiKeys.createdAt,
-          revokedAt: agentApiKeys.revokedAt,
-        })
-        .from(agentApiKeys)
-        .where(eq(agentApiKeys.id, keyId))
-        .then((rows) => rows[0] ?? null),
-
-    revokeKey: async (agentId: string, keyId: string) => {
+    revokeKey: async (keyId: string) => {
       const rows = await db
         .update(agentApiKeys)
         .set({ revokedAt: new Date() })
-        .where(and(eq(agentApiKeys.id, keyId), eq(agentApiKeys.agentId, agentId)))
+        .where(eq(agentApiKeys.id, keyId))
         .returning();
       return rows[0] ?? null;
     },

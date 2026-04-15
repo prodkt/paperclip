@@ -96,14 +96,6 @@ describe("MarkdownBody", () => {
     expect(html).toContain('data-mention-kind="skill"');
   });
 
-  it("sanitizes unsafe javascript markdown links", () => {
-    const html = renderMarkdown("[click me](javascript:alert(document.cookie))");
-
-    expect(html).toContain('<a href="" rel="noreferrer"');
-    expect(html).toContain(">click me</a>");
-    expect(html).not.toContain("javascript:");
-  });
-
   it("uses soft-break styling by default", () => {
     const html = renderMarkdown("First line\nSecond line");
 

@@ -5,6 +5,7 @@ describe("issue-reference", () => {
   it("extracts issue ids from company-scoped issue paths", () => {
     expect(parseIssuePathIdFromPath("/PAP/issues/PAP-1271")).toBe("PAP-1271");
     expect(parseIssuePathIdFromPath("/issues/PAP-1179")).toBe("PAP-1179");
+    expect(parseIssuePathIdFromPath("/issues/:id")).toBeNull();
   });
 
   it("extracts issue ids from full issue URLs", () => {
@@ -35,5 +36,10 @@ describe("issue-reference", () => {
       issuePathId: "PAP-1271",
       href: "/issues/PAP-1271",
     });
+  });
+
+  it("ignores literal route placeholder paths", () => {
+    expect(parseIssueReferenceFromHref("/issues/:id")).toBeNull();
+    expect(parseIssueReferenceFromHref("http://localhost:3100/api/issues/:id")).toBeNull();
   });
 });

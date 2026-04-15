@@ -87,16 +87,6 @@ export function shouldServeViteDevHtml(req: ExpressRequest): boolean {
   return req.accepts(["html"]) === "html";
 }
 
-export function shouldEnablePrivateHostnameGuard(opts: {
-  deploymentMode: DeploymentMode;
-  deploymentExposure: DeploymentExposure;
-}): boolean {
-  return (
-    opts.deploymentExposure === "private" &&
-    (opts.deploymentMode === "local_trusted" || opts.deploymentMode === "authenticated")
-  );
-}
-
 export async function createApp(
   db: Db,
   opts: {
@@ -134,10 +124,8 @@ export async function createApp(
     },
   }));
   app.use(httpLogger);
-  const privateHostnameGateEnabled = shouldEnablePrivateHostnameGuard({
-    deploymentMode: opts.deploymentMode,
-    deploymentExposure: opts.deploymentExposure,
-  });
+  const privateHostnameGateEnabled =
+    opts.deploymentMode === "authenticated" && opts.deploymentExposure === "private";
   const privateHostnameAllowSet = resolvePrivateHostnameAllowSet({
     allowedHostnames: opts.allowedHostnames,
     bindHost: opts.bindHost,
@@ -300,46 +288,9 @@ export async function createApp(
     const uiDist = candidates.find((p) => fs.existsSync(path.join(p, "index.html")));
     if (uiDist) {
       const indexHtml = applyUiBranding(fs.readFileSync(path.join(uiDist, "index.html"), "utf-8"));
-      // Hashed asset files (Vite emits them under /assets/<name>.<hash>.<ext>)
-      // never change once built, so they can be cached aggressively.
-      app.use(
-        "/assets",
-        express.static(path.join(uiDist, "assets"), {
-          maxAge: "1y",
-          immutable: true,
-        }),
-      );
-      // Non-hashed static files (favicon.ico, manifest, robots.txt, etc.):
-      // short cache so operators who swap them out see the new version
-      // reasonably fast. Override for `index.html` specifically — it is
-      // served by this middleware for `/` and `/index.html`, and it must
-      // never outlive the asset hashes it points at.
-      app.use(
-        express.static(uiDist, {
-          maxAge: "1h",
-          setHeaders(res, filePath) {
-            if (path.basename(filePath) === "index.html") {
-              res.set("Cache-Control", "no-cache");
-            }
-          },
-        }),
-      );
-      // SPA fallback. Only for non-asset routes — if the browser asks for
-      // /assets/something.js that doesn't exist, we must NOT serve the HTML
-      // shell: the browser would try to load it as a JavaScript module, fail
-      // with a MIME-type error, and cache that broken response. Return 404
-      // instead. The index.html response itself is no-cache so a subsequent
-      // deploy's updated asset hashes are picked up on next load.
-      app.get(/.*/, (req, res) => {
-        if (req.path.startsWith("/assets/")) {
-          res.status(404).end();
-          return;
-        }
-        res
-          .status(200)
-          .set("Content-Type", "text/html")
-          .set("Cache-Control", "no-cache")
-          .end(indexHtml);
+      app.use(express.static(uiDist));
+      app.get(/.*/, (_req, res) => {
+        res.status(200).set("Content-Type", "text/html").end(indexHtml);
       });
     } else {
       console.warn("[paperclip] UI dist not found; running in API-only mode");

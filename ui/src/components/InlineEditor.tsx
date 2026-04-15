@@ -54,7 +54,6 @@ export function InlineEditor({
   const [editing, setEditing] = useState(false);
   const [multilineFocused, setMultilineFocused] = useState(false);
   const [draft, setDraft] = useState(value);
-  const lastPropValueRef = useRef(value);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const markdownRef = useRef<MarkdownEditorRef>(null);
   const autosaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,14 +66,8 @@ export function InlineEditor({
   } = useAutosaveIndicator();
 
   useEffect(() => {
-    const previousValue = lastPropValueRef.current;
-    lastPropValueRef.current = value;
-    setDraft((currentDraft) => {
-      if (multiline && multilineFocused && currentDraft !== previousValue) {
-        return currentDraft;
-      }
-      return value;
-    });
+    if (multiline && multilineFocused) return;
+    setDraft(value);
   }, [value, multiline, multilineFocused]);
 
   useEffect(() => {

@@ -6,7 +6,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { timeAgo } from "@/lib/timeAgo";
 import { createIssueDetailPath, withIssueDetailHeaderSeed } from "@/lib/issueDetailBreadcrumb";
 import {
-  getIssueDetailQueryOptions,
+  fetchIssueDetail,
+  getCachedIssueDetail,
   ISSUE_DETAIL_STALE_TIME_MS,
   prefetchIssueDetail,
 } from "@/lib/issueDetailCache";
@@ -97,9 +98,12 @@ export const IssueLinkQuicklook = React.forwardRef<
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const prefetchedState = issuePrefetch ? withIssueDetailHeaderSeed(state, issuePrefetch) : state;
+  const cachedIssue = getCachedIssueDetail(queryClient, issuePathId, issuePrefetch ?? undefined);
   const { data, isLoading } = useQuery({
-    ...getIssueDetailQueryOptions(queryClient, issuePathId, { placeholderIssue: issuePrefetch ?? undefined }),
+    queryKey: queryKeys.issues.detail(issuePathId),
+    queryFn: () => fetchIssueDetail(queryClient, issuePathId),
     enabled: open,
+    initialData: () => cachedIssue,
     staleTime: ISSUE_DETAIL_STALE_TIME_MS,
   });
 
