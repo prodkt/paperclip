@@ -92,6 +92,7 @@ const MAX_INLINE_WAKE_COMMENT_BODY_CHARS = 4_000;
 const MAX_INLINE_WAKE_COMMENT_BODY_TOTAL_CHARS = 12_000;
 const execFile = promisify(execFileCallback);
 const ACTIVE_HEARTBEAT_RUN_STATUSES = ["queued", "running"] as const;
+const FAILED_CONTINUATION_RECOVERY_STATUSES = new Set(["failed", "timed_out", "cancelled"]);
 const SESSIONED_LOCAL_ADAPTERS = new Set([
   "claude_local",
   "codex_local",
@@ -517,6 +518,12 @@ export function prioritizeProjectWorkspaceCandidatesForRun<T extends ProjectWork
 
 function readNonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function readFirstSummaryLine(value: unknown): string | null {
+  const text = readNonEmptyString(value);
+  if (!text) return null;
+  return text.split(/\r?\n/, 1)[0]?.trim() ?? null;
 }
 
 function normalizeLedgerBillingType(value: unknown): BillingType {
@@ -2768,6 +2775,42 @@ export function heartbeatService(db: Db) {
     return queued;
   }
 
+  function didContinuationRecoveryFail(
+    latestRun: typeof heartbeatRuns.$inferSelect | null,
+    latestRetryReason: string | null,
+  ) {
+    return Boolean(
+      latestRun &&
+        latestRetryReason === "issue_continuation_needed" &&
+        FAILED_CONTINUATION_RECOVERY_STATUSES.has(latestRun.status),
+    );
+  }
+
+  function formatLatestRunFailureSummary(latestRun: typeof heartbeatRuns.$inferSelect | null) {
+    if (!latestRun) return null;
+
+    const latestSummary = summarizeHeartbeatRunResultJson(latestRun.resultJson);
+    const summaryLine =
+      readFirstSummaryLine(latestSummary?.summary) ??
+      readFirstSummaryLine(latestSummary?.result) ??
+      readFirstSummaryLine(latestSummary?.message) ??
+      readFirstSummaryLine(latestSummary?.error) ??
+      readFirstSummaryLine(latestRun.error);
+    const errorCode = readNonEmptyString(latestRun.errorCode);
+
+    if (errorCode && summaryLine) return `${errorCode}: ${summaryLine}`;
+    return summaryLine ?? errorCode;
+  }
+
+  function buildStrandedAssignedIssueComment(input: {
+    baseComment: string;
+    latestRun: typeof heartbeatRuns.$inferSelect | null;
+  }) {
+    const failureSummary = formatLatestRunFailureSummary(input.latestRun);
+    if (!failureSummary) return input.baseComment;
+    return `${input.baseComment}\n\nLatest failure summary: ${failureSummary}`;
+  }
+
   async function escalateStrandedAssignedIssue(input: {
     issue: typeof issues.$inferSelect;
     previousStatus: "todo" | "in_progress";
@@ -2861,9 +2904,12 @@ export function heartbeatService(db: Db) {
             issue,
             previousStatus: "todo",
             latestRun,
-            comment:
-              "Paperclip automatically retried dispatch for this assigned `todo` issue after a lost wake/run, " +
-              "but it still has no live execution path. Moving it to `blocked` so it is visible for intervention.",
+            comment: buildStrandedAssignedIssueComment({
+              latestRun,
+              baseComment:
+                "Paperclip automatically retried dispatch for this assigned `todo` issue after a lost wake/run, " +
+                "but it still has no live execution path. Moving it to `blocked` so it is visible for intervention.",
+            }),
           });
           if (updated) {
             result.escalated += 1;
@@ -2891,15 +2937,18 @@ export function heartbeatService(db: Db) {
         continue;
       }
 
-      if (latestRetryReason === "issue_continuation_needed") {
+      if (didContinuationRecoveryFail(latestRun, latestRetryReason)) {
         const updated = await escalateStrandedAssignedIssue({
           issue,
           previousStatus: "in_progress",
           latestRun,
-          comment:
-            "Paperclip automatically retried continuation for this assigned `in_progress` issue after its live " +
-            "execution disappeared, but it still has no live execution path. Moving it to `blocked` so it is " +
-            "visible for intervention.",
+          comment: buildStrandedAssignedIssueComment({
+            latestRun,
+            baseComment:
+              "Paperclip automatically retried continuation for this assigned `in_progress` issue after its live " +
+              "execution disappeared, but it still has no live execution path. Moving it to `blocked` so it is " +
+              "visible for intervention.",
+          }),
         });
         if (updated) {
           result.escalated += 1;
@@ -2907,6 +2956,11 @@ export function heartbeatService(db: Db) {
         } else {
           result.skipped += 1;
         }
+        continue;
+      }
+
+      if (latestRetryReason === "issue_continuation_needed" && latestRun?.status === "succeeded") {
+        result.skipped += 1;
         continue;
       }
 

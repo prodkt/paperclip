@@ -308,6 +308,9 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
     runStatus: "failed" | "timed_out" | "cancelled" | "succeeded";
     retryReason?: "assignment_recovery" | "issue_continuation_needed" | null;
     assignToUser?: boolean;
+    runErrorCode?: string | null;
+    runError?: string | null;
+    resultJson?: Record<string, unknown> | null;
   }) {
     const companyId = randomUUID();
     const agentId = randomUUID();
@@ -348,7 +351,10 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       runId,
       claimedAt: now,
       finishedAt: new Date("2026-03-19T00:05:00.000Z"),
-      error: input.runStatus === "succeeded" ? null : "run failed before issue advanced",
+      error:
+        input.runStatus === "succeeded"
+          ? null
+          : (input.runError ?? "run failed before issue advanced"),
     });
 
     await db.insert(heartbeatRuns).values({
@@ -370,8 +376,15 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       startedAt: now,
       finishedAt: new Date("2026-03-19T00:05:00.000Z"),
       updatedAt: new Date("2026-03-19T00:05:00.000Z"),
-      errorCode: input.runStatus === "succeeded" ? null : "process_lost",
-      error: input.runStatus === "succeeded" ? null : "run failed before issue advanced",
+      errorCode:
+        input.runStatus === "succeeded"
+          ? null
+          : (input.runErrorCode ?? "process_lost"),
+      error:
+        input.runStatus === "succeeded"
+          ? null
+          : (input.runError ?? "run failed before issue advanced"),
+      resultJson: input.resultJson ?? null,
     });
 
     await db.insert(issues).values({
@@ -632,6 +645,10 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       status: "in_progress",
       runStatus: "failed",
       retryReason: "issue_continuation_needed",
+      runErrorCode: "adapter_failed",
+      resultJson: {
+        summary: "OpenAI API request failed with 429 rate_limit_exceeded",
+      },
     });
     const heartbeat = heartbeatService(db);
 
@@ -646,6 +663,31 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
     const comments = await db.select().from(issueComments).where(eq(issueComments.issueId, issueId));
     expect(comments).toHaveLength(1);
     expect(comments[0]?.body).toContain("retried continuation");
+    expect(comments[0]?.body).toContain(
+      "Latest failure summary: adapter_failed: OpenAI API request failed with 429 rate_limit_exceeded",
+    );
+  });
+
+  it("does not block stranded in-progress work after a successful continuation retry", async () => {
+    const { issueId } = await seedStrandedIssueFixture({
+      status: "in_progress",
+      runStatus: "succeeded",
+      retryReason: "issue_continuation_needed",
+    });
+    const heartbeat = heartbeatService(db);
+
+    const result = await heartbeat.reconcileStrandedAssignedIssues();
+    expect(result.dispatchRequeued).toBe(0);
+    expect(result.continuationRequeued).toBe(0);
+    expect(result.escalated).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(result.issueIds).toEqual([]);
+
+    const issue = await db.select().from(issues).where(eq(issues.id, issueId)).then((rows) => rows[0] ?? null);
+    expect(issue?.status).toBe("in_progress");
+
+    const comments = await db.select().from(issueComments).where(eq(issueComments.issueId, issueId));
+    expect(comments).toHaveLength(0);
   });
 
   it("does not reconcile user-assigned work through the agent stranded-work recovery path", async () => {
