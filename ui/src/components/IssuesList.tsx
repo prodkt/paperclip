@@ -835,6 +835,7 @@ export function IssuesList({
                   const hasChildren = children.length > 0;
                   const totalDescendants = hasChildren ? countDescendants(issue.id, childMap) : 0;
                   const isExpanded = !viewState.collapsedParents.includes(issue.id);
+                  const useDeferredRowRendering = !(hasChildren && isExpanded);
                   const issueProject = issue.projectId ? projectById.get(issue.projectId) ?? null : null;
                   const parentIssue = issue.parentId ? issueById.get(issue.parentId) ?? null : null;
                   const toggleCollapse = (e: { preventDefault: () => void; stopPropagation: () => void }) => {
@@ -852,8 +853,12 @@ export function IssuesList({
                       key={issue.id}
                       style={{
                         ...(depth > 0 ? { paddingLeft: `${depth * 16}px` } : {}),
-                        contentVisibility: "auto",
-                        containIntrinsicSize: "44px",
+                        ...(useDeferredRowRendering
+                          ? {
+                            contentVisibility: "auto",
+                            containIntrinsicSize: "44px",
+                          }
+                          : {}),
                       }}
                     >
                       <IssueRow

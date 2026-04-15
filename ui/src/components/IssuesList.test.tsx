@@ -421,6 +421,47 @@ describe("IssuesList", () => {
     });
   });
 
+  it("skips deferred row sizing for expanded parent rows with visible children", async () => {
+    const parentIssue = createIssue({
+      id: "issue-parent",
+      identifier: "PAP-1",
+      title: "Parent issue",
+    });
+    const childIssue = createIssue({
+      id: "issue-child",
+      identifier: "PAP-2",
+      title: "Child issue",
+      parentId: "issue-parent",
+    });
+
+    const { root } = renderWithQueryClient(
+      <IssuesList
+        issues={[parentIssue, childIssue]}
+        agents={[]}
+        projects={[]}
+        viewStateKey="paperclip:test-issues"
+        onUpdateIssue={() => undefined}
+      />,
+      container,
+    );
+
+    await waitForAssertion(() => {
+      const rows = Array.from(container.querySelectorAll('[data-testid="issue-row"]'));
+      const parentRow = rows.find((row) => row.textContent?.includes("Parent issue"));
+      const childRow = rows.find((row) => row.textContent?.includes("Child issue"));
+      expect(parentRow).not.toBeUndefined();
+      expect(childRow).not.toBeUndefined();
+      expect((parentRow?.parentElement as HTMLDivElement | null)?.style.contentVisibility).toBe("");
+      expect((parentRow?.parentElement as HTMLDivElement | null)?.style.containIntrinsicSize).toBe("");
+      expect((childRow?.parentElement as HTMLDivElement | null)?.style.contentVisibility).toBe("auto");
+      expect((childRow?.parentElement as HTMLDivElement | null)?.style.containIntrinsicSize).toBe("44px");
+    });
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it("uses context-scoped persisted column visibility", async () => {
     localStorage.setItem("paperclip:test-issues:company-1:issue-columns", JSON.stringify(["id", "assignee"]));
 
