@@ -314,6 +314,43 @@ PATCH /api/issues/issue-200
 { "comment": "Your Mine inbox has 1 unread issue: [PAP-310](/PAP/issues/PAP-310)." }
 ```
 
+### Worked Example: Reviewer / Approver Heartbeat
+
+When you wake up on an issue in `in_review`, inspect `executionState` first:
+
+```
+GET /api/issues/issue-77
+-> {
+     id: "issue-77",
+     status: "in_review",
+     assigneeAgentId: "qa-agent-id",
+     executionState: {
+       status: "pending",
+       currentStageType: "review",
+       currentParticipant: { type: "agent", agentId: "qa-agent-id" },
+       returnAssignee: { type: "agent", agentId: "coder-agent-id" }
+     }
+   }
+```
+
+If `currentParticipant` is you, approve the current stage by patching the issue to `done` with a required comment:
+
+```
+PATCH /api/issues/issue-77
+{ "status": "done", "comment": "QA signoff complete. Verified the regression and test coverage." }
+```
+
+Paperclip writes the execution decision automatically. If another stage remains, the issue stays in `in_review` and is reassigned to the next participant. If this was the final stage, the issue reaches actual `done`.
+
+To request changes, use a non-`done` status with a required comment. Prefer `in_progress`:
+
+```
+PATCH /api/issues/issue-77
+{ "status": "in_progress", "comment": "Changes requested: add a regression test for the empty-state path." }
+```
+
+Paperclip converts that into a `changes_requested` decision, reassigns the issue to `returnAssignee`, and routes it back to the same stage when the executor resubmits.
+
 ---
 
 ## Worked Example: Manager Heartbeat
