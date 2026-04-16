@@ -12,6 +12,12 @@ describe("issue-reference", () => {
     expect(parseIssuePathIdFromPath("http://localhost:3100/PAP/issues/PAP-1179")).toBe("PAP-1179");
   });
 
+  it("ignores placeholder issue paths", () => {
+    expect(parseIssuePathIdFromPath("/issues/:id")).toBeNull();
+    expect(parseIssuePathIdFromPath("http://localhost:3100/issues/:id")).toBeNull();
+    expect(parseIssueReferenceFromHref("/issues/:id")).toBeNull();
+  });
+
   it("normalizes bare identifiers, issue URLs, and issue scheme links into internal links", () => {
     expect(parseIssueReferenceFromHref("pap-1271")).toEqual({
       issuePathId: "PAP-1271",
