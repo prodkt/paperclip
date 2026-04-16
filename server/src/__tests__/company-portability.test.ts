@@ -1159,4 +1159,91 @@ describe("company portability", () => {
       }),
     );
   });
+
+  it("round-trips exported package through import preserving company and agent metadata", async () => {
+    const portability = companyPortabilityService({} as any);
+
+    // Step 1: Export the company
+    const exported = await portability.exportBundle("company-1", {
+      include: {
+        company: true,
+        agents: true,
+        projects: false,
+        issues: false,
+      },
+    });
+
+    expect(Object.keys(exported.files).length).toBeGreaterThan(0);
+    expect(exported.files["COMPANY.md"]).toBeDefined();
+
+    // Step 2: Preview import using the exact exported files
+    companySvc.create.mockResolvedValue({
+      id: "company-roundtrip",
+      name: "Paperclip",
+    });
+    agentSvc.create.mockResolvedValue({ id: "agent-roundtrip" });
+
+    const preview = await portability.previewImport({
+      source: {
+        type: "inline",
+        rootPath: exported.rootPath,
+        files: exported.files,
+      },
+      include: {
+        company: true,
+        agents: true,
+        projects: false,
+        issues: false,
+      },
+      target: {
+        mode: "new_company",
+        newCompanyName: "Paperclip Roundtrip",
+      },
+      agents: "all",
+      collisionStrategy: "rename",
+    });
+
+    expect(preview.errors).toEqual([]);
+    // The preview manifest reflects the source package name, not the target override
+    expect(preview.manifest.company?.name).toBe("Paperclip");
+    expect(preview.manifest.agents.length).toBe(2);
+    const agentSlugs = preview.manifest.agents.map((a) => a.slug).sort();
+    expect(agentSlugs).toEqual(["claudecoder", "cmo"]);
+
+    // Step 3: Apply import using the exact exported files
+    await portability.importBundle({
+      source: {
+        type: "inline",
+        rootPath: exported.rootPath,
+        files: exported.files,
+      },
+      include: {
+        company: true,
+        agents: true,
+        projects: false,
+        issues: false,
+      },
+      target: {
+        mode: "new_company",
+        newCompanyName: "Paperclip Roundtrip",
+      },
+      agents: "all",
+      collisionStrategy: "rename",
+    }, "user-1");
+
+    // Verify company was created with correct metadata
+    expect(companySvc.create).toHaveBeenCalledWith(expect.objectContaining({
+      name: "Paperclip Roundtrip",
+    }));
+
+    // Verify both agents were created
+    expect(agentSvc.create).toHaveBeenCalledTimes(2);
+    const agentCreateCalls = agentSvc.create.mock.calls.map(
+      (c: unknown[]) => (c[1] as { name: string }).name,
+    );
+    expect(agentCreateCalls.sort()).toEqual(["CMO", "ClaudeCoder"]);
+
+    // Verify the managed instructions bundle was materialized for each imported agent
+    expect(agentInstructionsSvc.materializeManagedBundle).toHaveBeenCalledTimes(2);
+  });
 });
