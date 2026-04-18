@@ -860,6 +860,7 @@ export function issueRoutes(
       return;
     }
     assertCompanyAccess(req, issue.companyId);
+    if (!(await assertAgentRunCheckoutOwnership(req, res, issue))) return;
     if (req.actor.type === "agent") {
       if (!req.actor.agentId) throw forbidden("Agent authentication required");
       if (issue.assigneeAgentId !== req.actor.agentId && issue.createdByAgentId !== req.actor.agentId) {
