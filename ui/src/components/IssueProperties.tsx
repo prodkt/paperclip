@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { pickTextColorForPillBg } from "@/lib/color-contrast";
 import { Link } from "@/lib/router";
-import type { Issue } from "@paperclipai/shared";
+import type { Issue, Project, WorkspaceRuntimeService } from "@paperclipai/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { accessApi } from "../api/access";
 import { agentsApi } from "../api/agents";
@@ -70,6 +70,35 @@ function defaultExecutionWorkspaceModeForProject(project: { executionWorkspacePo
   if (defaultMode === "isolated_workspace" || defaultMode === "operator_branch") return defaultMode;
   if (defaultMode === "adapter_default") return "agent_default";
   return "shared_workspace";
+}
+
+function primaryWorkspaceIdForProject(project: Pick<Project, "primaryWorkspace" | "workspaces"> | null | undefined) {
+  return project?.primaryWorkspace?.id
+    ?? project?.workspaces.find((workspace) => workspace.isPrimary)?.id
+    ?? project?.workspaces[0]?.id
+    ?? null;
+}
+
+function isMainIssueWorkspace(input: {
+  issue: Pick<Issue, "projectWorkspaceId" | "currentExecutionWorkspace">;
+  project: Pick<Project, "primaryWorkspace" | "workspaces"> | null | undefined;
+}) {
+  const workspace = input.issue.currentExecutionWorkspace ?? null;
+  const primaryWorkspaceId = primaryWorkspaceIdForProject(input.project);
+  const linkedProjectWorkspaceId = workspace?.projectWorkspaceId ?? input.issue.projectWorkspaceId ?? null;
+  if (workspace) {
+    if (workspace.mode !== "shared_workspace") return false;
+    if (!linkedProjectWorkspaceId || !primaryWorkspaceId) return true;
+    return workspace.mode === "shared_workspace" && linkedProjectWorkspaceId === primaryWorkspaceId;
+  }
+  if (!linkedProjectWorkspaceId || !primaryWorkspaceId) return true;
+  return linkedProjectWorkspaceId === primaryWorkspaceId;
+}
+
+function runningRuntimeServiceWithUrl(
+  runtimeServices: WorkspaceRuntimeService[] | null | undefined,
+) {
+  return runtimeServices?.find((service) => service.status === "running" && service.url?.trim()) ?? null;
 }
 
 interface IssuePropertiesProps {
@@ -253,6 +282,11 @@ export function IssueProperties({
   const currentProject = issue.projectId
     ? orderedProjects.find((project) => project.id === issue.projectId) ?? null
     : null;
+  const issueProject = issue.project ?? currentProject;
+  const liveWorkspaceService = useMemo(() => {
+    if (isMainIssueWorkspace({ issue, project: issueProject })) return null;
+    return runningRuntimeServiceWithUrl(issue.currentExecutionWorkspace?.runtimeServices);
+  }, [issue, issueProject]);
   const projectLink = (id: string | null) => {
     if (!id) return null;
     const project = projects?.find((p) => p.id === id) ?? null;
@@ -1117,10 +1151,23 @@ export function IssueProperties({
         )}
       </div>
 
-      {issue.currentExecutionWorkspace?.branchName || issue.currentExecutionWorkspace?.cwd || issue.executionWorkspaceId ? (
+      {liveWorkspaceService || issue.currentExecutionWorkspace?.branchName || issue.currentExecutionWorkspace?.cwd || issue.executionWorkspaceId ? (
         <>
           <Separator />
           <div className="space-y-1">
+            {liveWorkspaceService?.url && (
+              <PropertyRow label="Service">
+                <a
+                  href={liveWorkspaceService.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-w-0 items-start gap-1 text-sm font-mono text-emerald-700 hover:text-emerald-800 hover:underline dark:text-emerald-300 dark:hover:text-emerald-200"
+                >
+                  <span className="min-w-0 break-all">{liveWorkspaceService.url}</span>
+                  <ExternalLink className="mt-1 h-3 w-3 shrink-0" />
+                </a>
+              </PropertyRow>
+            )}
             {issue.executionWorkspaceId && (
               <PropertyRow label="Workspace">
                 <Link
