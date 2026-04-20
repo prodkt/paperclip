@@ -174,7 +174,7 @@ eval "$(npx paperclipai worktree env)"   # skip if using the primary instance
 tmux new-session -d -s <session-name> 'pnpm dev'
 
 # Example with a descriptive name:
-tmux new-session -d -s papa81-auth-3102 'pnpm dev'
+tmux new-session -d -s auth-fix-3102 'pnpm dev'
 ```
 
 ### Managing the session
@@ -197,14 +197,10 @@ curl -sf http://127.0.0.1:<port>/api/health && echo "Server is up"
 lsof -nP -iTCP:<port> -sTCP:LISTEN
 ```
 
-### Why this matters
-
-In PAPA-81, the dev server was started with `pnpm dev` directly from the agent shell. It appeared healthy during the heartbeat, but died as soon as the heartbeat exited. QA repeatedly found the port unreachable seconds later. Switching to a detached `tmux` session solved the problem — the server survived across heartbeats and remained available for manual testing.
-
 ### Key rules
 
-1. **Always use `tmux` (or equivalent)** when a dev server needs to stay running after the heartbeat ends.
-2. **Name the session descriptively** — include the issue or worktree name and port (e.g., `papa81-auth-3102`).
+1. **Always use `tmux` (or equivalent)** when a dev server needs to stay running after the heartbeat ends. A server started directly from the agent shell will die when the heartbeat exits, even if it appeared healthy moments before.
+2. **Name the session descriptively** — include the worktree name and port (e.g., `auth-fix-3102`).
 3. **Verify the server is listening** before reporting the URL to anyone.
 4. **Do not use `nohup` or `&` alone** — these are unreliable for agent shells that may have their entire process group killed.
 5. **Clean up when done** — kill the tmux session when the testing is complete.
