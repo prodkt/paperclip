@@ -771,6 +771,7 @@ export function renderPaperclipWakePrompt(
       "Answer the board directly by posting an issue comment on this same issue.",
       "Do not run normal inbox or assignment triage for this wake, and do not delegate unless the board explicitly asks you to create or assign work.",
       "Keep the reply conversational, concise, and useful to the board.",
+      "Once you have answered the current board message, treat the chat turn as complete; Paperclip will mark the chat issue done until the board sends another message.",
       "If the issue title is still `New chat`, update it to a short descriptive conversation title before or alongside your first substantive reply.",
       "",
     );

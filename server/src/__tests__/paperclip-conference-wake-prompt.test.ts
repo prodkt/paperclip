@@ -28,6 +28,7 @@ describe("conference room wake prompt", () => {
 
     expect(prompt).toContain("## Conference Room Mode");
     expect(prompt).toContain("This issue is a board chat with you");
+    expect(prompt).toContain("Paperclip will mark the chat issue done until the board sends another message");
     expect(prompt).toContain("If the issue title is still `New chat`");
   });
 });

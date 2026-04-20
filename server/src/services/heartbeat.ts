@@ -7,6 +7,7 @@ import { and, asc, desc, eq, getTableColumns, gt, inArray, isNull, lte, notInArr
 import type { Db } from "@paperclipai/db";
 import {
   AGENT_DEFAULT_MAX_CONCURRENT_RUNS,
+  CONFERENCE_ROOM_ORIGIN_KIND,
   ISSUE_CONTINUATION_SUMMARY_DOCUMENT_KEY,
   MODEL_PROFILE_KEYS,
   isEnvironmentDriverSupportedForAdapter,
@@ -3238,6 +3239,57 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
       .then((rows) => rows[0] ?? null);
   }
 
+  async function completeConferenceRoomTurnAfterReply(input: {
+    run: typeof heartbeatRuns.$inferSelect;
+    issueId: string;
+    commentId: string;
+  }) {
+    if (input.run.status !== "succeeded") return null;
+
+    const issue = await db
+      .select({
+        id: issues.id,
+        companyId: issues.companyId,
+        identifier: issues.identifier,
+        status: issues.status,
+        originKind: issues.originKind,
+        assigneeAgentId: issues.assigneeAgentId,
+      })
+      .from(issues)
+      .where(and(eq(issues.id, input.issueId), eq(issues.companyId, input.run.companyId)))
+      .then((rows) => rows[0] ?? null);
+
+    if (!issue) return null;
+    if (issue.originKind !== CONFERENCE_ROOM_ORIGIN_KIND) return null;
+    if (issue.status !== "in_progress") return null;
+    if (issue.assigneeAgentId !== input.run.agentId) return null;
+
+    const updated = await issuesSvc.update(input.issueId, {
+      status: "done",
+    });
+    if (!updated) return null;
+
+    await logActivity(db, {
+      companyId: issue.companyId,
+      actorType: "system",
+      actorId: "heartbeat",
+      agentId: input.run.agentId,
+      runId: input.run.id,
+      action: "issue.updated",
+      entityType: "issue",
+      entityId: issue.id,
+      details: {
+        identifier: issue.identifier,
+        status: "done",
+        previousStatus: issue.status,
+        source: "conference_room.auto_complete",
+        satisfiedByCommentId: input.commentId,
+      },
+    });
+
+    return updated;
+  }
+
   async function refreshContinuationSummaryForRun(
     run: typeof heartbeatRuns.$inferSelect,
     agent: typeof agents.$inferSelect,
@@ -3437,6 +3489,11 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
         issueCommentStatus: "satisfied",
         issueCommentSatisfiedByCommentId: postedComment.id,
         issueCommentRetryQueuedAt: null,
+      });
+      await completeConferenceRoomTurnAfterReply({
+        run,
+        issueId,
+        commentId: postedComment.id,
       });
       return { outcome: "satisfied" as const, queuedRun: null };
     }
