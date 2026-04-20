@@ -21,6 +21,10 @@ NEXT_DATE=$(date -j -v+1d -f "%Y-%m-%d" "$DATE" "+%Y-%m-%d" 2>/dev/null \
 COMMITS=$(git log --since="${DATE}T00:00:00" --until="${NEXT_DATE}T00:00:00" master \
   --format="%h|%s|%an" 2>/dev/null || true)
 
+json_escape() {
+  python3 -c 'import json, sys; print(json.dumps(sys.stdin.read().rstrip("\n"))[1:-1])'
+}
+
 if [[ -z "$COMMITS" ]]; then
   PAYLOAD=$(cat <<ENDJSON
 {
@@ -37,8 +41,9 @@ else
 
   LINES=""
   while IFS='|' read -r hash subject author; do
-    escaped_subject=$(echo "$subject" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g')
-    LINES="${LINES}• [\`${hash}\`](${REPO_URL}/commit/${hash}) ${escaped_subject} — *${author}*\\n"
+    escaped_subject=$(printf '%s' "$subject" | json_escape)
+    escaped_author=$(printf '%s' "$author" | json_escape)
+    LINES="${LINES}• [\`${hash}\`](${REPO_URL}/commit/${hash}) ${escaped_subject} — *${escaped_author}*\\n"
   done <<< "$COMMITS"
 
   PAYLOAD=$(cat <<ENDJSON
