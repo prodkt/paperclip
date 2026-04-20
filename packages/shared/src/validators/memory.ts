@@ -130,6 +130,14 @@ export const memoryProviderConfigMetadataSchema = z
   })
   .strict();
 
+const queryBooleanSchema = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  return value;
+}, z.boolean());
+
 export const memoryHookPolicySchema = z
   .object({
     enabled: z.boolean().optional(),
@@ -295,10 +303,10 @@ export const memoryListRecordsQuerySchema = z
     runId: z.string().uuid().optional(),
     sourceKind: z.enum(MEMORY_SOURCE_KINDS).optional(),
     q: z.string().trim().min(1).max(500).optional(),
-    includeDeleted: z.coerce.boolean().optional().default(false),
-    includeRevoked: z.coerce.boolean().optional().default(false),
-    includeExpired: z.coerce.boolean().optional().default(false),
-    includeSuperseded: z.coerce.boolean().optional().default(false),
+    includeDeleted: queryBooleanSchema.optional().default(false),
+    includeRevoked: queryBooleanSchema.optional().default(false),
+    includeExpired: queryBooleanSchema.optional().default(false),
+    includeSuperseded: queryBooleanSchema.optional().default(false),
     limit: z.coerce.number().int().positive().max(200).optional().default(50),
     count: z.enum(["only"]).optional(),
   })

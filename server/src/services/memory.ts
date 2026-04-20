@@ -924,7 +924,7 @@ export function memoryService(
       metadata?: Record<string, unknown>;
       reviewState?: MemoryRecord["reviewState"];
     },
-    operationId: string,
+    operationId: string | null,
   ) {
     const scopeType = input.scopeType ?? normalizeScopeType(scope);
     const scopeId = input.scopeId ?? normalizeScopeId(binding.companyId, scopeType, scope);
@@ -1122,6 +1122,27 @@ export function memoryService(
     });
   }
 
+  async function attachCreatedByOperation(
+    companyId: string,
+    records: MemoryRecord[],
+    operationId: string,
+  ) {
+    if (records.length === 0) return records;
+    await db
+      .update(memoryLocalRecords)
+      .set({
+        createdByOperationId: operationId,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(memoryLocalRecords.companyId, companyId),
+          inArray(memoryLocalRecords.id, records.map((record) => record.id)),
+        ),
+      );
+    return records.map((record) => ({ ...record, createdByOperationId: operationId }));
+  }
+
   function buildLocalBasicConditions(companyId: string, filters: MemoryListRecordsQuery, actor: ActorInfo) {
     const conditions = [eq(memoryLocalRecords.companyId, companyId)];
     if (filters.bindingId) conditions.push(eq(memoryLocalRecords.bindingId, filters.bindingId));
@@ -1159,7 +1180,9 @@ export function memoryService(
     if (!filters.includeRevoked) conditions.push(isNull(memoryLocalRecords.revokedAt));
     if (!filters.includeExpired) {
       conditions.push(or(isNull(memoryLocalRecords.expiresAt), sql`${memoryLocalRecords.expiresAt} > now()`)!);
-      conditions.push(or(isNull(memoryLocalRecords.retentionState), eq(memoryLocalRecords.retentionState, "active"))!);
+      if (!filters.retentionState) {
+        conditions.push(or(isNull(memoryLocalRecords.retentionState), eq(memoryLocalRecords.retentionState, "active"))!);
+      }
     }
     if (!filters.includeSuperseded) conditions.push(isNull(memoryLocalRecords.supersededByRecordId));
 
@@ -2257,7 +2280,7 @@ export function memoryService(
             metadata: data.metadata ?? {},
             reviewState: data.reviewState,
           },
-          operationId,
+          null,
         );
       } else {
         if (!pluginMemoryProviders) {
@@ -2284,7 +2307,7 @@ export function memoryService(
         records = providerResult.records;
         usage = providerResult.usage ?? [];
         providerResultJson = providerResult.resultJson ?? null;
-        await persistCatalogRecords(binding, records, operationId);
+        await persistCatalogRecords(binding, records, null);
       }
       const operation = await logOperation({
         id: operationId,
@@ -2318,6 +2341,7 @@ export function memoryService(
         recordCount: records.length,
         usage,
       });
+      records = await attachCreatedByOperation(companyId, records, operation.id);
       return { operation, records } satisfies MemoryCaptureResult;
     },
 
@@ -2537,7 +2561,7 @@ export function memoryService(
           reviewNote: parsed.reason,
           citationJson: parsed.citation === undefined ? originalRow.citationJson : normalizeCitation(parsed.citation),
           supersedesRecordId: originalRow.id,
-          createdByOperationId: operationId,
+          createdByOperationId: null,
           createdAt: correctedAt,
           updatedAt: correctedAt,
         })
@@ -2568,11 +2592,16 @@ export function memoryService(
         },
         recordCount: 1,
       });
+      const [attachedCorrectedRow] = await db
+        .update(memoryLocalRecords)
+        .set({ createdByOperationId: operation.id, updatedAt: correctedAt })
+        .where(and(eq(memoryLocalRecords.companyId, companyId), eq(memoryLocalRecords.id, correctedRecordId)))
+        .returning();
 
       return {
         operation,
         originalRecord: mapRecord({ ...originalRow, supersededByRecordId: correctedRecordId, updatedAt: correctedAt }),
-        correctedRecord: mapRecord(correctedRow),
+        correctedRecord: mapRecord(attachedCorrectedRow ?? { ...correctedRow, createdByOperationId: operation.id }),
       } satisfies MemoryCorrectResult;
     },
 

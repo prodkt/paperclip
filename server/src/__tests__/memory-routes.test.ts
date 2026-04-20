@@ -258,7 +258,7 @@ describe("memory routes", () => {
 
     const res = await request(app)
       .get(`/api/companies/${companyA}/memory/records`)
-      .query({ count: "only", reviewState: "pending" })
+      .query({ count: "only", reviewState: "pending", includeRevoked: "false", includeExpired: "false" })
       .set("Origin", "http://localhost:3100");
 
     expect(res.status).toBe(200);
@@ -269,6 +269,7 @@ describe("memory routes", () => {
         count: "only",
         reviewState: "pending",
         includeRevoked: false,
+        includeExpired: false,
       }),
       expect.objectContaining({ actorType: "user", userId: "board-user" }),
     );

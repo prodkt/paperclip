@@ -1,5 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { randomUUID } from "node:crypto";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { companies, createDb } from "@paperclipai/db";
+import type { MemoryListRecordsQuery } from "@paperclipai/shared";
 import { memoryService } from "../services/memory.js";
+import {
+  getEmbeddedPostgresTestSupport,
+  startEmbeddedPostgresTestDatabase,
+} from "./helpers/embedded-postgres.js";
 
 function createQueuedSelectDb(selectResults: unknown[][]) {
   const calls: Array<{ kind: string }> = [];
@@ -382,7 +389,7 @@ describe("memoryService hook policies", () => {
           updatedValues.push(value);
           return {
             where: vi.fn().mockReturnValue({
-              returning: vi.fn().mockResolvedValue(updateResults.shift() ?? []),
+              returning: vi.fn().mockImplementation(() => Promise.resolve(updateResults.shift() ?? [])),
             }),
           };
         }),
@@ -420,6 +427,7 @@ describe("memoryService hook policies", () => {
     });
     expect(insertedValues[1]).toMatchObject({
       reviewState: "accepted",
+      createdByOperationId: null,
       metadata: {
         extraction: {
           mode: "paperclip_managed",
@@ -428,7 +436,12 @@ describe("memoryService hook policies", () => {
         },
       },
     });
-    expect(updatedValues[0]).toMatchObject({
+    expect(updatedValues).toContainEqual(
+      expect.objectContaining({
+        createdByOperationId: "77777777-7777-4777-8777-777777777777",
+      }),
+    );
+    expect(updatedValues.find((value) => (value as { status?: string }).status === "succeeded")).toMatchObject({
       status: "succeeded",
       operationId: "77777777-7777-4777-8777-777777777777",
       resultJson: {
@@ -436,5 +449,94 @@ describe("memoryService hook policies", () => {
         recordIds: ["44444444-4444-4444-8444-444444444444"],
       },
     });
+  });
+});
+
+const embeddedPostgresSupport = await getEmbeddedPostgresTestSupport();
+const describeEmbeddedPostgres = embeddedPostgresSupport.supported ? describe : describe.skip;
+
+describeEmbeddedPostgres("memoryService local basic persistence", () => {
+  let db!: ReturnType<typeof createDb>;
+  let tempDb: Awaited<ReturnType<typeof startEmbeddedPostgresTestDatabase>> | null = null;
+
+  beforeAll(async () => {
+    tempDb = await startEmbeddedPostgresTestDatabase("paperclip-memory-service-");
+    db = createDb(tempDb.connectionString);
+  }, 20_000);
+
+  afterEach(async () => {
+    await db.delete(companies);
+  });
+
+  afterAll(async () => {
+    await tempDb?.cleanup();
+  });
+
+  it("captures records with a valid operation id and counts explicit revoked filters", async () => {
+    const companyId = randomUUID();
+    await db.insert(companies).values({
+      id: companyId,
+      name: "Paperclip Memory Test",
+      issuePrefix: `M${companyId.replace(/-/g, "").slice(0, 5).toUpperCase()}`,
+      requireBoardApprovalForNewAgents: false,
+    });
+
+    const service = memoryService(db);
+    const actor = {
+      actorType: "user" as const,
+      actorId: "board-user",
+      agentId: null,
+      userId: "board-user",
+      runId: null,
+    };
+    const binding = await service.createBinding(companyId, {
+      key: "local-test",
+      name: "Local test",
+      providerKey: "local_basic",
+      config: {},
+      enabled: true,
+    });
+    await service.setCompanyDefault(companyId, binding.id);
+
+    const captured = await service.capture(
+      companyId,
+      {
+        bindingKey: "local-test",
+        scope: { scopeType: "org", scopeId: companyId },
+        scopeType: "org",
+        scopeId: companyId,
+        source: { kind: "manual_note", externalRef: "memory-service-test" },
+        title: "Revoked filter regression",
+        content: "A memory record that will be revoked for count filter coverage.",
+        reviewState: "pending",
+      },
+      actor,
+    );
+
+    expect(captured.records).toHaveLength(1);
+    expect(captured.records[0].createdByOperationId).toBe(captured.operation.id);
+
+    await service.revoke(
+      companyId,
+      {
+        selector: { recordIds: [captured.records[0].id] },
+        reason: "Verify revoked filters can see explicit revoked retention state",
+      },
+      actor,
+    );
+
+    const revokedFilters: MemoryListRecordsQuery = {
+      retentionState: "revoked",
+      includeDeleted: false,
+      includeRevoked: true,
+      includeExpired: false,
+      includeSuperseded: false,
+      limit: 50,
+    };
+
+    await expect(service.countRecords(companyId, revokedFilters, actor)).resolves.toEqual({ count: 1 });
+
+    const revokedRecords = await service.listRecords(companyId, revokedFilters, actor);
+    expect(revokedRecords.map((record) => record.id)).toEqual([captured.records[0].id]);
   });
 });
