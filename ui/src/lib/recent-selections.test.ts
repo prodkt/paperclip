@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { sortAgentsByRecency } from "./recent-assignees";
+import {
+  getRecentAssigneeIds,
+  getRecentAssigneeSelectionIds,
+  sortAgentsByRecency,
+  trackRecentAssignee,
+  trackRecentAssigneeUser,
+} from "./recent-assignees";
 import { getRecentProjectIds, trackRecentProject } from "./recent-projects";
 import { orderItemsBySelectedAndRecent } from "./recent-selections";
 
@@ -61,5 +67,13 @@ describe("recent selection ordering", () => {
     trackRecentProject("project-1");
 
     expect(getRecentProjectIds()).toEqual(["project-1", "project-2"]);
+  });
+
+  it("tracks recent user and agent assignee selections with prefixed ids", () => {
+    trackRecentAssignee("agent-1");
+    trackRecentAssigneeUser("user-1");
+
+    expect(getRecentAssigneeSelectionIds()).toEqual(["user:user-1", "agent:agent-1"]);
+    expect(getRecentAssigneeIds()).toEqual(["agent-1"]);
   });
 });

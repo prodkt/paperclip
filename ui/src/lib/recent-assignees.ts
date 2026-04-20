@@ -6,12 +6,39 @@ import {
 
 const STORAGE_KEY = "paperclip:recent-assignees";
 
+function agentSelectionId(agentId: string): string {
+  return `agent:${agentId}`;
+}
+
+function userSelectionId(userId: string): string {
+  return `user:${userId}`;
+}
+
+function agentIdFromSelectionId(id: string): string | null {
+  if (id.startsWith("agent:")) return id.slice("agent:".length);
+  if (!id.includes(":")) return id;
+  return null;
+}
+
 export function getRecentAssigneeIds(): string[] {
-  return readRecentSelectionIds(STORAGE_KEY);
+  return readRecentSelectionIds(STORAGE_KEY)
+    .map(agentIdFromSelectionId)
+    .filter((id): id is string => Boolean(id));
+}
+
+export function getRecentAssigneeSelectionIds(): string[] {
+  return readRecentSelectionIds(STORAGE_KEY).map((id) => {
+    if (id.includes(":")) return id;
+    return agentSelectionId(id);
+  });
 }
 
 export function trackRecentAssignee(agentId: string): void {
-  trackRecentSelectionId(STORAGE_KEY, agentId);
+  trackRecentSelectionId(STORAGE_KEY, agentSelectionId(agentId));
+}
+
+export function trackRecentAssigneeUser(userId: string): void {
+  trackRecentSelectionId(STORAGE_KEY, userSelectionId(userId));
 }
 
 export function sortAgentsByRecency<T extends { id: string; name: string }>(

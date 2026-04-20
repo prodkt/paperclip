@@ -58,7 +58,6 @@ export const InlineEntitySelector = forwardRef<HTMLButtonElement, InlineEntitySe
 
     const allOptions = useMemo<InlineEntityOption[]>(() => {
       const baseOptions = [{ id: "", label: noneLabel, searchText: noneLabel }, ...options];
-      if (recentOptionIds.length === 0) return orderItemsBySelectedAndRecent(baseOptions, value, []);
       return orderItemsBySelectedAndRecent(baseOptions, value, recentOptionIds);
     }, [noneLabel, options, recentOptionIds, value]);
 

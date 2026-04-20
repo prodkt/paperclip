@@ -56,8 +56,10 @@ vi.mock("../hooks/useProjectOrder", () => ({
 
 vi.mock("../lib/recent-assignees", () => ({
   getRecentAssigneeIds: () => [],
+  getRecentAssigneeSelectionIds: () => [],
   sortAgentsByRecency: (agents: unknown[]) => agents,
   trackRecentAssignee: vi.fn(),
+  trackRecentAssigneeUser: vi.fn(),
 }));
 
 vi.mock("../lib/assignees", () => ({
