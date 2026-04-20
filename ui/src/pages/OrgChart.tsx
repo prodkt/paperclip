@@ -229,6 +229,15 @@ export function OrgChart() {
     moved: false,
   });
   const suppressNextCardClick = useRef(false);
+  const suppressClickTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (suppressClickTimerRef.current !== null) {
+        window.clearTimeout(suppressClickTimerRef.current);
+      }
+    };
+  }, []);
 
   // Center the chart on first load
   const hasInitialized = useRef(false);
@@ -400,8 +409,12 @@ export function OrgChart() {
   const handleTouchEnd = useCallback(() => {
     if (touchGesture.current.moved) {
       suppressNextCardClick.current = true;
-      window.setTimeout(() => {
+      if (suppressClickTimerRef.current !== null) {
+        window.clearTimeout(suppressClickTimerRef.current);
+      }
+      suppressClickTimerRef.current = window.setTimeout(() => {
         suppressNextCardClick.current = false;
+        suppressClickTimerRef.current = null;
       }, 400);
     }
     touchGesture.current = {

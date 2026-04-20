@@ -219,6 +219,33 @@ describe("OrgChart mobile gestures", () => {
     expect(layer.style.transform).toBe("translate(50px, 105px) scale(1)");
   });
 
+  it("suppresses card navigation after a touch pan", async () => {
+    const { viewport } = await renderOrgChart();
+    const card = container.querySelector("[data-org-card]") as HTMLDivElement;
+
+    await act(async () => {
+      viewport.dispatchEvent(createTouchEvent("touchstart", [{ clientX: 100, clientY: 100 }]));
+      viewport.dispatchEvent(createTouchEvent("touchmove", [{ clientX: 130, clientY: 145 }]));
+      viewport.dispatchEvent(createTouchEvent("touchend", []));
+      card.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it("allows card navigation after a touch tap without movement", async () => {
+    const { viewport } = await renderOrgChart();
+    const card = container.querySelector("[data-org-card]") as HTMLDivElement;
+
+    await act(async () => {
+      viewport.dispatchEvent(createTouchEvent("touchstart", [{ clientX: 100, clientY: 100 }]));
+      viewport.dispatchEvent(createTouchEvent("touchend", []));
+      card.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith("/agents/ceo");
+  });
+
   it("pinch-zooms toward the touch center", async () => {
     const { viewport, layer } = await renderOrgChart();
 
