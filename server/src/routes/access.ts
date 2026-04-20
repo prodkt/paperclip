@@ -1079,6 +1079,7 @@ async function getProtectedMemberReason(
   opts?: {
     actorRole?: HumanCompanyMembershipRole | null;
     instanceAdminUserIds?: ReadonlySet<string>;
+    operation?: "archive" | "update";
   },
 ): Promise<string | null> {
   if (member.principalType !== "user") return "Only human company members can be removed.";
@@ -1094,8 +1095,10 @@ async function getProtectedMemberReason(
   const targetRole = member.membershipRole
     ? normalizeHumanRole(member.membershipRole, "operator")
     : "operator";
-  if (targetRole === "owner") return "Board owners cannot be removed from company access.";
-  if (targetRole === "admin") return "Company admins cannot be removed from company access.";
+  if (opts?.operation === "archive") {
+    if (targetRole === "owner") return "Board owners cannot be removed from company access.";
+    if (targetRole === "admin") return "Company admins cannot be removed from company access.";
+  }
 
   const actorRole = opts?.actorRole ?? await resolveActorHumanRole(req, access, companyId);
   if (!actorRole) return "Only active company members can remove users.";
@@ -1111,8 +1114,9 @@ async function assertCanManageCompanyMember(
   access: ReturnType<typeof accessService>,
   companyId: string,
   member: { principalId: string; principalType: string; membershipRole: string | null },
+  operation: "archive" | "update" = "update",
 ) {
-  const reason = await getProtectedMemberReason(req, access, companyId, member);
+  const reason = await getProtectedMemberReason(req, access, companyId, member, { operation });
   if (reason) throw forbidden(reason);
 }
 
@@ -1141,6 +1145,7 @@ async function addCompanyMemberRemovalAccess(
       const reason = await getProtectedMemberReason(req, access, companyId, member, {
         actorRole,
         instanceAdminUserIds,
+        operation: "archive",
       });
       return {
         ...member,
@@ -3961,7 +3966,7 @@ export function accessRoutes(
       await assertCompanyPermission(req, companyId, "users:manage_permissions");
       const memberToArchive = await access.getMemberById(companyId, memberId);
       if (!memberToArchive) throw notFound("Member not found");
-      await assertCanManageCompanyMember(req, access, companyId, memberToArchive);
+      await assertCanManageCompanyMember(req, access, companyId, memberToArchive, "archive");
 
       const result = await access.archiveMember(companyId, memberId, {
         reassignment: req.body.reassignment ?? null,
