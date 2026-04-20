@@ -13,6 +13,7 @@ import {
   workspaceOperations,
 } from "@paperclipai/db";
 import { ISSUE_CONTINUATION_SUMMARY_DOCUMENT_KEY } from "@paperclipai/shared";
+import { logger } from "../middleware/logger.js";
 import { classifyRunLiveness } from "./run-liveness.js";
 
 export interface ActivityFilters {
@@ -23,6 +24,7 @@ export interface ActivityFilters {
 }
 
 export function activityService(db: Db) {
+  const scheduledLivenessBackfills = new Set<string>();
   const issueIdAsText = sql<string>`${issues.id}::text`;
   const summarizedUsageJson = sql<Record<string, unknown> | null>`
     case
@@ -298,6 +300,19 @@ export function activityService(db: Db) {
     }
   }
 
+  function scheduleRunLivenessBackfill(companyId: string, issueId: string) {
+    const key = `${companyId}:${issueId}`;
+    if (scheduledLivenessBackfills.has(key)) return;
+    scheduledLivenessBackfills.add(key);
+    void backfillMissingRunLivenessForIssue(companyId, issueId)
+      .catch((err: unknown) => {
+        logger.warn({ err, companyId, issueId }, "run liveness backfill failed");
+      })
+      .finally(() => {
+        scheduledLivenessBackfills.delete(key);
+      });
+  }
+
   return {
     list: (filters: ActivityFilters) => {
       const conditions = [eq(activityLog.companyId, filters.companyId)];
@@ -348,7 +363,7 @@ export function activityService(db: Db) {
         .orderBy(desc(activityLog.createdAt)),
 
     runsForIssue: async (companyId: string, issueId: string) => {
-      await backfillMissingRunLivenessForIssue(companyId, issueId);
+      scheduleRunLivenessBackfill(companyId, issueId);
       return db
         .select({
           runId: heartbeatRuns.id,

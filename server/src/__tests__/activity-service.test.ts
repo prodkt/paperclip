@@ -20,11 +20,30 @@ import { activityService } from "../services/activity.ts";
 
 const embeddedPostgresSupport = await getEmbeddedPostgresTestSupport();
 const describeEmbeddedPostgres = embeddedPostgresSupport.supported ? describe : describe.skip;
+type ActivityService = ReturnType<typeof activityService>;
+type IssueRun = Awaited<ReturnType<ActivityService["runsForIssue"]>>[number];
 
 if (!embeddedPostgresSupport.supported) {
   console.warn(
     `Skipping embedded Postgres activity service tests on this host: ${embeddedPostgresSupport.reason ?? "unsupported environment"}`,
   );
+}
+
+async function waitForIssueRun(
+  service: ActivityService,
+  companyId: string,
+  issueId: string,
+  predicate: (run: IssueRun) => boolean,
+) {
+  const deadline = Date.now() + 2_000;
+  let latestRuns: IssueRun[] = [];
+  while (Date.now() < deadline) {
+    latestRuns = await service.runsForIssue(companyId, issueId);
+    const run = latestRuns.find(predicate);
+    if (run) return { run, runs: latestRuns };
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`Timed out waiting for issue run. Latest run count: ${latestRuns.length}`);
 }
 
 describeEmbeddedPostgres("activity service", () => {
@@ -212,10 +231,16 @@ describeEmbeddedPostgres("activity service", () => {
       createdAt: completedAt,
     });
 
-    const runs = await activityService(db).runsForIssue(companyId, issueId);
+    const service = activityService(db);
+    const { run, runs } = await waitForIssueRun(
+      service,
+      companyId,
+      issueId,
+      (entry) => entry.runId === runId && entry.livenessState === "completed",
+    );
 
     expect(runs).toHaveLength(1);
-    expect(runs[0]).toMatchObject({
+    expect(run).toMatchObject({
       runId,
       livenessState: "completed",
       livenessReason: "Issue is done",
@@ -341,8 +366,13 @@ describeEmbeddedPostgres("activity service", () => {
       updatedAt: createdAt,
     });
 
-    const runs = await activityService(db).runsForIssue(companyId, issueId);
-    const backfilledRun = runs.find((run) => run.runId === runId);
+    const service = activityService(db);
+    const { run: backfilledRun } = await waitForIssueRun(
+      service,
+      companyId,
+      issueId,
+      (entry) => entry.runId === runId && entry.livenessState === "plan_only",
+    );
 
     expect(backfilledRun).toMatchObject({
       runId,
@@ -442,8 +472,13 @@ describeEmbeddedPostgres("activity service", () => {
       updatedAt: createdAt,
     });
 
-    const runs = await activityService(db).runsForIssue(companyId, issueId);
-    const backfilledRun = runs.find((run) => run.runId === runId);
+    const service = activityService(db);
+    const { run: backfilledRun } = await waitForIssueRun(
+      service,
+      companyId,
+      issueId,
+      (entry) => entry.runId === runId && entry.livenessState === "plan_only",
+    );
 
     expect(backfilledRun).toMatchObject({
       runId,
