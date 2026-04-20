@@ -65,6 +65,11 @@ describeEmbeddedPostgres("heartbeat list", () => {
       agentId,
       invocationSource: "assignment",
       status: "running",
+      livenessState: "advanced",
+      livenessReason: "run produced action evidence",
+      continuationAttempt: 1,
+      lastUsefulActionAt: new Date("2026-04-18T12:00:00Z"),
+      nextAction: "continue implementation",
       contextSnapshot: { issueId: randomUUID() },
     });
 
@@ -80,6 +85,13 @@ describeEmbeddedPostgres("heartbeat list", () => {
       expect(runs).toHaveLength(1);
       expect(runs[0]?.id).toBe(runId);
       expect(runs[0]?.processGroupId ?? null).toBeNull();
+      expect(runs[0]).toMatchObject({
+        livenessState: "advanced",
+        livenessReason: "run produced action evidence",
+        continuationAttempt: 1,
+        nextAction: "continue implementation",
+      });
+      expect(runs[0]?.lastUsefulActionAt).toEqual(new Date("2026-04-18T12:00:00Z"));
     } finally {
       if (originalDescriptor) {
         Object.defineProperty(heartbeatRuns, "processGroupId", originalDescriptor);
