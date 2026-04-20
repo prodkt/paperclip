@@ -69,6 +69,7 @@ function signalRunningProcess(
 export const runningProcesses = new Map<string, RunningProcess>();
 export const MAX_CAPTURE_BYTES = 4 * 1024 * 1024;
 export const MAX_EXCERPT_BYTES = 32 * 1024;
+const TERMINAL_RESULT_SCAN_OVERLAP_CHARS = 64 * 1024;
 const SENSITIVE_ENV_KEY = /(key|token|secret|password|passwd|authorization|cookie)/i;
 const PAPERCLIP_SKILL_ROOT_RELATIVE_CANDIDATES = [
   "../../skills",
@@ -1301,6 +1302,8 @@ export async function runChildProcess(
         let terminalCleanupStarted = false;
         let terminalCleanupTimer: NodeJS.Timeout | null = null;
         let terminalCleanupKillTimer: NodeJS.Timeout | null = null;
+        let terminalResultStdoutScanOffset = 0;
+        let terminalResultStderrScanOffset = 0;
 
         const clearTerminalCleanupTimers = () => {
           if (terminalCleanupTimer) clearTimeout(terminalCleanupTimer);
@@ -1313,15 +1316,24 @@ export async function runChildProcess(
           const terminalCleanup = opts.terminalResultCleanup;
           if (!terminalCleanup || terminalCleanupStarted || timedOut) return;
           if (!terminalResultSeen) {
+            const stdoutStart = Math.max(0, terminalResultStdoutScanOffset - TERMINAL_RESULT_SCAN_OVERLAP_CHARS);
+            const stderrStart = Math.max(0, terminalResultStderrScanOffset - TERMINAL_RESULT_SCAN_OVERLAP_CHARS);
+            const scanOutput = {
+              stdout: stdout.slice(stdoutStart),
+              stderr: stderr.slice(stderrStart),
+            };
+            terminalResultStdoutScanOffset = stdout.length;
+            terminalResultStderrScanOffset = stderr.length;
+            if (scanOutput.stdout.length === 0 && scanOutput.stderr.length === 0) return;
             try {
-              terminalResultSeen = terminalCleanup.hasTerminalResult({ stdout, stderr });
+              terminalResultSeen = terminalCleanup.hasTerminalResult(scanOutput);
             } catch (err) {
               onLogError(err, runId, "failed to inspect terminal adapter output");
             }
           }
           if (!terminalResultSeen || !childExited) return;
 
-          if (terminalCleanupTimer) clearTimeout(terminalCleanupTimer);
+          if (terminalCleanupTimer) return;
           const graceMs = Math.max(0, terminalCleanup.graceMs ?? 5_000);
           terminalCleanupTimer = setTimeout(() => {
             terminalCleanupTimer = null;
