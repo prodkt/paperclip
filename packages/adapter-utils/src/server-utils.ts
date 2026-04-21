@@ -1345,7 +1345,6 @@ export async function runChildProcess(
         let stdout = "";
         let stderr = "";
         let logChain: Promise<void> = Promise.resolve();
-        let childExited = false;
         let terminalResultSeen = false;
         let terminalCleanupStarted = false;
         let terminalCleanupTimer: NodeJS.Timeout | null = null;
@@ -1379,7 +1378,7 @@ export async function runChildProcess(
               onLogError(err, runId, "failed to inspect terminal adapter output");
             }
           }
-          if (!terminalResultSeen || !childExited) return;
+          if (!terminalResultSeen) return;
 
           if (terminalCleanupTimer) return;
           const graceMs = Math.max(0, terminalCleanup.graceMs ?? 5_000);
@@ -1462,7 +1461,6 @@ export async function runChildProcess(
         });
 
         child.on("exit", () => {
-          childExited = true;
           maybeArmTerminalResultCleanup();
         });
 
