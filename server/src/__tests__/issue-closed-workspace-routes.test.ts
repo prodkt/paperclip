@@ -80,6 +80,7 @@ function registerServiceMocks() {
     routineService: () => ({
       syncRunStatusForIssue: vi.fn(async () => undefined),
     }),
+    issueDeliverableService: () => ({}),
     workProductService: () => ({}),
   }));
 }

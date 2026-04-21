@@ -97,6 +97,9 @@ function registerModuleMocks() {
       listCompanyIds: vi.fn(async () => ["company-1"]),
     }),
     issueApprovalService: () => ({}),
+    issueDeliverableService: () => ({
+      getForIssue: vi.fn(async () => null),
+    }),
     issueService: () => mockIssueService,
     logActivity: vi.fn(async () => undefined),
     projectService: () => ({}),

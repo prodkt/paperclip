@@ -74,6 +74,7 @@ function registerModuleMocks() {
     logActivity: mockLogActivity,
     projectService: () => ({}),
     routineService: () => mockRoutineService,
+    issueDeliverableService: () => ({}),
     workProductService: () => ({}),
   }));
 }

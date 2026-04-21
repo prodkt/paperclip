@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { queryKeys } from "../lib/queryKeys";
+import { safeActionHref } from "../lib/safeLinks";
 import { createIssueDetailPath } from "../lib/issueDetailBreadcrumb";
 import { projectUrl, relativeTime } from "../lib/utils";
 import {
@@ -157,7 +158,7 @@ function ArtifactCard({
   projectHref: string | null;
 }) {
   const meta = deliverableMeta(item);
-  const href = itemHref(item);
+  const href = safeActionHref(itemHref(item));
   const sizeLabel = formatByteSize(item.byteSize);
   const MetaIcon = meta.icon;
   const isInternalDocLink = Boolean(href?.startsWith("/issues/"));
@@ -263,7 +264,7 @@ function ArtifactCard({
               </Button>
             ) : (
               <Button asChild size="sm" variant="outline">
-                <a href={href} target="_blank" rel="noreferrer">
+                <a href={href} target="_blank" rel="noreferrer noopener">
                   <ArrowUpRight className="mr-1.5 h-4 w-4" />
                   {actionLabel(item)}
                 </a>

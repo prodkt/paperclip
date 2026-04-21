@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+function isHttpUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export const issueWorkProductTypeSchema = z.enum([
   "preview_url",
   "runtime_service",
@@ -37,7 +46,7 @@ export const createIssueWorkProductSchema = z.object({
   provider: z.string().min(1),
   externalId: z.string().optional().nullable(),
   title: z.string().min(1),
-  url: z.string().url().optional().nullable(),
+  url: z.string().trim().refine(isHttpUrl, "URL must use http or https").optional().nullable(),
   status: issueWorkProductStatusSchema.default("active"),
   reviewState: issueWorkProductReviewStateSchema.optional().default("none"),
   isPrimary: z.boolean().optional().default(false),

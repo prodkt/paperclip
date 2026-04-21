@@ -1,6 +1,7 @@
 import type { IssueDeliverableItem, IssueDeliverablesResponse } from "@paperclipai/shared";
 import { Link } from "@/lib/router";
 import { projectWorkspaceUrl, relativeTime } from "@/lib/utils";
+import { safeActionHref } from "@/lib/safeLinks";
 import { EmptyState } from "./EmptyState";
 import { PageSkeleton } from "./PageSkeleton";
 import { Badge } from "@/components/ui/badge";
@@ -48,17 +49,18 @@ function itemIcon(item: IssueDeliverableItem) {
 }
 
 function DeliverableAction({ href, label }: { href: string | null; label: string | null }) {
-  if (!href || !label) return null;
-  if (href.startsWith("#")) {
+  const safeHref = safeActionHref(href, { allowHash: true });
+  if (!safeHref || !label) return null;
+  if (safeHref.startsWith("#")) {
     return (
       <Button asChild size="sm" variant="outline">
-        <a href={href}>{label}</a>
+        <a href={safeHref}>{label}</a>
       </Button>
     );
   }
   return (
     <Button asChild size="sm" variant="outline">
-      <a href={href} target="_blank" rel="noreferrer">
+      <a href={safeHref} target="_blank" rel="noreferrer noopener">
         {label}
       </a>
     </Button>
