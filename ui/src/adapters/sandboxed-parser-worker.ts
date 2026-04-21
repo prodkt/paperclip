@@ -16,17 +16,13 @@
 /** Messages sent from the main thread to the worker. */
 export type SandboxRequest =
   | { type: "init"; source: string }
-  | { type: "parse"; id: number; line: string; ts: string }
-  | { type: "create_parser"; id: number }
-  | { type: "parser_parse"; id: number; parserId: number; line: string; ts: string }
-  | { type: "parser_reset"; parserId: number };
+  | { type: "parse"; id: number; line: string; ts: string };
 
 /** Messages sent from the worker back to the main thread. */
 export type SandboxResponse =
-  | { type: "ready"; hasFactory: boolean }
+  | { type: "ready" }
   | { type: "error"; message: string }
-  | { type: "result"; id: number; entries: unknown[] }
-  | { type: "parser_created"; id: number; parserId: number };
+  | { type: "result"; id: number; entries: unknown[] };
 
 // ── Worker bootstrap source ─────────────────────────────────────────────────
 
@@ -37,8 +33,7 @@ export type SandboxResponse =
  *     no-ops or `undefined`.
  *  2. Waits for an `init` message carrying the adapter's parser source.
  *  3. Evaluates the source via `new Function()` and extracts exports.
- *  4. Responds to `parse` / `create_parser` / `parser_parse` / `parser_reset`
- *     messages with `TranscriptEntry[]` results.
+ *  4. Responds to `parse` messages with `TranscriptEntry[]` results.
  */
 const WORKER_BOOTSTRAP = `
 "use strict";
@@ -88,8 +83,7 @@ self.IDBFactory = _undefined;
 
 let parseStdoutLine = null;
 let createStdoutParser = null;
-let nextParserId = 1;
-const parserInstances = new Map();
+let fallbackParser = null;
 
 // ── 3. Message handler ──────────────────────────────────────────────────────
 
@@ -129,13 +123,19 @@ self.onmessage = function (e) {
       if (typeof resolved.createStdoutParser === "function") {
         createStdoutParser = resolved.createStdoutParser;
       }
+      if (!parseStdoutLine && createStdoutParser) {
+        fallbackParser = createStdoutParser();
+        if (fallbackParser && typeof fallbackParser.parseLine === "function") {
+          parseStdoutLine = (line, ts) => fallbackParser.parseLine(line, ts);
+        }
+      }
 
-      if (!parseStdoutLine && !createStdoutParser) {
-        self.postMessage({ type: "error", message: "Parser module exports neither parseStdoutLine nor createStdoutParser" });
+      if (!parseStdoutLine) {
+        self.postMessage({ type: "error", message: "Parser module exports no usable parseStdoutLine or createStdoutParser" });
         return;
       }
 
-      self.postMessage({ type: "ready", hasFactory: !!createStdoutParser });
+      self.postMessage({ type: "ready" });
     } catch (err) {
       self.postMessage({ type: "error", message: "Parser init failed: " + (err && err.message || String(err)) });
     }
@@ -152,43 +152,6 @@ self.onmessage = function (e) {
     return;
   }
 
-  if (msg.type === "create_parser") {
-    try {
-      if (!createStdoutParser) {
-        self.postMessage({ type: "error", message: "No createStdoutParser factory available" });
-        return;
-      }
-      const id = nextParserId++;
-      parserInstances.set(id, createStdoutParser());
-      self.postMessage({ type: "parser_created", id: msg.id, parserId: id });
-    } catch (err) {
-      self.postMessage({ type: "error", message: "createStdoutParser failed: " + (err && err.message || String(err)) });
-    }
-    return;
-  }
-
-  if (msg.type === "parser_parse") {
-    try {
-      const parser = parserInstances.get(msg.parserId);
-      if (!parser) {
-        self.postMessage({ type: "result", id: msg.id, entries: [] });
-        return;
-      }
-      const entries = parser.parseLine(msg.line, msg.ts);
-      self.postMessage({ type: "result", id: msg.id, entries: entries || [] });
-    } catch (err) {
-      self.postMessage({ type: "result", id: msg.id, entries: [] });
-    }
-    return;
-  }
-
-  if (msg.type === "parser_reset") {
-    try {
-      const parser = parserInstances.get(msg.parserId);
-      if (parser) parser.reset();
-    } catch {}
-    return;
-  }
 };
 `;
 

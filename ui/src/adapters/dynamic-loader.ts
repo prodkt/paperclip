@@ -28,7 +28,7 @@
  */
 
 import type { TranscriptEntry } from "@paperclipai/adapter-utils";
-import type { StatefulStdoutParser, StdoutLineParser, StdoutParserFactory } from "./types";
+import type { StdoutLineParser, StdoutParserFactory } from "./types";
 import { createSandboxedWorker } from "./sandboxed-parser-worker";
 import type { SandboxRequest, SandboxResponse } from "./sandboxed-parser-worker";
 
@@ -42,10 +42,8 @@ interface DynamicParserModule {
 interface SandboxedParser {
   worker: Worker;
   ready: boolean;
-  hasFactory: boolean;
   nextId: number;
   pendingResolves: Map<number, (entries: TranscriptEntry[]) => void>;
-  pendingParserCreates: Map<number, (parserId: number | null) => void>;
 }
 
 // ── State ───────────────────────────────────────────────────────────────────
@@ -82,10 +80,6 @@ function lineCacheKey(line: string, ts: string): string {
   return `${ts}\u0000${line}`;
 }
 
-function statefulLineCacheKey(index: number, line: string, ts: string): string {
-  return `${index}\u0000${ts}\u0000${line}`;
-}
-
 function notifyResultReady(): void {
   resultNotifier?.();
 }
@@ -107,18 +101,6 @@ function drainPendingRequests(sandbox: SandboxedParser): void {
     resolver([]);
   }
   sandbox.pendingResolves.clear();
-
-  for (const resolver of sandbox.pendingParserCreates.values()) {
-    resolver(null);
-  }
-  sandbox.pendingParserCreates.clear();
-}
-
-function drainPendingParserCreates(sandbox: SandboxedParser): void {
-  for (const resolver of sandbox.pendingParserCreates.values()) {
-    resolver(null);
-  }
-  sandbox.pendingParserCreates.clear();
 }
 
 /**
@@ -130,10 +112,8 @@ function initSandboxedWorker(source: string): Promise<SandboxedParser> {
     const sandbox: SandboxedParser = {
       worker,
       ready: false,
-      hasFactory: false,
       nextId: 1,
       pendingResolves: new Map(),
-      pendingParserCreates: new Map(),
     };
 
     // Timeout if the worker doesn't respond within 5s
@@ -149,7 +129,6 @@ function initSandboxedWorker(source: string): Promise<SandboxedParser> {
       if (msg.type === "ready") {
         clearTimeout(timeout);
         sandbox.ready = true;
-        sandbox.hasFactory = msg.hasFactory;
 
         // Switch to the steady-state message handler.
         worker.onmessage = (ev: MessageEvent<SandboxResponse>) => {
@@ -160,15 +139,9 @@ function initSandboxedWorker(source: string): Promise<SandboxedParser> {
               sandbox.pendingResolves.delete(resp.id);
               resolver(resp.entries as TranscriptEntry[]);
             }
-          } else if (resp.type === "parser_created") {
-            const resolver = sandbox.pendingParserCreates.get(resp.id);
-            if (resolver) {
-              sandbox.pendingParserCreates.delete(resp.id);
-              resolver(resp.parserId);
-            }
           } else if (resp.type === "error") {
             console.error("[adapter-ui-loader] Worker reported error:", resp.message);
-            drainPendingParserCreates(sandbox);
+            drainPendingRequests(sandbox);
           }
         };
 
@@ -201,12 +174,9 @@ function initSandboxedWorker(source: string): Promise<SandboxedParser> {
  * Build a DynamicParserModule that delegates all calls to the sandboxed worker.
  *
  * The parseStdoutLine wrapper is **synchronous** to match the existing contract.
- * It sends the parse request to the worker and returns `[]` immediately.
- * When the worker responds, the caller must handle the async result.
- *
- * For callers that need sync results (the current transcript renderer), we
- * provide a sync wrapper that accumulates results.  The registry's
- * re-registration pattern will trigger a re-render when results arrive.
+ * Cache misses send a parse request to the worker and return `[]`; when the
+ * worker responds, the registry notification path recomputes transcripts and
+ * this wrapper returns the cached result synchronously.
  *
  * In practice, because the existing codebase already handles the "bridge"
  * pattern where parseStdoutLine returns [] until the dynamic parser loads,
@@ -234,82 +204,7 @@ function buildParserModule(sandbox: SandboxedParser): DynamicParserModule {
     return [];
   };
 
-  const mod: DynamicParserModule = { parseStdoutLine };
-
-  if (sandbox.hasFactory) {
-    const statefulCache = new Map<string, TranscriptEntry[]>();
-    const statefulPendingKeys = new Set<string>();
-
-    mod.createStdoutParser = (): StatefulStdoutParser => {
-      let parserId: number | null = null;
-      let parserReady = false;
-      let lineIndex = 0;
-      const history: { key: string; line: string; ts: string }[] = [];
-      const sentKeys = new Set<string>();
-      let replaying = false;
-
-      // Request a parser instance from the worker.
-      const id = nextRequestId(sandbox);
-      sandbox.pendingParserCreates.set(id, (createdParserId) => {
-        if (createdParserId !== null) {
-          parserId = createdParserId;
-          parserReady = true;
-          flushReplay();
-        }
-      });
-      sendToWorker(sandbox, { type: "create_parser", id });
-
-      const sendParserLine = (item: { key: string; line: string; ts: string }, cacheResult: boolean): void => {
-        if (parserId === null || sentKeys.has(item.key)) return;
-        sentKeys.add(item.key);
-        const reqId = nextRequestId(sandbox);
-        sandbox.pendingResolves.set(reqId, (entries) => {
-          if (cacheResult) {
-            statefulPendingKeys.delete(item.key);
-            statefulCache.set(item.key, entries);
-            notifyResultReady();
-          }
-        });
-        sendToWorker(sandbox, { type: "parser_parse", id: reqId, parserId, line: item.line, ts: item.ts });
-      };
-
-      function flushReplay(): void {
-        if (!parserReady || parserId === null || replaying) return;
-        replaying = true;
-        try {
-          for (const item of history) {
-            sendParserLine(item, statefulPendingKeys.has(item.key));
-          }
-        } finally {
-          replaying = false;
-        }
-      }
-
-      return {
-        parseLine: (line: string, ts: string): TranscriptEntry[] => {
-          const key = statefulLineCacheKey(lineIndex++, line, ts);
-          const cached = statefulCache.get(key);
-          history.push({ key, line, ts });
-
-          if (cached) return cached.slice();
-
-          if (!statefulPendingKeys.has(key)) {
-            statefulPendingKeys.add(key);
-            flushReplay();
-          }
-
-          return [];
-        },
-        reset: () => {
-          if (parserReady && parserId !== null) {
-            sendToWorker(sandbox, { type: "parser_reset", parserId });
-          }
-        },
-      };
-    };
-  }
-
-  return mod;
+  return { parseStdoutLine };
 }
 
 // ── Public API ──────────────────────────────────────────────────────────────
