@@ -767,7 +767,7 @@ describe("optimistic issue comments", () => {
 
     const result = applyLocalQueuedIssueCommentState(comment, {
       queuedTargetRunId: "run-1",
-      targetRunIsLive: false,
+      targetRunIsLive: true,
       runningRunId: "run-2",
     });
 
