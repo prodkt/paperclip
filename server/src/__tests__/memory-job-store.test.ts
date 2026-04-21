@@ -107,6 +107,49 @@ describeEmbeddedPostgres("memory job store", () => {
     });
   });
 
+  it("rejects reruns when a lineage already has a queued retry", async () => {
+    const companyId = randomUUID();
+    const store = memoryJobStore(db);
+    await insertCompany(db, companyId);
+
+    const original = await store.enqueue({
+      companyId,
+      bindingId: randomUUID(),
+      bindingKey: "primary",
+      operationType: "capture",
+      sourceKind: "manual",
+    });
+
+    await store.cancel({
+      companyId,
+      jobId: original.id,
+      now: new Date("2026-04-21T18:00:00.000Z"),
+      resultSummary: "Cancelled by test",
+    });
+
+    const firstRetry = await store.rerun(companyId, original.id, {
+      now: new Date("2026-04-21T18:01:00.000Z"),
+    });
+
+    await expect(store.rerun(companyId, original.id)).rejects.toMatchObject({
+      status: 409,
+      message: `Memory job ${original.id} already has a queued or running rerun attempt`,
+    });
+
+    await store.cancel({
+      companyId,
+      jobId: firstRetry.id,
+      now: new Date("2026-04-21T18:02:00.000Z"),
+      resultSummary: "Retry cancelled by test",
+    });
+
+    await expect(store.rerun(companyId, original.id)).resolves.toMatchObject({
+      retryOfJobId: original.id,
+      attemptNumber: 3,
+      status: "queued",
+    });
+  });
+
   it("derives stuck effective state from expired running leases in list and detail queries", async () => {
     const companyId = randomUUID();
     const now = new Date("2026-04-21T19:00:00.000Z");

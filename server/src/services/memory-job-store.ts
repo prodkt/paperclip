@@ -696,7 +696,10 @@ export function memoryJobStore(db: Db) {
       );
 
       const lineageRows = await txDb
-        .select({ attemptNumber: memoryExtractionJobs.attemptNumber })
+        .select({
+          attemptNumber: memoryExtractionJobs.attemptNumber,
+          status: memoryExtractionJobs.status,
+        })
         .from(memoryExtractionJobs)
         .where(
           and(
@@ -707,6 +710,11 @@ export function memoryJobStore(db: Db) {
             ),
           ),
         );
+
+      const pendingAttempt = lineageRows.find((row) => row.status === "queued" || row.status === "running");
+      if (pendingAttempt) {
+        throw conflict(`Memory job ${retryRootId} already has a queued or running rerun attempt`);
+      }
 
       const nextAttemptNumber = lineageRows.reduce((maxAttempt, row) => {
         return Math.max(maxAttempt, row.attemptNumber);
