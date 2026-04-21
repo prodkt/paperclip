@@ -3312,7 +3312,8 @@ export function heartbeatService(db: Db) {
           lte(heartbeatRuns.scheduledRetryAt, now),
         ),
       )
-      .orderBy(asc(heartbeatRuns.scheduledRetryAt), asc(heartbeatRuns.createdAt), asc(heartbeatRuns.id));
+      .orderBy(asc(heartbeatRuns.scheduledRetryAt), asc(heartbeatRuns.createdAt), asc(heartbeatRuns.id))
+      .limit(50);
 
     const promotedRunIds: string[] = [];
 

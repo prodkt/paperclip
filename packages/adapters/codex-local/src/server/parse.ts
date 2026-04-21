@@ -93,5 +93,7 @@ export function isCodexTransientUpstreamError(input: {
     .join("\n");
 
   if (!CODEX_TRANSIENT_UPSTREAM_RE.test(haystack)) return false;
+  // Keep automatic retries scoped to the observed remote-compaction/high-demand
+  // failure shape; broader 429s may be caused by user or account limits.
   return CODEX_REMOTE_COMPACTION_RE.test(haystack) || /high\s+demand|temporary\s+errors/i.test(haystack);
 }
