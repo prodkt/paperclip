@@ -5952,7 +5952,10 @@ export function heartbeatService(db: Db) {
       });
 
       if (outcome.kind === "deferred" || outcome.kind === "skipped") return null;
-      if (outcome.kind === "coalesced") return outcome.run;
+      if (outcome.kind === "coalesced") {
+        await startNextQueuedRunForAgent(agent.id);
+        return outcome.run;
+      }
 
       const newRun = outcome.run;
       publishLiveEvent({
