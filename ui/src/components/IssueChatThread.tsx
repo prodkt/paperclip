@@ -108,6 +108,7 @@ interface IssueChatMessageContext {
   feedbackDataSharingPreference: FeedbackDataSharingPreference;
   feedbackTermsUrl: string | null;
   agentMap?: Map<string, Agent>;
+  projectNameMap?: ReadonlyMap<string, string>;
   currentUserId?: string | null;
   userLabelMap?: ReadonlyMap<string, string> | null;
   userProfileMap?: ReadonlyMap<string, CompanyUserProfile> | null;
@@ -245,6 +246,7 @@ interface IssueChatThreadProps {
   projectId?: string | null;
   issueStatus?: string;
   agentMap?: Map<string, Agent>;
+  projectNameMap?: ReadonlyMap<string, string>;
   currentUserId?: string | null;
   userLabelMap?: ReadonlyMap<string, string> | null;
   userProfileMap?: ReadonlyMap<string, CompanyUserProfile> | null;
@@ -1734,6 +1736,7 @@ function IssueChatFeedbackButtons({
 function IssueChatSystemMessage({ message }: { message: ThreadMessage }) {
   const {
     agentMap,
+    projectNameMap,
     currentUserId,
     userLabelMap,
     onAcceptInteraction,
@@ -1769,6 +1772,7 @@ function IssueChatSystemMessage({ message }: { message: ThreadMessage }) {
           <IssueThreadInteractionCard
             interaction={interaction}
             agentMap={agentMap}
+            projectNameMap={projectNameMap}
             currentUserId={currentUserId}
             userLabelMap={userLabelMap}
             onAcceptInteraction={onAcceptInteraction}
@@ -2152,6 +2156,7 @@ export function IssueChatThread({
   projectId,
   issueStatus,
   agentMap,
+  projectNameMap,
   currentUserId,
   userLabelMap,
   userProfileMap,
@@ -2350,6 +2355,7 @@ export function IssueChatThread({
       feedbackDataSharingPreference,
       feedbackTermsUrl,
       agentMap,
+      projectNameMap,
       currentUserId,
       userLabelMap,
       userProfileMap,
@@ -2370,6 +2376,7 @@ export function IssueChatThread({
       feedbackDataSharingPreference,
       feedbackTermsUrl,
       agentMap,
+      projectNameMap,
       currentUserId,
       userLabelMap,
       userProfileMap,

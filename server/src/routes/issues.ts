@@ -204,13 +204,18 @@ function queueResolvedInteractionContinuationWakeup(input: {
   actor: { actorType: "user" | "agent"; actorId: string };
   source: string;
 }) {
+  const isAcceptResolution = input.interaction.status === "accepted"
+    || (
+      input.interaction.kind === "ask_user_questions"
+      && input.interaction.status === "answered"
+    );
   if (
     input.interaction.continuationPolicy !== "wake_assignee"
     && input.interaction.continuationPolicy !== "wake_assignee_on_accept"
   ) return;
   if (
     input.interaction.continuationPolicy === "wake_assignee_on_accept"
-    && input.interaction.status !== "accepted"
+    && !isAcceptResolution
   ) return;
   if (input.interaction.status === "expired") return;
   if (!input.issue.assigneeAgentId || isClosedIssueStatus(input.issue.status)) return;

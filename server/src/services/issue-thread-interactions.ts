@@ -731,7 +731,7 @@ export function issueThreadInteractionService(db: Db) {
       const current = await getPendingInteractionForResolution({ issue, interactionId });
       switch (current.kind) {
         case "suggest_tasks":
-          return issueThreadInteractionService(db).acceptSuggestedTasks(issue, interactionId, data, actor);
+          return issueThreadInteractionService(db).acceptSuggestedTasks(issue, interactionId, data, actor, current);
         case "request_confirmation": {
           const accepted = await acceptRequestConfirmation({
             issue,
@@ -754,12 +754,14 @@ export function issueThreadInteractionService(db: Db) {
       interactionId: string,
       input: AcceptIssueThreadInteraction,
       actor: InteractionActor,
+      currentRow?: IssueThreadInteractionRow,
     ) => {
-      const current = await db
-        .select()
-        .from(issueThreadInteractions)
-        .where(eq(issueThreadInteractions.id, interactionId))
-        .then((rows) => rows[0] ?? null);
+      const current = currentRow
+        ?? await db
+          .select()
+          .from(issueThreadInteractions)
+          .where(eq(issueThreadInteractions.id, interactionId))
+          .then((rows) => rows[0] ?? null);
 
       if (!current) throw notFound("Interaction not found");
       if (current.companyId !== issue.companyId || current.issueId !== issue.id) {

@@ -523,6 +523,7 @@ type IssueDetailChatTabProps = {
   feedbackDataSharingPreference: "allowed" | "not_allowed" | "prompt";
   feedbackTermsUrl: string | null;
   agentMap: Map<string, Agent>;
+  projectNameMap: ReadonlyMap<string, string>;
   currentUserId: string | null;
   userLabelMap: ReadonlyMap<string, string> | null;
   userProfileMap: ReadonlyMap<string, import("../lib/company-members").CompanyUserProfile> | null;
@@ -573,6 +574,7 @@ const IssueDetailChatTab = memo(function IssueDetailChatTab({
   feedbackDataSharingPreference,
   feedbackTermsUrl,
   agentMap,
+  projectNameMap,
   currentUserId,
   userLabelMap,
   userProfileMap,
@@ -736,6 +738,7 @@ const IssueDetailChatTab = memo(function IssueDetailChatTab({
         projectId={projectId}
         issueStatus={issueStatus}
         agentMap={agentMap}
+        projectNameMap={projectNameMap}
         currentUserId={currentUserId}
         userLabelMap={userLabelMap}
         userProfileMap={userProfileMap}
@@ -1152,6 +1155,11 @@ export function IssueDetail() {
     for (const a of agents ?? []) map.set(a.id, a);
     return map;
   }, [agents]);
+  const projectNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const project of orderedProjects) map.set(project.id, project.name);
+    return map;
+  }, [orderedProjects]);
   const userProfileMap = useMemo(
     () => buildCompanyUserProfileMap(companyMembers?.users),
     [companyMembers?.users],
@@ -2931,6 +2939,7 @@ export function IssueDetail() {
               feedbackDataSharingPreference={feedbackDataSharingPreference}
               feedbackTermsUrl={FEEDBACK_TERMS_URL}
               agentMap={agentMap}
+              projectNameMap={projectNameMap}
               currentUserId={currentUserId}
               userLabelMap={userLabelMap}
               userProfileMap={userProfileMap}

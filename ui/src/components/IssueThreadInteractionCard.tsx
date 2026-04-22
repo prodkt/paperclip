@@ -29,6 +29,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 interface IssueThreadInteractionCardProps {
   interaction: IssueThreadInteraction;
   agentMap?: Map<string, Agent>;
+  projectNameMap?: ReadonlyMap<string, string>;
   currentUserId?: string | null;
   userLabelMap?: ReadonlyMap<string, string> | null;
   onAcceptInteraction?: (
@@ -171,6 +172,7 @@ function TaskTreeNode({
   node,
   createdByClientKey,
   agentMap,
+  projectNameMap,
   currentUserId,
   userLabelMap,
   depth = 0,
@@ -182,6 +184,7 @@ function TaskTreeNode({
   node: SuggestedTaskTreeNode;
   createdByClientKey: ReadonlyMap<string, SuggestTasksResultCreatedTask>;
   agentMap?: Map<string, Agent>;
+  projectNameMap?: ReadonlyMap<string, string>;
   currentUserId?: string | null;
   userLabelMap?: ReadonlyMap<string, string> | null;
   depth?: number;
@@ -208,9 +211,12 @@ function TaskTreeNode({
     node.task.assigneeAgentId || node.task.assigneeUserId,
   );
   const labels = node.task.labels ?? [];
+  const projectLabel = node.task.projectId
+    ? projectNameMap?.get(node.task.projectId) ?? node.task.projectId.slice(0, 8)
+    : null;
   const hasMetadata = hasExplicitAssignee
     || Boolean(node.task.billingCode)
-    || Boolean(node.task.projectId)
+    || Boolean(projectLabel)
     || labels.length > 0;
 
   return (
@@ -282,8 +288,8 @@ function TaskTreeNode({
             {node.task.billingCode ? (
               <TaskField label="Billing" value={node.task.billingCode} />
             ) : null}
-            {node.task.projectId ? (
-              <TaskField label="Project" value={node.task.projectId} tone="subtle" />
+            {projectLabel ? (
+              <TaskField label="Project" value={projectLabel} tone="subtle" />
             ) : null}
             {labels.map((label) => (
               <TaskField key={label} label="Label" value={label} tone="subtle" />
@@ -311,6 +317,7 @@ function TaskTreeNode({
               node={child}
               createdByClientKey={createdByClientKey}
               agentMap={agentMap}
+              projectNameMap={projectNameMap}
               currentUserId={currentUserId}
               userLabelMap={userLabelMap}
               depth={depth + 1}
@@ -329,6 +336,7 @@ function TaskTreeNode({
 function SuggestTasksCard({
   interaction,
   agentMap,
+  projectNameMap,
   currentUserId,
   userLabelMap,
   onAcceptInteraction,
@@ -336,6 +344,7 @@ function SuggestTasksCard({
 }: {
   interaction: SuggestTasksInteraction;
   agentMap?: Map<string, Agent>;
+  projectNameMap?: ReadonlyMap<string, string>;
   currentUserId?: string | null;
   userLabelMap?: ReadonlyMap<string, string> | null;
   onAcceptInteraction?: (
@@ -458,6 +467,7 @@ function SuggestTasksCard({
             node={root}
             createdByClientKey={createdByClientKey}
             agentMap={agentMap}
+            projectNameMap={projectNameMap}
             currentUserId={currentUserId}
             userLabelMap={userLabelMap}
             selectedClientKeys={selectedClientKeys}
@@ -1157,6 +1167,7 @@ function RequestConfirmationCard({
 export function IssueThreadInteractionCard({
   interaction,
   agentMap,
+  projectNameMap,
   currentUserId,
   userLabelMap,
   onAcceptInteraction,
@@ -1238,6 +1249,7 @@ export function IssueThreadInteractionCard({
           <SuggestTasksCard
             interaction={interaction}
             agentMap={agentMap}
+            projectNameMap={projectNameMap}
             currentUserId={currentUserId}
             userLabelMap={userLabelMap}
             onAcceptInteraction={onAcceptInteraction}

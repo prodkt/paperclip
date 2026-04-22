@@ -99,6 +99,26 @@ describe("IssueThreadInteractionCard", () => {
     expect(host.textContent).toContain("Child task");
   });
 
+  it("renders project names for suggested task metadata", () => {
+    const host = renderCard({
+      interaction: {
+        ...pendingSuggestedTasksInteraction,
+        payload: {
+          ...pendingSuggestedTasksInteraction.payload,
+          tasks: pendingSuggestedTasksInteraction.payload.tasks.map((task) =>
+            task.clientKey === "root-design"
+              ? { ...task, projectId: "project-board-ui" }
+              : task
+          ),
+        },
+      },
+      projectNameMap: new Map([["project-board-ui", "Board UI"]]),
+    });
+
+    expect(host.textContent).toContain("Project: Board UI");
+    expect(host.textContent).not.toContain("Project: project-board-ui");
+  });
+
   it("shows an explicit placeholder when a rejected interaction has no reason", () => {
     const host = renderCard({
       interaction: {

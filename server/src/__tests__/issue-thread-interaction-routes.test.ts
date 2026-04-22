@@ -360,6 +360,56 @@ describe("issue thread interaction routes", () => {
     );
   });
 
+  it("answers questions and emits an accept-only continuation wake", async () => {
+    mockInteractionService.answerQuestions.mockResolvedValueOnce({
+      id: "interaction-2",
+      companyId: "company-1",
+      issueId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      kind: "ask_user_questions",
+      status: "answered",
+      continuationPolicy: "wake_assignee_on_accept",
+      idempotencyKey: null,
+      sourceCommentId: "comment-2",
+      sourceRunId: "run-2",
+      payload: {
+        version: 1,
+        questions: [{
+          id: "scope",
+          prompt: "Scope?",
+          selectionMode: "single",
+          options: [{ id: "phase-1", label: "Phase 1" }],
+        }],
+      },
+      result: {
+        version: 1,
+        answers: [{ questionId: "scope", optionIds: ["phase-1"] }],
+      },
+      createdAt: "2026-04-20T12:00:00.000Z",
+      updatedAt: "2026-04-20T12:06:00.000Z",
+      resolvedAt: "2026-04-20T12:06:00.000Z",
+    });
+    const app = await createApp();
+
+    const res = await request(app)
+      .post("/api/issues/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/interactions/interaction-2/respond")
+      .send({
+        answers: [{ questionId: "scope", optionIds: ["phase-1"] }],
+      });
+
+    expect(res.status).toBe(200);
+    expect(mockHeartbeatService.wakeup).toHaveBeenCalledWith(
+      ASSIGNEE_AGENT_ID,
+      expect.objectContaining({
+        reason: "issue_commented",
+        payload: expect.objectContaining({
+          interactionId: "interaction-2",
+          interactionKind: "ask_user_questions",
+          interactionStatus: "answered",
+        }),
+      }),
+    );
+  });
+
   it("accepts request confirmations and wakes the current assignee when configured for accept-only wakeups", async () => {
     mockInteractionService.acceptInteraction.mockResolvedValueOnce({
       interaction: {
