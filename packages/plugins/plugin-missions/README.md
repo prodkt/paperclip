@@ -25,6 +25,14 @@ This package now carries the installable mission workflow surface:
   - issue `toolbarButton`
   - plugin `settingsPage`
 
+## Alpha Workflow Notes
+
+The mission detail UI exposes command metadata for initialize, decompose,
+advance, and waive actions. Initialization is available from the UI in this
+package. Decompose, advance, and waive remain intentionally disabled in the UI
+until the follow-on workflow tickets land; the worker API routes are present so
+agents and integration tests can exercise those flows directly during the alpha.
+
 ## Verify
 
 From the repo root:

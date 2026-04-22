@@ -10,6 +10,9 @@ CREATE TABLE plugin_missions_8c47c0d099.missions (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE INDEX plugin_missions_missions_company_id_idx
+  ON plugin_missions_8c47c0d099.missions (company_id);
+
 CREATE TABLE plugin_missions_8c47c0d099.mission_findings (
   mission_issue_id uuid NOT NULL REFERENCES plugin_missions_8c47c0d099.missions(mission_issue_id) ON DELETE CASCADE,
   finding_key text NOT NULL,
@@ -34,3 +37,6 @@ CREATE TABLE plugin_missions_8c47c0d099.mission_events (
   updated_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (mission_issue_id, event_key)
 );
+
+CREATE INDEX plugin_missions_mission_events_company_id_idx
+  ON plugin_missions_8c47c0d099.mission_events (company_id);

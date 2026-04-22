@@ -113,7 +113,7 @@ export interface MissionWaiveFindingResult {
 
 type PluginIssueOriginKindLike = `plugin:${string}`;
 
-const DEFAULT_MAX_VALIDATION_ROUNDS = 3;
+const DEFAULT_MAX_VALIDATION_ROUNDS = 2;
 const ACTIVE_AGENT_STATUSES = new Set(["active", "idle", "running"]);
 const PAUSED_AGENT_STATUSES = new Set(["paused", "pending_approval", "terminated", "error"]);
 
