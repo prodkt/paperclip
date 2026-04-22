@@ -170,8 +170,8 @@ Paperclip is a full control plane, not a wrapper. Before you build any of this y
 │  └───────────┘  └───────────┘  └───────────┘  └───────────┘  │
 │                                                              │
 │  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐  │
-│  │ Org Chart │  │Workspaces │  │  Adapter  │  │  Budget   │  │
-│  │ & Agents  │  │ & Runtime │  │ Registry  │  │ & Costs   │  │
+│  │ Org Chart │  │Workspaces │  │  Plugins  │  │  Budget   │  │
+│  │ & Agents  │  │ & Runtime │  │           │  │ & Costs   │  │
 │  └───────────┘  └───────────┘  └───────────┘  └───────────┘  │
 │                                                              │
 │  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐  │
@@ -181,8 +181,8 @@ Paperclip is a full control plane, not a wrapper. Before you build any of this y
 └──────────────────────────────────────────────────────────────┘
          ▲              ▲              ▲              ▲
    ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐
-   │  Claude   │  │   Codex   │  │ OpenClaw  │  │  Any bot  │
-   │   Code    │  │           │  │           │  │ (HTTP/WS) │
+   │  Claude   │  │   Codex   │  │   CLI     │  │ HTTP/web  │
+   │   Code    │  │           │  │  agents   │  │   bots    │
    └───────────┘  └───────────┘  └───────────┘  └───────────┘
 ```
 
@@ -197,7 +197,7 @@ Paperclip is a full control plane, not a wrapper. Before you build any of this y
 </td>
 <td width="50%">
 
-**Org Chart & Agents** — Agents have roles, titles, reporting lines, permissions, and budgets. The adapter registry supports Claude, Codex, Cursor, OpenClaw, Gemini, HTTP, bash, and external adapter plugins. If it can receive a heartbeat, it's hired.
+**Org Chart & Agents** — Agents have roles, titles, reporting lines, permissions, and budgets. Adapter examples match the diagram: Claude Code, Codex, CLI agents such as Cursor/Gemini/bash, HTTP/webhook bots such as OpenClaw, and external adapter plugins. If it can receive a heartbeat, it's hired.
 
 </td>
 </tr>
@@ -241,6 +241,18 @@ Paperclip is a full control plane, not a wrapper. Before you build any of this y
 <td>
 
 **Plugins** — Instance-wide plugin system with out-of-process workers, capability-gated host services, job scheduling, tool exposure, and UI contributions. Extend Paperclip without forking it.
+
+</td>
+<td>
+
+**Secrets & Storage** — Instance and company secrets, encrypted local storage, provider-backed object storage, attachments, and work products. Sensitive values stay out of prompts unless a scoped run explicitly needs them.
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Activity & Events** — Mutating actions, heartbeat state changes, cost events, approvals, comments, and work products are recorded as durable activity so operators can audit what happened and why.
 
 </td>
 <td>
