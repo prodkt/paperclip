@@ -80,7 +80,10 @@ import {
   sanitizeRuntimeServiceBaseEnv,
 } from "./workspace-runtime.js";
 import { issueService } from "./issues.js";
-import { issueTreeControlService } from "./issue-tree-control.js";
+import {
+  ISSUE_TREE_CONTROL_INTERACTION_WAKE_REASONS,
+  issueTreeControlService,
+} from "./issue-tree-control.js";
 import {
   getIssueContinuationSummaryDocument,
   refreshIssueContinuationSummary,
@@ -1252,17 +1255,11 @@ function shouldRequireIssueCommentForWake(
   );
 }
 
-const ISSUE_INTERACTION_WAKE_REASONS = new Set([
-  "issue_commented",
-  "issue_reopened_via_comment",
-  "issue_comment_mentioned",
-]);
-
 function allowsIssueInteractionWake(
   contextSnapshot: Record<string, unknown> | null | undefined,
 ) {
   const wakeReason = readNonEmptyString(contextSnapshot?.wakeReason);
-  if (!wakeReason || !ISSUE_INTERACTION_WAKE_REASONS.has(wakeReason)) return false;
+  if (!wakeReason || !ISSUE_TREE_CONTROL_INTERACTION_WAKE_REASONS.has(wakeReason)) return false;
   return Boolean(deriveCommentId(contextSnapshot, null));
 }
 

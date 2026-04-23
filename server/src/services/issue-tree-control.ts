@@ -70,6 +70,12 @@ type RestoreTreeStatusResult = TreeStatusUpdateResult & {
 const TERMINAL_ISSUE_STATUSES = new Set<IssueStatus>(["done", "cancelled"]);
 const ACTIVE_RUN_STATUSES = ["queued", "running"] as const;
 const DEFAULT_RELEASE_POLICY: IssueTreeHoldReleasePolicy = { strategy: "manual" };
+const MAX_PAUSE_HOLD_GATE_DEPTH = 15;
+export const ISSUE_TREE_CONTROL_INTERACTION_WAKE_REASONS: ReadonlySet<string> = new Set([
+  "issue_commented",
+  "issue_reopened_via_comment",
+  "issue_comment_mentioned",
+] as const);
 
 function normalizeReleasePolicy(
   releasePolicy: IssueTreeHoldReleasePolicy | null | undefined,
@@ -421,8 +427,9 @@ export function issueTreeControlService(db: Db) {
     const holdByRootIssueId = new Map(activePauseHolds.map((hold) => [hold.rootIssueId, hold]));
     let currentIssueId: string | null = issueId;
     const visited = new Set<string>();
+    let depth = 0;
 
-    while (currentIssueId && !visited.has(currentIssueId)) {
+    while (currentIssueId && !visited.has(currentIssueId) && depth < MAX_PAUSE_HOLD_GATE_DEPTH) {
       visited.add(currentIssueId);
       const hold = holdByRootIssueId.get(currentIssueId);
       if (hold) {
@@ -443,6 +450,7 @@ export function issueTreeControlService(db: Db) {
         .where(and(eq(issues.id, currentIssueId), eq(issues.companyId, companyId)))
         .then((rows) => rows[0] ?? null);
       currentIssueId = parent?.parentId ?? null;
+      depth += 1;
     }
 
     return null;

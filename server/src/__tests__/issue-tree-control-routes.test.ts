@@ -256,4 +256,48 @@ describe("issue tree control routes", () => {
     );
     expect(res.body.hold.status).toBe("released");
   });
+
+  it("releases a restore hold if the restore application fails", async () => {
+    const app = await createApp({
+      type: "board",
+      userId: "user-1",
+      companyIds: ["company-2"],
+      source: "session",
+      isInstanceAdmin: false,
+    });
+    mockTreeControlService.createHold.mockResolvedValue({
+      hold: {
+        id: "66666666-6666-4666-8666-666666666666",
+        mode: "restore",
+        reason: "restore subtree",
+      },
+      preview: {
+        mode: "restore",
+        totals: { affectedIssues: 1 },
+        warnings: [],
+        activeRuns: [],
+      },
+    });
+    mockTreeControlService.restoreIssueStatusesForHold.mockRejectedValue(new Error("restore failed"));
+    mockTreeControlService.releaseHold.mockResolvedValue({
+      id: "66666666-6666-4666-8666-666666666666",
+      mode: "restore",
+      status: "released",
+    });
+
+    const res = await request(app)
+      .post("/api/issues/11111111-1111-4111-8111-111111111111/tree-holds")
+      .send({ mode: "restore", reason: "restore subtree" });
+
+    expect(res.status).toBe(500);
+    expect(mockTreeControlService.releaseHold).toHaveBeenCalledWith(
+      "company-2",
+      "11111111-1111-4111-8111-111111111111",
+      "66666666-6666-4666-8666-666666666666",
+      expect.objectContaining({
+        reason: "Restore operation failed before subtree status updates completed",
+        metadata: { cleanup: "restore_failed_before_apply" },
+      }),
+    );
+  });
 });

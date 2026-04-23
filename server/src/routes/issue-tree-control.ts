@@ -159,10 +159,22 @@ export function issueTreeControlRoutes(db: Db) {
     }
 
     if (result.hold.mode === "restore") {
-      const statusUpdate = await treeControlSvc.restoreIssueStatusesForHold(root.companyId, root.id, result.hold.id, {
-        reason: result.hold.reason,
-        actor: actorInput,
-      });
+      let statusUpdate;
+      try {
+        statusUpdate = await treeControlSvc.restoreIssueStatusesForHold(root.companyId, root.id, result.hold.id, {
+          reason: result.hold.reason,
+          actor: actorInput,
+        });
+      } catch (error) {
+        await treeControlSvc.releaseHold(root.companyId, root.id, result.hold.id, {
+          reason: "Restore operation failed before subtree status updates completed",
+          metadata: {
+            cleanup: "restore_failed_before_apply",
+          },
+          actor: actorInput,
+        }).catch(() => null);
+        throw error;
+      }
       if (statusUpdate.restoreHold) {
         result = { ...result, hold: statusUpdate.restoreHold };
       }

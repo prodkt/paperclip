@@ -37,6 +37,7 @@ import { redactCurrentUserText } from "../log-redaction.js";
 import { resolveIssueGoalId, resolveNextIssueGoalId } from "./issue-goal-fallback.js";
 import { getDefaultCompanyGoal } from "./goals.js";
 import {
+  ISSUE_TREE_CONTROL_INTERACTION_WAKE_REASONS,
   issueTreeControlService,
   type ActiveIssueTreePauseHoldGate,
 } from "./issue-tree-control.js";
@@ -49,12 +50,6 @@ const ISSUE_LIST_RELATED_QUERY_CHUNK_SIZE = 500;
 export const MAX_CHILD_ISSUES_CREATED_BY_HELPER = 25;
 const MAX_CHILD_COMPLETION_SUMMARIES = 20;
 const CHILD_COMPLETION_SUMMARY_BODY_MAX_CHARS = 500;
-const ISSUE_INTERACTION_WAKE_REASONS = new Set([
-  "issue_commented",
-  "issue_reopened_via_comment",
-  "issue_comment_mentioned",
-]);
-
 function assertTransition(from: string, to: string) {
   if (from === to) return;
   if (!ALL_ISSUE_STATUSES.includes(to)) {
@@ -968,7 +963,7 @@ export function issueService(db: Db) {
       readStringFromRecord(run?.contextSnapshot, "reason");
     return Boolean(
       wakeReason &&
-      ISSUE_INTERACTION_WAKE_REASONS.has(wakeReason) &&
+      ISSUE_TREE_CONTROL_INTERACTION_WAKE_REASONS.has(wakeReason) &&
       readLatestWakeCommentId(run?.contextSnapshot),
     );
   }
