@@ -43,6 +43,7 @@ function MarkdownIssueLink({
   const identifier = data?.identifier ?? issuePathId;
   const title = data?.title ?? identifier;
   const status = data?.status;
+  const issueLabel = title !== identifier ? `Issue ${identifier}: ${title}` : `Issue ${identifier}`;
 
   return (
     <Link
@@ -50,7 +51,7 @@ function MarkdownIssueLink({
       data-mention-kind="issue"
       className="paperclip-markdown-issue-ref"
       title={title}
-      aria-label={`Issue ${identifier}: ${title}`}
+      aria-label={issueLabel}
     >
       {status ? (
         <StatusIcon status={status} className="mr-1 h-3 w-3 align-[-0.125em]" />

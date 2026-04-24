@@ -250,7 +250,7 @@ export function InlineEditor({
   }, [autosaveState, commit, draft, markDirty, multiline, multilineFocused, nullable, reset, runSave, value]);
 
   if (multiline) {
-    const previewValue = autosaveState === "saved" ? draft : value;
+    const previewValue = autosaveState === "saved" || autosaveState === "idle" ? draft : value;
     const hasValue = Boolean(previewValue.trim());
     const showEditor = multilineEditing || multilineFocused || !hasValue;
 

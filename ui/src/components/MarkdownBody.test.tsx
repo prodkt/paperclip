@@ -33,7 +33,7 @@ vi.mock("../api/issues", () => ({
   issuesApi: mockIssuesApi,
 }));
 
-function renderMarkdown(children: string, seededIssues: Array<{ identifier: string; status: string }> = []) {
+function renderMarkdown(children: string, seededIssues: Array<{ identifier: string; status: string; title?: string }> = []) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -47,6 +47,7 @@ function renderMarkdown(children: string, seededIssues: Array<{ identifier: stri
       id: issue.identifier,
       identifier: issue.identifier,
       status: issue.status,
+      title: issue.title,
     });
   }
 
@@ -159,6 +160,17 @@ describe("MarkdownBody", () => {
     expect(html).toContain('data-mention-kind="issue"');
     expect(html).toContain("paperclip-markdown-issue-ref");
     expect(html).not.toContain("paperclip-mention-chip--issue");
+  });
+
+  it("uses concise issue aria labels until a distinct title is available", () => {
+    const html = renderMarkdown("Depends on PAP-1271 and PAP-1272.", [
+      { identifier: "PAP-1271", status: "done" },
+      { identifier: "PAP-1272", status: "blocked", title: "Fix hover state" },
+    ]);
+
+    expect(html).toContain('aria-label="Issue PAP-1271"');
+    expect(html).toContain('aria-label="Issue PAP-1272: Fix hover state"');
+    expect(html).not.toContain('aria-label="Issue PAP-1271: PAP-1271"');
   });
 
   it("rewrites full issue URLs to internal issue links", () => {
