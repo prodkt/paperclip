@@ -3550,6 +3550,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
         const issue = await db
           .select({
             id: issues.id,
+            status: issues.status,
             assigneeAgentId: issues.assigneeAgentId,
             executionRunId: issues.executionRunId,
           })
@@ -3557,15 +3558,18 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
           .where(and(eq(issues.id, dueRunIssueId), eq(issues.companyId, dueRun.companyId)))
           .then((rows) => rows[0] ?? null);
 
-        if (issue && issue.assigneeAgentId !== dueRun.agentId) {
-          const reason = "Cancelled because the issue was reassigned before the scheduled retry became due";
+        if (issue && (issue.assigneeAgentId !== dueRun.agentId || issue.status === "cancelled")) {
+          const issueCancelled = issue.status === "cancelled";
+          const reason = issueCancelled
+            ? "Cancelled because the issue was cancelled before the scheduled retry became due"
+            : "Cancelled because the issue was reassigned before the scheduled retry became due";
           const cancelled = await db
             .update(heartbeatRuns)
             .set({
               status: "cancelled",
               finishedAt: now,
               error: reason,
-              errorCode: "issue_reassigned",
+              errorCode: issueCancelled ? "issue_cancelled" : "issue_reassigned",
               updatedAt: now,
             })
             .where(
@@ -3608,9 +3612,12 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
             eventType: "lifecycle",
             stream: "system",
             level: "warn",
-            message: "Scheduled retry cancelled because issue ownership changed before it became due",
+            message: issueCancelled
+              ? "Scheduled retry cancelled because issue was cancelled before it became due"
+              : "Scheduled retry cancelled because issue ownership changed before it became due",
             payload: {
               issueId: issue.id,
+              issueStatus: issue.status,
               scheduledRetryAttempt: cancelled.scheduledRetryAttempt,
               scheduledRetryAt: cancelled.scheduledRetryAt ? new Date(cancelled.scheduledRetryAt).toISOString() : null,
               scheduledRetryReason: cancelled.scheduledRetryReason,
@@ -6305,6 +6312,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
           .select({
             id: issues.id,
             companyId: issues.companyId,
+            status: issues.status,
             assigneeAgentId: issues.assigneeAgentId,
             executionRunId: issues.executionRunId,
             executionAgentNameKey: issues.executionAgentNameKey,
@@ -6331,22 +6339,25 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
         }
 
         const cancelStaleScheduledRetry = async (scheduledRun: typeof heartbeatRuns.$inferSelect) => {
+          const issueCancelled = issue.status === "cancelled";
           if (
             scheduledRun.status !== "scheduled_retry" ||
-            scheduledRun.agentId === issue.assigneeAgentId
+            (scheduledRun.agentId === issue.assigneeAgentId && !issueCancelled)
           ) {
             return false;
           }
 
           const now = new Date();
-          const reason = "Cancelled because the issue was reassigned before the scheduled retry became due";
+          const reason = issueCancelled
+            ? "Cancelled because the issue was cancelled before the scheduled retry became due"
+            : "Cancelled because the issue was reassigned before the scheduled retry became due";
           const cancelled = await tx
             .update(heartbeatRuns)
             .set({
               status: "cancelled",
               finishedAt: now,
               error: reason,
-              errorCode: "issue_reassigned",
+              errorCode: issueCancelled ? "issue_cancelled" : "issue_reassigned",
               updatedAt: now,
             })
             .where(and(eq(heartbeatRuns.id, scheduledRun.id), eq(heartbeatRuns.status, "scheduled_retry")))
@@ -6378,6 +6389,33 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
               })
               .where(and(eq(issues.id, issue.id), eq(issues.executionRunId, scheduledRun.id)));
           }
+
+          const [eventSeq] = await tx
+            .select({ maxSeq: sql<number | null>`max(${heartbeatRunEvents.seq})` })
+            .from(heartbeatRunEvents)
+            .where(eq(heartbeatRunEvents.runId, cancelled.id));
+
+          await tx.insert(heartbeatRunEvents).values({
+            companyId: cancelled.companyId,
+            runId: cancelled.id,
+            agentId: cancelled.agentId,
+            seq: Number(eventSeq?.maxSeq ?? 0) + 1,
+            eventType: "lifecycle",
+            stream: "system",
+            level: "warn",
+            message: issueCancelled
+              ? "Scheduled retry cancelled because issue was cancelled before it became due"
+              : "Scheduled retry cancelled because issue ownership changed before it became due",
+            payload: {
+              issueId: issue.id,
+              issueStatus: issue.status,
+              scheduledRetryAttempt: cancelled.scheduledRetryAttempt,
+              scheduledRetryAt: cancelled.scheduledRetryAt ? new Date(cancelled.scheduledRetryAt).toISOString() : null,
+              scheduledRetryReason: cancelled.scheduledRetryReason,
+              previousRetryAgentId: cancelled.agentId,
+              currentAssigneeAgentId: issue.assigneeAgentId,
+            },
+          });
 
           return true;
         };
