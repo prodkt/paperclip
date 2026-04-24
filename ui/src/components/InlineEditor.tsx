@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "../lib/utils";
+import { MarkdownBody } from "./MarkdownBody";
 import { MarkdownEditor, type MarkdownEditorRef, type MentionOption } from "./MarkdownEditor";
 import { useAutosaveIndicator } from "../hooks/useAutosaveIndicator";
 
@@ -52,6 +53,7 @@ export function InlineEditor({
   mentions,
 }: InlineEditorProps) {
   const [editing, setEditing] = useState(false);
+  const [multilineEditing, setMultilineEditing] = useState(false);
   const [multilineFocused, setMultilineFocused] = useState(false);
   const [draft, setDraft] = useState(value);
   const lastPropValueRef = useRef(value);
@@ -59,6 +61,9 @@ export function InlineEditor({
   const markdownRef = useRef<MarkdownEditorRef>(null);
   const autosaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurCommitFrameRef = useRef<(() => void) | null>(null);
+  const pendingFocusFrameRef = useRef<number | null>(null);
+  const justEnteredEditRef = useRef(false);
+  const hasBeenFocusedRef = useRef(false);
   const {
     state: autosaveState,
     markDirty,
@@ -86,6 +91,10 @@ export function InlineEditor({
         blurCommitFrameRef.current();
         blurCommitFrameRef.current = null;
       }
+      if (pendingFocusFrameRef.current !== null) {
+        cancelAnimationFrame(pendingFocusFrameRef.current);
+        pendingFocusFrameRef.current = null;
+      }
     };
   }, []);
 
@@ -106,12 +115,39 @@ export function InlineEditor({
   }, [editing, autoSize]);
 
   useEffect(() => {
-    if (!editing || !multiline) return;
-    const frame = requestAnimationFrame(() => {
+    if (!multilineEditing || !multiline) return;
+    if (!justEnteredEditRef.current) return;
+    justEnteredEditRef.current = false;
+    if (pendingFocusFrameRef.current !== null) {
+      cancelAnimationFrame(pendingFocusFrameRef.current);
+    }
+    pendingFocusFrameRef.current = requestAnimationFrame(() => {
+      pendingFocusFrameRef.current = null;
       markdownRef.current?.focus();
     });
-    return () => cancelAnimationFrame(frame);
-  }, [editing, multiline]);
+    return () => {
+      if (pendingFocusFrameRef.current !== null) {
+        cancelAnimationFrame(pendingFocusFrameRef.current);
+        pendingFocusFrameRef.current = null;
+      }
+    };
+  }, [multilineEditing, multiline]);
+
+  // Once the editor has been focused at least once, it's blurred, and any
+  // autosave has settled, swap back to the MarkdownBody preview so inline
+  // issue refs render with status + quicklook.
+  useEffect(() => {
+    if (multilineFocused) {
+      hasBeenFocusedRef.current = true;
+      return;
+    }
+    if (!multiline || !multilineEditing) return;
+    if (!hasBeenFocusedRef.current) return;
+    if (autosaveState !== "idle") return;
+    hasBeenFocusedRef.current = false;
+    setMultilineEditing(false);
+  }, [multiline, multilineEditing, multilineFocused, autosaveState]);
+
 
   const commit = useCallback(async (nextValue = draft) => {
     const valueToSave = nextValue.trim();
@@ -176,6 +212,8 @@ export function InlineEditor({
       setDraft(value);
       if (multiline) {
         setMultilineFocused(false);
+        setMultilineEditing(false);
+        hasBeenFocusedRef.current = false;
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur();
         }
@@ -212,6 +250,45 @@ export function InlineEditor({
   }, [autosaveState, commit, draft, markDirty, multiline, multilineFocused, nullable, reset, runSave, value]);
 
   if (multiline) {
+    const previewValue = autosaveState === "saved" || autosaveState === "idle" ? draft : value;
+    const hasValue = Boolean(previewValue.trim());
+    const showEditor = multilineEditing || multilineFocused || !hasValue;
+
+    if (!showEditor) {
+      const enterEditMode = () => {
+        if (multilineEditing) return;
+        justEnteredEditRef.current = true;
+        setMultilineEditing(true);
+      };
+      return (
+        <div
+          className={cn(markdownPad, "rounded transition-colors hover:bg-accent/20")}
+          onClick={(event) => {
+            if (event.defaultPrevented) return;
+            const target = event.target as HTMLElement | null;
+            if (target && target.closest("a,button,[data-mention-kind],[data-radix-popper-content-wrapper]")) {
+              return;
+            }
+            enterEditMode();
+          }}
+          onDragEnter={() => enterEditMode()}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            enterEditMode();
+          }}
+          role="textbox"
+          aria-multiline="true"
+          aria-label={placeholder}
+          tabIndex={0}
+        >
+          <MarkdownBody className={cn("paperclip-edit-in-place-content", className)}>
+            {previewValue}
+          </MarkdownBody>
+        </div>
+      );
+    }
+
     return (
       <div
         className={cn(
@@ -219,12 +296,20 @@ export function InlineEditor({
           "rounded transition-colors",
           multilineFocused ? "bg-transparent" : "hover:bg-accent/20",
         )}
-        onFocusCapture={() => {
+        onFocusCapture={(event) => {
+          // Ignore focus events where the active element isn't actually inside
+          // the wrapper (React 19 can emit a synthetic focus after a blur).
+          const active = document.activeElement;
+          if (!(active instanceof Node) || !event.currentTarget.contains(active)) return;
           cancelPendingBlurCommit();
           setMultilineFocused(true);
         }}
         onBlurCapture={(event) => {
           if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+          if (pendingFocusFrameRef.current !== null) {
+            cancelAnimationFrame(pendingFocusFrameRef.current);
+            pendingFocusFrameRef.current = null;
+          }
           scheduleBlurCommit(event.currentTarget);
         }}
         onKeyDown={handleKeyDown}

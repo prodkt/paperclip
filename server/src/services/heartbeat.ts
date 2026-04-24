@@ -182,6 +182,61 @@ function resolveCodexTransientFallbackMode(attempt: number): CodexTransientFallb
   if (attempt === 3) return "fresh_session";
   return "fresh_session_safer_invocation";
 }
+
+function readHeartbeatRunErrorFamily(
+  run: Pick<typeof heartbeatRuns.$inferSelect, "errorCode" | "resultJson">,
+) {
+  const resultJson = parseObject(run.resultJson);
+  const persistedFamily = readNonEmptyString(resultJson.errorFamily);
+  if (persistedFamily) return persistedFamily;
+
+  if (run.errorCode === "codex_transient_upstream" || run.errorCode === "claude_transient_upstream") {
+    return "transient_upstream";
+  }
+  return null;
+}
+
+function readTransientRetryNotBeforeFromRun(run: Pick<typeof heartbeatRuns.$inferSelect, "resultJson">) {
+  const resultJson = parseObject(run.resultJson);
+  const value = resultJson.retryNotBefore ?? resultJson.transientRetryNotBefore;
+  if (!(typeof value === "string" || typeof value === "number" || value instanceof Date)) {
+    return null;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function readTransientRecoveryContractFromRun(
+  run: Pick<typeof heartbeatRuns.$inferSelect, "errorCode" | "resultJson">,
+) {
+  return readHeartbeatRunErrorFamily(run) === "transient_upstream"
+    ? {
+        errorFamily: "transient_upstream" as const,
+        retryNotBefore: readTransientRetryNotBeforeFromRun(run),
+      }
+    : null;
+}
+
+function mergeAdapterRecoveryMetadata(input: {
+  resultJson: Record<string, unknown> | null | undefined;
+  errorFamily?: string | null;
+  retryNotBefore?: string | null;
+}) {
+  const errorFamily = readNonEmptyString(input.errorFamily);
+  const retryNotBefore = readNonEmptyString(input.retryNotBefore);
+  if (!input.resultJson && !errorFamily && !retryNotBefore) return input.resultJson ?? null;
+
+  return {
+    ...(input.resultJson ?? {}),
+    ...(errorFamily ? { errorFamily } : {}),
+    ...(retryNotBefore
+      ? {
+          retryNotBefore,
+          transientRetryNotBefore: retryNotBefore,
+        }
+      : {}),
+  };
+}
 const RUNNING_ISSUE_WAKE_REASONS_REQUIRING_FOLLOWUP = new Set(["approval_approved"]);
 const SESSIONED_LOCAL_ADAPTERS = new Set([
   "claude_local",
@@ -3281,13 +3336,18 @@ export function heartbeatService(db: Db) {
     const retryReason = opts?.retryReason ?? BOUNDED_TRANSIENT_HEARTBEAT_RETRY_REASON;
     const wakeReason = opts?.wakeReason ?? BOUNDED_TRANSIENT_HEARTBEAT_RETRY_WAKE_REASON;
     const nextAttempt = (run.scheduledRetryAttempt ?? 0) + 1;
-    const schedule = computeBoundedTransientHeartbeatRetrySchedule(nextAttempt, now, opts?.random);
+    const baseSchedule = computeBoundedTransientHeartbeatRetrySchedule(nextAttempt, now, opts?.random);
+    const transientRecovery =
+      retryReason === BOUNDED_TRANSIENT_HEARTBEAT_RETRY_REASON
+        ? readTransientRecoveryContractFromRun(run)
+        : null;
     const codexTransientFallbackMode =
-      agent.adapterType === "codex_local" && retryReason === BOUNDED_TRANSIENT_HEARTBEAT_RETRY_REASON && run.errorCode === "codex_transient_upstream"
+      agent.adapterType === "codex_local" && transientRecovery
         ? resolveCodexTransientFallbackMode(nextAttempt)
         : null;
+    const transientRetryNotBefore = transientRecovery?.retryNotBefore ?? null;
 
-    if (!schedule) {
+    if (!baseSchedule) {
       await appendRunEvent(run, await nextRunEventSeq(run.id), {
         eventType: "lifecycle",
         stream: "system",
@@ -3305,6 +3365,14 @@ export function heartbeatService(db: Db) {
         maxAttempts: BOUNDED_TRANSIENT_HEARTBEAT_RETRY_MAX_ATTEMPTS,
       };
     }
+    const schedule =
+      transientRetryNotBefore && transientRetryNotBefore.getTime() > baseSchedule.dueAt.getTime()
+        ? {
+            ...baseSchedule,
+            dueAt: transientRetryNotBefore,
+            delayMs: Math.max(0, transientRetryNotBefore.getTime() - now.getTime()),
+          }
+        : baseSchedule;
 
     const contextSnapshot = parseObject(run.contextSnapshot);
     const issueId = readNonEmptyString(contextSnapshot.issueId);
@@ -3315,8 +3383,10 @@ export function heartbeatService(db: Db) {
       retryOfRunId: run.id,
       wakeReason,
       retryReason,
+      ...(transientRecovery ? { errorFamily: transientRecovery.errorFamily } : {}),
       scheduledRetryAttempt: schedule.attempt,
       scheduledRetryAt: schedule.dueAt.toISOString(),
+      ...(transientRetryNotBefore ? { transientRetryNotBefore: transientRetryNotBefore.toISOString() } : {}),
       ...(codexTransientFallbackMode ? { codexTransientFallbackMode } : {}),
     };
 
@@ -3333,8 +3403,10 @@ export function heartbeatService(db: Db) {
             ...(issueId ? { issueId } : {}),
             retryOfRunId: run.id,
             retryReason,
+            ...(transientRecovery ? { errorFamily: transientRecovery.errorFamily } : {}),
             scheduledRetryAttempt: schedule.attempt,
             scheduledRetryAt: schedule.dueAt.toISOString(),
+            ...(transientRetryNotBefore ? { transientRetryNotBefore: transientRetryNotBefore.toISOString() } : {}),
             ...(codexTransientFallbackMode ? { codexTransientFallbackMode } : {}),
           },
           status: "queued",
@@ -3397,10 +3469,12 @@ export function heartbeatService(db: Db) {
       payload: {
         retryRunId: retryRun.id,
         retryReason,
+        ...(transientRecovery ? { errorFamily: transientRecovery.errorFamily } : {}),
         scheduledRetryAttempt: schedule.attempt,
         scheduledRetryAt: schedule.dueAt.toISOString(),
         baseDelayMs: schedule.baseDelayMs,
         delayMs: schedule.delayMs,
+        ...(transientRetryNotBefore ? { transientRetryNotBefore: transientRetryNotBefore.toISOString() } : {}),
         ...(codexTransientFallbackMode ? { codexTransientFallbackMode } : {}),
       },
     });
@@ -5223,7 +5297,11 @@ export function heartbeatService(db: Db) {
 
       const persistedResultJson = mergeHeartbeatRunResultJson(
         mergeRunStopMetadataForAgent(agent, outcome, {
-          resultJson: adapterResult.resultJson ?? null,
+          resultJson: mergeAdapterRecoveryMetadata({
+            resultJson: adapterResult.resultJson ?? null,
+            errorFamily: adapterResult.errorFamily ?? null,
+            retryNotBefore: adapterResult.retryNotBefore ?? null,
+          }),
           errorCode: runErrorCode,
           errorMessage: runErrorMessage,
         }),
@@ -5284,7 +5362,7 @@ export function heartbeatService(db: Db) {
             );
           }
         }
-        if (outcome === "failed" && livenessRun.errorCode === "codex_transient_upstream") {
+        if (outcome === "failed" && readTransientRecoveryContractFromRun(livenessRun)) {
           await scheduleBoundedRetryForRun(livenessRun, agent);
         }
         await finalizeIssueCommentPolicy(livenessRun, agent);
@@ -5618,6 +5696,8 @@ export function heartbeatService(db: Db) {
         }
         const deferredCommentIds = extractWakeCommentIds(deferredContextSeed);
         const deferredWakeReason = readNonEmptyString(deferredContextSeed.wakeReason);
+        // Only human/comment-reopen interactions should revive completed issues;
+        // system follow-ups such as retry or cleanup wakes must not reopen closed work.
         const shouldReopenDeferredCommentWake =
           deferredCommentIds.length > 0 &&
           (issue.status === "done" || issue.status === "cancelled") &&
