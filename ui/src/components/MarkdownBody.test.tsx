@@ -325,6 +325,7 @@ describe("MarkdownBody", () => {
     // icon can never be orphaned on the previous line from the URL text.
     expect(html).toMatch(/<span style="white-space:nowrap">.*lucide-github.*?<\/svg>h<\/span>/);
     expect(html).toContain("ttps://github.com/paperclipai/paperclip/pull/4099");
+    expect(html).not.toContain("lucide-external-link");
   });
 
   it("prefixes GitHub autolinks with the GitHub icon", () => {

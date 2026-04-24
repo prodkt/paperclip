@@ -140,6 +140,8 @@ function renderLinkBody(
 ): ReactNode {
   if (!leadingIcon && !trailingIcon) return children;
 
+  // React-markdown can pass arrays/elements for styled link text; the nowrap
+  // splitting below is intentionally limited to plain text links.
   if (typeof children === "string" && children.length > 0) {
     if (children.length === 1) {
       return (
@@ -332,7 +334,7 @@ export function MarkdownBody({
       const leadingIcon = isGitHubLink ? (
         <Github aria-hidden="true" className="mr-1 inline h-3.5 w-3.5 align-[-0.125em]" />
       ) : null;
-      const trailingIcon = isExternal ? (
+      const trailingIcon = isExternal && !isGitHubLink ? (
         <ExternalLink aria-hidden="true" className="ml-1 inline h-3 w-3 align-[-0.125em]" />
       ) : null;
       return (
