@@ -9,6 +9,24 @@ import {
 } from "./issue.js";
 
 describe("issue validators", () => {
+  it("passes real line breaks through unchanged", () => {
+    const parsed = createIssueSchema.parse({
+      title: "Follow up PR",
+      description: "Line 1\n\nLine 2",
+    });
+
+    expect(parsed.description).toBe("Line 1\n\nLine 2");
+  });
+
+  it("accepts null and omitted optional multiline issue fields", () => {
+    expect(createIssueSchema.parse({ title: "Follow up PR", description: null }).description)
+      .toBeNull();
+    expect(createIssueSchema.parse({ title: "Follow up PR" }).description)
+      .toBeUndefined();
+    expect(updateIssueSchema.parse({ comment: undefined }).comment)
+      .toBeUndefined();
+  });
+
   it("normalizes JSON-escaped line breaks in issue descriptions", () => {
     const parsed = createIssueSchema.parse({
       title: "Follow up PR",
