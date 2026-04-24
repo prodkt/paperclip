@@ -108,6 +108,7 @@ import {
 } from "./recovery/index.js";
 import { isAutomaticRecoverySuppressedByPauseHold } from "./recovery/pause-hold-guard.js";
 import { recoveryService } from "./recovery/service.js";
+import { withAgentStartLock } from "./agent-start-lock.js";
 import { redactCurrentUserText, redactCurrentUserValue } from "../log-redaction.js";
 import {
   hasSessionCompactionThresholds,
@@ -132,7 +133,6 @@ const MAX_RUN_EVENT_PAYLOAD_OBJECT_KEYS = 100;
 const MAX_RUN_EVENT_PAYLOAD_DEPTH = 6;
 const HEARTBEAT_MAX_CONCURRENT_RUNS_DEFAULT = AGENT_DEFAULT_MAX_CONCURRENT_RUNS;
 const HEARTBEAT_MAX_CONCURRENT_RUNS_MAX = 10;
-const AGENT_START_LOCK_STALE_MS = 30_000;
 const LIVENESS_BOOKKEEPING_ACTIVITY_ACTIONS = [
   "environment.lease_acquired",
   "environment.lease_released",
@@ -142,7 +142,6 @@ const WAKE_COMMENT_IDS_KEY = "wakeCommentIds";
 const PAPERCLIP_WAKE_PAYLOAD_KEY = "paperclipWake";
 const PAPERCLIP_HARNESS_CHECKOUT_KEY = "paperclipHarnessCheckedOut";
 const DETACHED_PROCESS_ERROR_CODE = "process_detached";
-const startLocksByAgent = new Map<string, { promise: Promise<void>; startedAtMs: number }>();
 const REPO_ONLY_CWD_SENTINEL = "/__paperclip_repo_only__";
 const MANAGED_WORKSPACE_GIT_CLONE_TIMEOUT_MS = 10 * 60 * 1000;
 const MAX_INLINE_WAKE_COMMENTS = 8;
@@ -849,54 +848,6 @@ function normalizeMaxConcurrentRuns(value: unknown) {
   const parsed = Math.floor(asNumber(value, HEARTBEAT_MAX_CONCURRENT_RUNS_DEFAULT));
   if (!Number.isFinite(parsed)) return HEARTBEAT_MAX_CONCURRENT_RUNS_DEFAULT;
   return Math.max(HEARTBEAT_MAX_CONCURRENT_RUNS_DEFAULT, Math.min(HEARTBEAT_MAX_CONCURRENT_RUNS_MAX, parsed));
-}
-
-async function waitForAgentStartLock(agentId: string, lock: { promise: Promise<void>; startedAtMs: number }) {
-  const elapsedMs = Date.now() - lock.startedAtMs;
-  const remainingMs = AGENT_START_LOCK_STALE_MS - elapsedMs;
-  if (remainingMs <= 0) {
-    logger.warn({ agentId, staleMs: elapsedMs }, "agent start lock stale; continuing queued-run start");
-    return;
-  }
-
-  let timedOut = false;
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  await Promise.race([
-    lock.promise,
-    new Promise<void>((resolve) => {
-      timeout = setTimeout(() => {
-        timedOut = true;
-        resolve();
-      }, remainingMs);
-    }),
-  ]);
-  if (timeout) clearTimeout(timeout);
-
-  if (timedOut) {
-    logger.warn({ agentId, staleMs: AGENT_START_LOCK_STALE_MS }, "agent start lock timed out; continuing queued-run start");
-  }
-}
-
-export async function withAgentStartLockForTest<T>(agentId: string, fn: () => Promise<T>) {
-  return withAgentStartLock(agentId, fn);
-}
-
-async function withAgentStartLock<T>(agentId: string, fn: () => Promise<T>) {
-  const previous = startLocksByAgent.get(agentId);
-  const waitForPrevious = previous ? waitForAgentStartLock(agentId, previous) : Promise.resolve();
-  const run = waitForPrevious.then(fn);
-  const marker = run.then(
-    () => undefined,
-    () => undefined,
-  );
-  startLocksByAgent.set(agentId, { promise: marker, startedAtMs: Date.now() });
-  try {
-    return await run;
-  } finally {
-    if (startLocksByAgent.get(agentId)?.promise === marker) {
-      startLocksByAgent.delete(agentId);
-    }
-  }
 }
 
 interface WakeupOptions {
@@ -5989,7 +5940,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
         return { kind: "released" as const };
       }
 
-      if (await isAutomaticRecoverySuppressedByPauseHold(db, issue.companyId, issue.id)) {
+      if (await isAutomaticRecoverySuppressedByPauseHold(db, issue.companyId, issue.id, treeControlSvc)) {
         return { kind: "released" as const };
       }
 

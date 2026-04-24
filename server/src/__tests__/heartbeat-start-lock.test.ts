@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { withAgentStartLockForTest } from "../services/heartbeat.ts";
+import { withAgentStartLock } from "../services/agent-start-lock.ts";
 
 describe("heartbeat agent start lock", () => {
   afterEach(() => {
@@ -14,11 +14,11 @@ describe("heartbeat agent start lock", () => {
     const firstStart = vi.fn(() => new Promise<void>(() => undefined));
     const secondStart = vi.fn(async () => "started");
 
-    void withAgentStartLockForTest(agentId, firstStart);
+    void withAgentStartLock(agentId, firstStart);
     await Promise.resolve();
     expect(firstStart).toHaveBeenCalledTimes(1);
 
-    const secondStartResult = withAgentStartLockForTest(agentId, secondStart);
+    const secondStartResult = withAgentStartLock(agentId, secondStart);
     await Promise.resolve();
     expect(secondStart).not.toHaveBeenCalled();
 

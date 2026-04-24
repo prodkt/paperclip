@@ -400,8 +400,6 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
     );
     const importedMatchingIssues = importedIssues.filter((issue) => issue.title === sourceIssue.title);
 
-    const importedMatchingIssues = importedIssues.filter((issue) => issue.title === sourceIssue.title);
-
     expect(importedAgents.map((agent) => agent.name)).toContain(sourceAgent.name);
     expect(importedProjects.map((project) => project.name)).toContain(sourceProject.name);
     expect(importedMatchingIssues).toHaveLength(1);
@@ -474,8 +472,6 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
       apiBase,
       `/api/companies/${importedNew.company.id}/issues`,
     );
-    const twiceImportedMatchingIssues = twiceImportedIssues.filter((issue) => issue.title === sourceIssue.title);
-
     const twiceImportedMatchingIssues = twiceImportedIssues.filter((issue) => issue.title === sourceIssue.title);
 
     expect(twiceImportedAgents).toHaveLength(2);
