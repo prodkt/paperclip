@@ -112,6 +112,15 @@ describe("isCodexTransientUpstreamError", () => {
     );
   });
 
+  it("parses explicit timezone hints on usage-limit retry windows", () => {
+    const errorMessage = "You've hit your usage limit for GPT-5.3-Codex-Spark. Switch to another model now, or try again at 11:31 PM (America/Chicago).";
+    const now = new Date("2026-04-23T03:29:02.000Z");
+
+    expect(extractCodexRetryNotBefore({ errorMessage }, now)?.toISOString()).toBe(
+      "2026-04-23T04:31:00.000Z",
+    );
+  });
+
   it("does not classify deterministic compaction errors as transient", () => {
     expect(
       isCodexTransientUpstreamError({

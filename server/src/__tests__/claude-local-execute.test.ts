@@ -711,12 +711,11 @@ describe("claude execute", () => {
       expect(result.exitCode).toBe(1);
       expect(result.errorCode).toBe("claude_transient_upstream");
       expect(result.errorFamily).toBe("transient_upstream");
-      const expectedRetryNotBefore = new Date(2026, 3, 22, 16, 0, 0, 0).toISOString();
-      expect(result.retryNotBefore).toBe(expectedRetryNotBefore);
-      expect(result.resultJson?.retryNotBefore).toBe(expectedRetryNotBefore);
+      expect(result.retryNotBefore).toBe("2026-04-22T21:00:00.000Z");
+      expect(result.resultJson?.retryNotBefore).toBe("2026-04-22T21:00:00.000Z");
       expect(result.errorMessage ?? "").toContain("extra usage");
       expect(new Date(String(result.resultJson?.transientRetryNotBefore)).getTime()).toBe(
-        new Date(2026, 3, 22, 16, 0, 0, 0).getTime(),
+        new Date("2026-04-22T21:00:00.000Z").getTime(),
       );
     } finally {
       vi.useRealTimers();

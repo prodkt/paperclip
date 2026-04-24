@@ -97,22 +97,22 @@ describe("isClaudeTransientUpstreamError", () => {
 });
 
 describe("extractClaudeRetryNotBefore", () => {
-  it("parses the 'resets 4pm' hint into an absolute retry time", () => {
-    const now = new Date(2026, 3, 22, 10, 15, 0);
+  it("parses the 'resets 4pm' hint in its explicit timezone", () => {
+    const now = new Date("2026-04-22T15:15:00.000Z");
     const extracted = extractClaudeRetryNotBefore(
       { errorMessage: "You're out of extra usage · resets 4pm (America/Chicago)" },
       now,
     );
-    expect(extracted?.getTime()).toBe(new Date(2026, 3, 22, 16, 0, 0, 0).getTime());
+    expect(extracted?.toISOString()).toBe("2026-04-22T21:00:00.000Z");
   });
 
   it("rolls forward past midnight when the reset time has already passed today", () => {
-    const now = new Date(2026, 3, 22, 23, 30, 0);
+    const now = new Date("2026-04-22T23:30:00.000Z");
     const extracted = extractClaudeRetryNotBefore(
       { errorMessage: "Usage limit reached. Resets at 3:15 AM (UTC)." },
       now,
     );
-    expect(extracted?.getTime()).toBe(new Date(2026, 3, 23, 3, 15, 0, 0).getTime());
+    expect(extracted?.toISOString()).toBe("2026-04-23T03:15:00.000Z");
   });
 
   it("returns null when no reset hint is present", () => {
