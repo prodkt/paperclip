@@ -1586,10 +1586,14 @@ export function companySkillService(db: Db) {
       })
       .from(companySkills)
       .where(eq(companySkills.companyId, companyId));
-    const missingIds = new Set(await findMissingLocalSkillIds(rows));
+    const skills = rows.map((row) => ({
+      ...row,
+      sourceType: row.sourceType as CompanySkillSourceType,
+    }));
+    const missingIds = new Set(await findMissingLocalSkillIds(skills));
     if (missingIds.size === 0) return;
 
-    for (const skill of rows) {
+    for (const skill of skills) {
       if (!missingIds.has(skill.id)) continue;
       await db
         .delete(companySkills)
