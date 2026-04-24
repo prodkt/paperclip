@@ -319,14 +319,14 @@ function canBoardRecordWatchdogDecision(
   companyId: string,
   boardAccess: CurrentBoardAccess | undefined,
 ) {
-  if (!boardAccess) return true;
+  if (!boardAccess) return false;
   if (boardAccess.source === "local_implicit" || boardAccess.isInstanceAdmin) return true;
 
   const membership = boardAccess.memberships?.find(
     (item) => item.companyId === companyId && item.status === "active",
   );
   if (!membership) return boardAccess.companyIds.includes(companyId) && !boardAccess.memberships;
-  return membership.membershipRole !== "viewer";
+  return membership.membershipRole !== "viewer" && membership.membershipRole !== null;
 }
 
 function watchdogDecisionErrorMessage(error: unknown) {
@@ -386,12 +386,13 @@ export function IssueRunLedger({
     },
     onError: (error) => {
       const message = watchdogDecisionErrorMessage(error);
+      const dedupeSuffix = error instanceof ApiError ? String(error.status) : "error";
       setWatchdogDecisionError(message);
       pushToast({
         title: "Watchdog decision not recorded",
         body: message,
         tone: "error",
-        dedupeKey: `watchdog-decision:${issueId}:forbidden`,
+        dedupeKey: `watchdog-decision:${issueId}:${dedupeSuffix}`,
       });
     },
   });
