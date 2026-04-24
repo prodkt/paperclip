@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { TranscriptEntry } from "../../adapters";
 import { ThemeProvider } from "../../context/ThemeContext";
@@ -109,5 +109,32 @@ describe("RunTranscriptView", () => {
     expect(html).toMatch(/<li[^>]*>fixed deploy config<\/li>/);
     expect(html).toMatch(/<li[^>]*>posted issue update<\/li>/);
     expect(html).not.toContain("result");
+  });
+
+  it("adds timestamp and age tooltip to raw mode labels", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-12T00:03:00.000Z"));
+    try {
+      const html = renderToStaticMarkup(
+        <ThemeProvider>
+          <RunTranscriptView
+            mode="raw"
+            entries={[
+              {
+                kind: "stdout",
+                ts: "2026-03-12T00:00:00.000Z",
+                text: "hello",
+              },
+            ]}
+          />
+        </ThemeProvider>,
+      );
+
+      expect(html).toContain("Timestamp:");
+      expect(html).toContain("Ago: 3m ago");
+      expect(html).toContain(">stdout</span>");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
