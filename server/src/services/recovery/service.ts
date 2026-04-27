@@ -102,7 +102,7 @@ function readNonEmptyString(value: unknown): string | null {
 function summarizeRunFailureForIssueComment(run: LatestIssueRun) {
   if (!run) return null;
 
-  if (readNonEmptyString(run.error)) {
+  if (readNonEmptyString(run.error) || readNonEmptyString(run.errorCode)) {
     return " Latest retry failure details were withheld from the issue thread; inspect the linked run for evidence.";
   }
   return null;
@@ -814,6 +814,16 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
       );
   }
 
+  function isUniqueStrandedIssueRecoveryConflict(error: unknown) {
+    if (!error || typeof error !== "object") return false;
+    const maybe = error as { code?: string; constraint?: string; message?: string };
+    return maybe.code === "23505" &&
+      (
+        maybe.constraint === "issues_active_stranded_issue_recovery_uq" ||
+        typeof maybe.message === "string" && maybe.message.includes("issues_active_stranded_issue_recovery_uq")
+      );
+  }
+
   async function ensureSourceIssueBlockedByStaleEvaluation(input: {
     sourceIssue: typeof issues.$inferSelect | null;
     evaluationIssue: { id: string; identifier: string | null };
@@ -1267,32 +1277,40 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
     if (!ownerAgentId) return null;
 
     const prefix = await getCompanyIssuePrefix(input.issue.companyId);
-    const recovery = await issuesSvc.create(input.issue.companyId, {
-      title: `Recover stalled issue ${input.issue.identifier ?? input.issue.title}`,
-      description: buildStrandedIssueRecoveryDescription({
-        issue: input.issue,
-        latestRun: input.latestRun,
-        previousStatus: input.previousStatus,
-        prefix,
-      }),
-      status: "todo",
-      priority: input.issue.priority,
-      parentId: input.issue.id,
-      projectId: input.issue.projectId,
-      goalId: input.issue.goalId,
-      assigneeAgentId: ownerAgentId,
-      originKind: STRANDED_ISSUE_RECOVERY_ORIGIN_KIND,
-      originId: input.issue.id,
-      originRunId: input.latestRun?.id ?? null,
-      originFingerprint: [
-        STRANDED_ISSUE_RECOVERY_ORIGIN_KIND,
-        input.issue.companyId,
-        input.issue.id,
-        input.latestRun?.id ?? "no-run",
-      ].join(":"),
-      billingCode: input.issue.billingCode,
-      inheritExecutionWorkspaceFromIssueId: input.issue.id,
-    });
+    let recovery: Awaited<ReturnType<typeof issuesSvc.create>>;
+    try {
+      recovery = await issuesSvc.create(input.issue.companyId, {
+        title: `Recover stalled issue ${input.issue.identifier ?? input.issue.title}`,
+        description: buildStrandedIssueRecoveryDescription({
+          issue: input.issue,
+          latestRun: input.latestRun,
+          previousStatus: input.previousStatus,
+          prefix,
+        }),
+        status: "todo",
+        priority: input.issue.priority,
+        parentId: input.issue.id,
+        projectId: input.issue.projectId,
+        goalId: input.issue.goalId,
+        assigneeAgentId: ownerAgentId,
+        originKind: STRANDED_ISSUE_RECOVERY_ORIGIN_KIND,
+        originId: input.issue.id,
+        originRunId: input.latestRun?.id ?? null,
+        originFingerprint: [
+          STRANDED_ISSUE_RECOVERY_ORIGIN_KIND,
+          input.issue.companyId,
+          input.issue.id,
+          input.latestRun?.id ?? "no-run",
+        ].join(":"),
+        billingCode: input.issue.billingCode,
+        inheritExecutionWorkspaceFromIssueId: input.issue.id,
+      });
+    } catch (error) {
+      if (!isUniqueStrandedIssueRecoveryConflict(error)) throw error;
+      const raced = await findOpenStrandedIssueRecoveryIssue(input.issue.companyId, input.issue.id);
+      if (!raced) throw error;
+      return raced;
+    }
 
     await deps.enqueueWakeup(ownerAgentId, {
       source: "assignment",

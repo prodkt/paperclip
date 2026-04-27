@@ -511,7 +511,9 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       runId,
       claimedAt: now,
       finishedAt: new Date("2026-03-19T00:05:00.000Z"),
-      error: input.runStatus === "succeeded" ? null : (input.runError ?? "run failed before issue advanced"),
+      error: input.runStatus === "succeeded"
+        ? null
+        : ("runError" in input ? input.runError : "run failed before issue advanced"),
     });
 
     await db.insert(heartbeatRuns).values({
@@ -533,8 +535,12 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       startedAt: now,
       finishedAt: new Date("2026-03-19T00:05:00.000Z"),
       updatedAt: new Date("2026-03-19T00:05:00.000Z"),
-      errorCode: input.runStatus === "succeeded" ? null : (input.runErrorCode ?? "process_lost"),
-      error: input.runStatus === "succeeded" ? null : (input.runError ?? "run failed before issue advanced"),
+      errorCode: input.runStatus === "succeeded"
+        ? null
+        : ("runErrorCode" in input ? input.runErrorCode : "process_lost"),
+      error: input.runStatus === "succeeded"
+        ? null
+        : ("runError" in input ? input.runError : "run failed before issue advanced"),
     });
 
     await db.insert(issues).values([
@@ -1542,6 +1548,61 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
     expect(comments[0]?.body).toContain("retried continuation");
     expect(comments[0]?.body).toContain("Latest retry failure details were withheld from the issue thread");
     expect(comments[0]?.body).toContain(`Recovery issue: [${recovery.identifier}]`);
+  });
+
+  it("redacts error-code-only stranded recovery failures in issue copy", async () => {
+    const { companyId, agentId, issueId, runId } = await seedStrandedIssueFixture({
+      status: "in_progress",
+      runStatus: "failed",
+      retryReason: "issue_continuation_needed",
+      runErrorCode: "adapter_exit_code",
+      runError: null,
+    });
+    const heartbeat = heartbeatService(db);
+
+    const result = await heartbeat.reconcileStrandedAssignedIssues();
+    expect(result.escalated).toBe(1);
+
+    const recovery = await expectStrandedRecoveryArtifacts({
+      companyId,
+      agentId,
+      issueId,
+      runId,
+      previousStatus: "in_progress",
+      retryReason: "issue_continuation_needed",
+    });
+    expect(recovery.description).toContain("Latest retry failure details were withheld from the issue thread");
+    expect(recovery.description).not.toContain("- Failure: none recorded");
+
+    const comments = await db.select().from(issueComments).where(eq(issueComments.issueId, issueId));
+    expect(comments).toHaveLength(1);
+    expect(comments[0]?.body).toContain("Latest retry failure details were withheld from the issue thread");
+    expect(comments[0]?.body).not.toContain("- Failure: none recorded");
+  });
+
+  it("reuses the raced stranded recovery issue when duplicate active recovery creation conflicts", async () => {
+    const { companyId, issueId } = await seedStrandedIssueFixture({
+      status: "in_progress",
+      runStatus: "failed",
+      retryReason: "issue_continuation_needed",
+    });
+    const heartbeat = heartbeatService(db);
+
+    const results = await Promise.allSettled(
+      Array.from({ length: 8 }, () => heartbeat.reconcileStrandedAssignedIssues()),
+    );
+    expect(results.every((result) => result.status === "fulfilled")).toBe(true);
+
+    const recoveries = await db
+      .select()
+      .from(issues)
+      .where(and(
+        eq(issues.companyId, companyId),
+        eq(issues.originKind, "stranded_issue_recovery"),
+        eq(issues.originId, issueId),
+      ));
+    expect(recoveries).toHaveLength(1);
+    await expect(sourceBlockerIssueIds(companyId, issueId)).resolves.toEqual([recoveries[0]?.id]);
   });
 
   it("blocks stranded recovery issues in place instead of creating nested recovery issues", async () => {
