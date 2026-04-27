@@ -94,7 +94,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
     if (companies.length === 0) {
-      if (shouldClearStoredCompanySelection({ companies, isLoading, unauthorized: companyListUnauthorized })) {
+      if (shouldClearStoredCompanySelection({ companies, isLoading: false, unauthorized: companyListUnauthorized })) {
         if (selectedCompanyId !== null) {
           setSelectedCompanyIdState(null);
         }
