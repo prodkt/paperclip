@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { orderItemsBySelectedAndRecent } from "../lib/recent-selections";
@@ -75,17 +75,17 @@ export const InlineEntitySelector = forwardRef<HTMLButtonElement, InlineEntitySe
 
     const currentOption = options.find((option) => option.id === value) ?? null;
 
-    function setHighlightedIndexValue(next: number | ((current: number) => number)) {
+    const setHighlightedIndexValue = useCallback((next: number | ((current: number) => number)) => {
       const resolved = typeof next === "function" ? next(highlightedIndexRef.current) : next;
       highlightedIndexRef.current = resolved;
       setHighlightedIndex(resolved);
-    }
+    }, []);
 
     useEffect(() => {
       if (!open) return;
       const selectedIndex = filteredOptions.findIndex((option) => option.id === value);
       setHighlightedIndexValue(selectedIndex >= 0 ? selectedIndex : 0);
-    }, [filteredOptions, open, value]);
+    }, [filteredOptions, open, setHighlightedIndexValue, value]);
 
     const commitSelection = (index: number, moveNext: boolean) => {
       const option = filteredOptions[index] ?? filteredOptions[0];

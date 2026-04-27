@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Company } from "@paperclipai/shared";
+import { queryKeys } from "../lib/queryKeys";
 import {
   CompanyProvider,
   resolveBootstrapCompanySelection,
@@ -141,8 +142,8 @@ describe("CompanyProvider", () => {
     });
   });
 
-  afterEach(() => {
-    act(() => {
+  afterEach(async () => {
+    await act(async () => {
       root.unmount();
     });
     queryClient.clear();
@@ -170,11 +171,11 @@ describe("CompanyProvider", () => {
 
   it("replaces a stale stored company id with the first loaded company", async () => {
     localStorage.setItem("paperclip.selectedCompanyId", "stale-company");
-    let resolveCompanies!: (companies: Company[]) => void;
-    const companiesPromise = new Promise<Company[]>((resolve) => {
-      resolveCompanies = resolve;
+    queryClient.setQueryData(queryKeys.companies.all, {
+      companies: [makeCompany("company-1")],
+      unauthorized: false,
     });
-    mockCompaniesApi.list.mockReturnValue(companiesPromise);
+    mockCompaniesApi.list.mockImplementation(() => new Promise(() => {}));
     const seen: Array<string | null> = [];
 
     await act(async () => {
@@ -187,14 +188,7 @@ describe("CompanyProvider", () => {
       );
     });
 
-    await act(async () => {
-      resolveCompanies([makeCompany("company-1")]);
-      await companiesPromise;
-    });
-
-    await vi.waitFor(() => {
-      expect(seen).toEqual([null, "company-1"]);
-      expect(localStorage.getItem("paperclip.selectedCompanyId")).toBe("company-1");
-    });
+    expect(seen).toEqual([null, "company-1"]);
+    expect(localStorage.getItem("paperclip.selectedCompanyId")).toBe("company-1");
   });
 });
