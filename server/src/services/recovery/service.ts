@@ -1871,24 +1871,49 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
     );
   }
 
-  async function latestDependencyUpdatedAtForLivenessFinding(finding: IssueLivenessFinding) {
-    const issueIds = [...new Set(finding.dependencyPath.map((entry) => entry.issueId))];
-    if (issueIds.length === 0) return null;
-    const rows = await db
-      .select({ id: issues.id, updatedAt: issues.updatedAt })
-      .from(issues)
-      .where(and(eq(issues.companyId, finding.companyId), inArray(issues.id, issueIds)));
-    if (rows.length !== issueIds.length) return null;
-    return rows.reduce((latest, row) =>
-      row.updatedAt > latest ? row.updatedAt : latest,
-    rows[0]!.updatedAt);
+  function livenessDependencyIssueKey(companyId: string, issueId: string) {
+    return `${companyId}:${issueId}`;
   }
 
-  async function isLivenessFindingInsideAutoRecoveryLookback(
+  async function loadLivenessDependencyUpdatedAtByIssue(findings: IssueLivenessFinding[]) {
+    const issueIds = [
+      ...new Set(
+        findings.flatMap((finding) => finding.dependencyPath.map((entry) => entry.issueId)),
+      ),
+    ];
+    if (issueIds.length === 0) return new Map<string, Date>();
+    const rows = await db
+      .select({ id: issues.id, companyId: issues.companyId, updatedAt: issues.updatedAt })
+      .from(issues)
+      .where(inArray(issues.id, issueIds));
+    return new Map(rows.map((row) => [
+      livenessDependencyIssueKey(row.companyId, row.id),
+      row.updatedAt,
+    ]));
+  }
+
+  function latestDependencyUpdatedAtForLivenessFinding(
+    finding: IssueLivenessFinding,
+    updatedAtByIssueKey: Map<string, Date>,
+  ) {
+    const dependencyIssueIds = [...new Set(finding.dependencyPath.map((entry) => entry.issueId))];
+    if (dependencyIssueIds.length === 0) return null;
+    const timestamps = dependencyIssueIds.map((issueId) =>
+      updatedAtByIssueKey.get(livenessDependencyIssueKey(finding.companyId, issueId)) ?? null
+    );
+    if (timestamps.some((timestamp) => !timestamp)) return null;
+    const [firstTimestamp, ...remainingTimestamps] = timestamps as Date[];
+    return remainingTimestamps.reduce((latest, updatedAt) =>
+      updatedAt > latest ? updatedAt : latest,
+    firstTimestamp!);
+  }
+
+  function isLivenessFindingInsideAutoRecoveryLookback(
     finding: IssueLivenessFinding,
     cutoff: Date,
+    updatedAtByIssueKey: Map<string, Date>,
   ) {
-    const latestUpdatedAt = await latestDependencyUpdatedAtForLivenessFinding(finding);
+    const latestUpdatedAt = latestDependencyUpdatedAtForLivenessFinding(finding, updatedAtByIssueKey);
     return Boolean(latestUpdatedAt && latestUpdatedAt >= cutoff);
   }
 
@@ -1899,6 +1924,7 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
     const lookbackHours = normalizeIssueGraphLivenessAutoRecoveryLookbackHours(opts?.lookbackHours);
     const cutoff = new Date(now.getTime() - lookbackHours * 60 * 60 * 1000);
     const findings = await collectIssueGraphLivenessFindings();
+    const updatedAtByIssueKey = await loadLivenessDependencyUpdatedAtByIssue(findings);
     const issueIds = [...new Set(findings.map((finding) => finding.recoveryIssueId))];
     const recoveryRows = issueIds.length > 0
       ? await db
@@ -1911,7 +1937,10 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
     let skippedOutsideLookback = 0;
 
     for (const finding of findings) {
-      const latestDependencyUpdatedAt = await latestDependencyUpdatedAtForLivenessFinding(finding);
+      const latestDependencyUpdatedAt = latestDependencyUpdatedAtForLivenessFinding(
+        finding,
+        updatedAtByIssueKey,
+      );
       if (!latestDependencyUpdatedAt || latestDependencyUpdatedAt < cutoff) {
         skippedOutsideLookback += 1;
         continue;
@@ -2222,6 +2251,7 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
     const now = new Date();
     const cutoff = new Date(now.getTime() - lookbackHours * 60 * 60 * 1000);
     const obsoleteRecoveryCleanup = await retireObsoleteLivenessRecoveryIssues(findings);
+    const updatedAtByIssueKey = await loadLivenessDependencyUpdatedAtByIssue(findings);
     const result = {
       findings: findings.length,
       autoRecoveryEnabled,
@@ -2246,7 +2276,7 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
     }
 
     for (const finding of findings) {
-      if (!await isLivenessFindingInsideAutoRecoveryLookback(finding, cutoff)) {
+      if (!isLivenessFindingInsideAutoRecoveryLookback(finding, cutoff, updatedAtByIssueKey)) {
         result.skippedOutsideLookback += 1;
         result.skipped += 1;
         continue;
