@@ -1,6 +1,13 @@
 import { and, asc, desc, eq, gt, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import {
+  DEFAULT_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS,
+  MAX_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS,
+  MIN_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS,
+  type IssueGraphLivenessAutoRecoveryPreview,
+  type IssueGraphLivenessAutoRecoveryPreviewItem,
+} from "@paperclipai/shared";
+import {
   agents,
   agentWakeupRequests,
   approvals,
@@ -38,7 +45,6 @@ import { isAutomaticRecoverySuppressedByPauseHold } from "./pause-hold-guard.js"
 
 const EXECUTION_PATH_HEARTBEAT_RUN_STATUSES = ["queued", "running", "scheduled_retry"] as const;
 const UNSUCCESSFUL_HEARTBEAT_RUN_TERMINAL_STATUSES = ["failed", "cancelled", "timed_out"] as const;
-const ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_MIN_STALE_MS = 24 * 60 * 60 * 1000;
 export const ACTIVE_RUN_OUTPUT_SUSPICION_THRESHOLD_MS = 60 * 60 * 1000;
 export const ACTIVE_RUN_OUTPUT_CRITICAL_THRESHOLD_MS = 4 * 60 * 60 * 1000;
 export const ACTIVE_RUN_OUTPUT_CONTINUE_REARM_MS = 30 * 60 * 1000;
@@ -1857,18 +1863,86 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
     return result;
   }
 
-  async function isLivenessFindingOldEnoughForAutoRecovery(finding: IssueLivenessFinding, now = new Date()) {
+  function normalizeIssueGraphLivenessAutoRecoveryLookbackHours(raw: unknown) {
+    const numeric = Math.floor(asNumber(raw, DEFAULT_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS));
+    return Math.min(
+      MAX_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS,
+      Math.max(MIN_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS, numeric),
+    );
+  }
+
+  async function latestDependencyUpdatedAtForLivenessFinding(finding: IssueLivenessFinding) {
     const issueIds = [...new Set(finding.dependencyPath.map((entry) => entry.issueId))];
-    if (issueIds.length === 0) return false;
+    if (issueIds.length === 0) return null;
     const rows = await db
       .select({ id: issues.id, updatedAt: issues.updatedAt })
       .from(issues)
       .where(and(eq(issues.companyId, finding.companyId), inArray(issues.id, issueIds)));
-    if (rows.length !== issueIds.length) return false;
-    const latestUpdatedAt = rows.reduce((latest, row) =>
+    if (rows.length !== issueIds.length) return null;
+    return rows.reduce((latest, row) =>
       row.updatedAt > latest ? row.updatedAt : latest,
     rows[0]!.updatedAt);
-    return now.getTime() - latestUpdatedAt.getTime() >= ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_MIN_STALE_MS;
+  }
+
+  async function isLivenessFindingInsideAutoRecoveryLookback(
+    finding: IssueLivenessFinding,
+    cutoff: Date,
+  ) {
+    const latestUpdatedAt = await latestDependencyUpdatedAtForLivenessFinding(finding);
+    return Boolean(latestUpdatedAt && latestUpdatedAt >= cutoff);
+  }
+
+  async function buildIssueGraphLivenessAutoRecoveryPreview(
+    opts?: { lookbackHours?: number; now?: Date },
+  ): Promise<IssueGraphLivenessAutoRecoveryPreview> {
+    const now = opts?.now ?? new Date();
+    const lookbackHours = normalizeIssueGraphLivenessAutoRecoveryLookbackHours(opts?.lookbackHours);
+    const cutoff = new Date(now.getTime() - lookbackHours * 60 * 60 * 1000);
+    const findings = await collectIssueGraphLivenessFindings();
+    const issueIds = [...new Set(findings.map((finding) => finding.recoveryIssueId))];
+    const recoveryRows = issueIds.length > 0
+      ? await db
+        .select({ id: issues.id, identifier: issues.identifier, title: issues.title })
+        .from(issues)
+        .where(inArray(issues.id, issueIds))
+      : [];
+    const recoveryById = new Map(recoveryRows.map((row) => [row.id, row]));
+    const items: IssueGraphLivenessAutoRecoveryPreviewItem[] = [];
+    let skippedOutsideLookback = 0;
+
+    for (const finding of findings) {
+      const latestDependencyUpdatedAt = await latestDependencyUpdatedAtForLivenessFinding(finding);
+      if (!latestDependencyUpdatedAt || latestDependencyUpdatedAt < cutoff) {
+        skippedOutsideLookback += 1;
+        continue;
+      }
+      const recoveryIssue = recoveryById.get(finding.recoveryIssueId);
+      items.push({
+        issueId: finding.issueId,
+        identifier: finding.identifier,
+        title: finding.dependencyPath[0]?.title ?? finding.identifier ?? finding.issueId,
+        state: finding.state,
+        severity: finding.severity,
+        reason: finding.reason,
+        recoveryIssueId: finding.recoveryIssueId,
+        recoveryIdentifier: recoveryIssue?.identifier ?? null,
+        recoveryTitle: recoveryIssue?.title ?? null,
+        recommendedOwnerAgentId: finding.recommendedOwnerAgentId,
+        incidentKey: finding.incidentKey,
+        latestDependencyUpdatedAt: latestDependencyUpdatedAt.toISOString(),
+        dependencyPath: finding.dependencyPath,
+      });
+    }
+
+    return {
+      lookbackHours,
+      cutoff: cutoff.toISOString(),
+      generatedAt: now.toISOString(),
+      findings: findings.length,
+      recoverableFindings: items.length,
+      skippedOutsideLookback,
+      items,
+    };
   }
 
   async function resolveEscalationOwnerAgentId(
@@ -2131,22 +2205,33 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
     return { kind: "created" as const, escalationIssueId: escalation.id };
   }
 
-  async function reconcileIssueGraphLiveness(opts?: { runId?: string | null }) {
+  async function reconcileIssueGraphLiveness(opts?: {
+    runId?: string | null;
+    force?: boolean;
+    lookbackHours?: number;
+  }) {
     const findings = await collectIssueGraphLivenessFindings();
     const experimentalSettings = await instanceSettings.getExperimental();
     const autoRecoveryEnabled = asBoolean(
       experimentalSettings.enableIssueGraphLivenessAutoRecovery,
-      false,
+      true,
+    ) || opts?.force === true;
+    const lookbackHours = normalizeIssueGraphLivenessAutoRecoveryLookbackHours(
+      opts?.lookbackHours ?? experimentalSettings.issueGraphLivenessAutoRecoveryLookbackHours,
     );
+    const now = new Date();
+    const cutoff = new Date(now.getTime() - lookbackHours * 60 * 60 * 1000);
     const obsoleteRecoveryCleanup = await retireObsoleteLivenessRecoveryIssues(findings);
     const result = {
       findings: findings.length,
       autoRecoveryEnabled,
+      lookbackHours,
+      cutoff: cutoff.toISOString(),
       escalationsCreated: 0,
       existingEscalations: 0,
       skipped: 0,
       skippedAutoRecoveryDisabled: 0,
-      skippedAutoRecoveryTooYoung: 0,
+      skippedOutsideLookback: 0,
       obsoleteRecoveriesRetired: obsoleteRecoveryCleanup.retired,
       obsoleteRecoveriesActiveSkipped: obsoleteRecoveryCleanup.activeSkipped,
       obsoleteRecoveryBlockerRelationsRemoved: obsoleteRecoveryCleanup.blockerRelationsRemoved,
@@ -2160,10 +2245,9 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
       return result;
     }
 
-    const now = new Date();
     for (const finding of findings) {
-      if (!await isLivenessFindingOldEnoughForAutoRecovery(finding, now)) {
-        result.skippedAutoRecoveryTooYoung += 1;
+      if (!await isLivenessFindingInsideAutoRecoveryLookback(finding, cutoff)) {
+        result.skippedOutsideLookback += 1;
         result.skipped += 1;
         continue;
       }
@@ -2197,6 +2281,7 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
     recordWatchdogDecision,
     scanSilentActiveRuns,
     reconcileStrandedAssignedIssues,
+    buildIssueGraphLivenessAutoRecoveryPreview,
     reconcileIssueGraphLiveness,
     readRecoveryTimerIntervalMs,
   };

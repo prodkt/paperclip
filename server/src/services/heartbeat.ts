@@ -4502,7 +4502,15 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
     return recovery.buildRunOutputSilence(run, now);
   }
 
-  async function reconcileIssueGraphLiveness(opts?: { runId?: string | null }) {
+  async function buildIssueGraphLivenessAutoRecoveryPreview(opts?: { lookbackHours?: number; now?: Date }) {
+    return recovery.buildIssueGraphLivenessAutoRecoveryPreview(opts);
+  }
+
+  async function reconcileIssueGraphLiveness(opts?: {
+    runId?: string | null;
+    force?: boolean;
+    lookbackHours?: number;
+  }) {
     return recovery.reconcileIssueGraphLiveness(opts);
   }
 
@@ -7476,6 +7484,8 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
     },
 
     reconcileStrandedAssignedIssues,
+
+    buildIssueGraphLivenessAutoRecoveryPreview,
 
     reconcileIssueGraphLiveness,
 
