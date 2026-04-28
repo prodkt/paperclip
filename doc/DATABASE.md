@@ -113,7 +113,7 @@ DATABASE_URL=postgres://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.
 DATABASE_MIGRATION_URL=postgres://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres
 ```
 
-Do not patch `packages/db/src/client.ts` as a setup step. Add a configuration/env switch for postgres-js prepared statements before documenting pooled Supavisor as the supported runtime path.
+If your hosted database requires transaction-pooling-only connections, use a direct or session-pooled connection for Paperclip until runtime pooling support is documented in this guide. Do not edit database client source files as part of deployment setup.
 
 ### Push the schema
 
