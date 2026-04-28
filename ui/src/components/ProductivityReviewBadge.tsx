@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom";
 import { Eye } from "lucide-react";
 import type { IssueProductivityReview } from "@paperclipai/shared";
+import { Link } from "../lib/router";
 import { cn } from "../lib/utils";
 import { createIssueDetailPath } from "../lib/issueDetailBreadcrumb";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
