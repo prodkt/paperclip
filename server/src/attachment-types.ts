@@ -98,5 +98,5 @@ export function normalizeIssueAttachmentMaxBytes(value: number | null | undefine
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     return MAX_ATTACHMENT_BYTES;
   }
-  return Math.min(Math.floor(value), MAX_COMPANY_ATTACHMENT_MAX_BYTES);
+  return Math.min(Math.floor(value), MAX_COMPANY_ATTACHMENT_MAX_BYTES, MAX_ATTACHMENT_BYTES);
 }

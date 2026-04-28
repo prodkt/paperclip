@@ -171,13 +171,15 @@ function makeAttachment(contentType: string, originalFilename: string) {
 }
 
 describe("normalizeIssueAttachmentMaxBytes", () => {
-  it("keeps the process-level attachment cap as the fallback for missing company limits", async () => {
+  it("keeps the process-level attachment cap as the final cap", async () => {
     const previous = process.env.PAPERCLIP_ATTACHMENT_MAX_BYTES;
     process.env.PAPERCLIP_ATTACHMENT_MAX_BYTES = "5";
     vi.resetModules();
     try {
       const { normalizeIssueAttachmentMaxBytes } = await import("../attachment-types.js");
       expect(normalizeIssueAttachmentMaxBytes(null)).toBe(5);
+      expect(normalizeIssueAttachmentMaxBytes(10)).toBe(5);
+      expect(normalizeIssueAttachmentMaxBytes(3)).toBe(3);
     } finally {
       if (previous === undefined) {
         delete process.env.PAPERCLIP_ATTACHMENT_MAX_BYTES;
@@ -242,7 +244,7 @@ describe("issue attachment routes", () => {
     expect(res.body.contentType).toBe("application/zip");
   });
 
-  it("allows issue attachments larger than the legacy 10 MiB process default when company limit allows it", async () => {
+  it("enforces the process-level issue attachment limit even when the company limit allows more", async () => {
     const storage = createStorageService();
     mockIssueService.getById.mockResolvedValue({
       id: "11111111-1111-4111-8111-111111111111",
@@ -259,8 +261,9 @@ describe("issue attachment routes", () => {
         contentType: "application/octet-stream",
       });
 
-    expect(res.status).toBe(201);
-    expect(storage.__calls.putFile?.body.length).toBe(10 * 1024 * 1024 + 1);
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe("Attachment exceeds 10485760 bytes");
+    expect(storage.__calls.putFile).toBeUndefined();
   });
 
   it("enforces the configured per-company issue attachment limit", async () => {
