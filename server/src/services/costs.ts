@@ -136,6 +136,8 @@ export function costService(db: Db, budgetHooks: BudgetServiceHooks = {}) {
     },
 
     issueTreeSummary: async (companyId: string, issueId: string) => {
+      // Callers must resolve and authorize a visible root issue before invoking this.
+      // The route does that so zero counts are not mistaken for a missing root.
       const childIssues = alias(issues, "child");
       const issueTreeCondition = sql<boolean>`
         ${issues.id} IN (

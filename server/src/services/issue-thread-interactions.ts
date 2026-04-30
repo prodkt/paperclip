@@ -13,6 +13,7 @@ import type {
   AcceptIssueThreadInteraction,
   AskUserQuestionsAnswer,
   AskUserQuestionsInteraction,
+  CancelIssueThreadInteraction,
   CreateIssueThreadInteraction,
   IssueThreadInteraction,
   RequestConfirmationInteraction,
@@ -26,6 +27,7 @@ import {
   acceptIssueThreadInteractionSchema,
   askUserQuestionsPayloadSchema,
   askUserQuestionsResultSchema,
+  cancelIssueThreadInteractionSchema,
   createIssueThreadInteractionSchema,
   rejectIssueThreadInteractionSchema,
   requestConfirmationPayloadSchema,
@@ -1152,10 +1154,10 @@ export function issueThreadInteractionService(db: Db) {
     cancelQuestions: async (
       issue: { id: string; companyId: string },
       interactionId: string,
-      input: RejectIssueThreadInteraction,
+      input: CancelIssueThreadInteraction,
       actor: InteractionActor,
     ) => {
-      const data = rejectIssueThreadInteractionSchema.parse(input);
+      const data = cancelIssueThreadInteractionSchema.parse(input);
       const current = await db
         .select()
         .from(issueThreadInteractions)

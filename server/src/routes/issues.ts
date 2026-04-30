@@ -7,6 +7,7 @@ import { issueExecutionDecisions } from "@paperclipai/db";
 import {
   addIssueCommentSchema,
   acceptIssueThreadInteractionSchema,
+  cancelIssueThreadInteractionSchema,
   createIssueAttachmentMetadataSchema,
   createIssueThreadInteractionSchema,
   createIssueWorkProductSchema,
@@ -3184,7 +3185,7 @@ export function issueRoutes(
 
   router.post(
     "/issues/:id/interactions/:interactionId/cancel",
-    validate(rejectIssueThreadInteractionSchema),
+    validate(cancelIssueThreadInteractionSchema),
     async (req, res) => {
       const id = req.params.id as string;
       const interactionId = req.params.interactionId as string;
