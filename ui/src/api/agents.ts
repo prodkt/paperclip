@@ -13,6 +13,10 @@ import type {
   Approval,
   AgentConfigRevision,
 } from "@paperclipai/shared";
+import type {
+  AdapterModelProfileDefinition,
+  AdapterModelProfileKey,
+} from "@paperclipai/adapter-utils";
 import { isUuidLike, normalizeAgentUrlKey } from "@paperclipai/shared";
 import { ApiError, api } from "./client";
 
@@ -28,15 +32,8 @@ export interface AdapterModel {
   label: string;
 }
 
-export type AdapterModelProfileKey = "cheap";
-
-export interface AdapterModelProfile {
-  key: AdapterModelProfileKey;
-  label: string;
-  description?: string;
-  adapterConfig: Record<string, unknown>;
-  source?: "adapter_default" | "discovered";
-}
+export type { AdapterModelProfileKey };
+export type AdapterModelProfile = AdapterModelProfileDefinition;
 
 export interface DetectedAdapterModel {
   model: string;

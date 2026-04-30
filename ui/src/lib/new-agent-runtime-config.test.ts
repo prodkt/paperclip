@@ -37,6 +37,7 @@ describe("buildNewAgentRuntimeConfig", () => {
       heartbeatEnabled: true,
       intervalSec: 600,
       cheapModel: "claude-sonnet-4-6",
+      cheapModelEnabled: true,
     });
 
     expect(config.modelProfiles).toEqual({

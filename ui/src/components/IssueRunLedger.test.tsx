@@ -451,7 +451,7 @@ describe("IssueRunLedger", () => {
           resultJson: {
             modelProfile: {
               requested: "cheap",
-              applied: "primary",
+              applied: null,
               configSource: null,
               fallbackReason: "agent_runtime_profile_disabled",
             },
@@ -461,7 +461,7 @@ describe("IssueRunLedger", () => {
     });
 
     expect(container.textContent).toContain("Profile: cheap");
-    expect(container.textContent).toContain("Profile: cheap → primary");
+    expect(container.textContent).toContain("Profile: cheap (unavailable)");
     expect(container.textContent).toContain("Cheap profile fell back to primary");
     expect(container.textContent).toContain("agent_runtime_profile_disabled");
   });
