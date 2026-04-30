@@ -213,6 +213,20 @@ describeEmbeddedPostgres("runDatabaseBackup", () => {
           VALUES ('11111111-1111-4111-8111-111111111111', 'parent');
         `);
         await sourceSql.unsafe(`
+          CREATE TABLE "public"."plugin_rows" (
+            "id" serial PRIMARY KEY,
+            "note" text NOT NULL
+          );
+          CREATE TABLE "public"."audit_rows" (
+            "id" serial PRIMARY KEY,
+            "secret_note" text
+          );
+          INSERT INTO "public"."plugin_rows" ("note")
+          VALUES ('public-collision');
+          INSERT INTO "public"."audit_rows" ("secret_note")
+          VALUES ('public-secret');
+        `);
+        await sourceSql.unsafe(`
           CREATE SCHEMA "plugin_backup_scope";
           CREATE TYPE "plugin_backup_scope"."plugin_status" AS ENUM ('ready', 'done');
           CREATE TABLE "plugin_backup_scope"."plugin_rows" (
@@ -221,9 +235,15 @@ describeEmbeddedPostgres("runDatabaseBackup", () => {
             "status" "plugin_backup_scope"."plugin_status" NOT NULL,
             "note" text NOT NULL
           );
+          CREATE TABLE "plugin_backup_scope"."audit_rows" (
+            "id" serial PRIMARY KEY,
+            "secret_note" text
+          );
           CREATE UNIQUE INDEX "plugin_rows_note_uq" ON "plugin_backup_scope"."plugin_rows" ("note");
           INSERT INTO "plugin_backup_scope"."plugin_rows" ("parent_id", "status", "note")
-          VALUES ('11111111-1111-4111-8111-111111111111', 'ready', 'first');
+            VALUES ('11111111-1111-4111-8111-111111111111', 'ready', 'first');
+          INSERT INTO "plugin_backup_scope"."audit_rows" ("secret_note")
+          VALUES ('plugin-secret');
         `);
 
         const result = await runDatabaseBackup({
@@ -232,6 +252,10 @@ describeEmbeddedPostgres("runDatabaseBackup", () => {
           retention: { dailyDays: 7, weeklyWeeks: 4, monthlyMonths: 1 },
           filenamePrefix: "paperclip-full-logical-test",
           backupEngine: "javascript",
+          excludeTables: ["plugin_rows"],
+          nullifyColumns: {
+            audit_rows: ["secret_note"],
+          },
         });
 
         await runDatabaseRestore({
@@ -252,6 +276,24 @@ describeEmbeddedPostgres("runDatabaseBackup", () => {
           JOIN "public"."backup_parent_records" p ON p."id" = r."parent_id"
         `);
         expect(pluginRows).toEqual([{ note: "first", status: "ready", parent_name: "parent" }]);
+
+        const publicCollisionRows = await restoreSql.unsafe<{ count: number }[]>(`
+          SELECT count(*)::int AS count
+          FROM "public"."plugin_rows"
+        `);
+        expect(publicCollisionRows[0]?.count).toBe(0);
+
+        const publicAuditRows = await restoreSql.unsafe<{ secret_note: string | null }[]>(`
+          SELECT "secret_note"
+          FROM "public"."audit_rows"
+        `);
+        expect(publicAuditRows).toEqual([{ secret_note: null }]);
+
+        const pluginAuditRows = await restoreSql.unsafe<{ secret_note: string | null }[]>(`
+          SELECT "secret_note"
+          FROM "plugin_backup_scope"."audit_rows"
+        `);
+        expect(pluginAuditRows).toEqual([{ secret_note: "plugin-secret" }]);
 
         await expect(
           restoreSql.unsafe(`

@@ -197,16 +197,22 @@ function formatSqlLiteral(value: string): string {
 function normalizeTableNameSet(values: string[] | undefined): Set<string> {
   return new Set(
     (values ?? [])
-      .map((value) => value.trim())
+      .map(normalizeTableSelector)
       .filter((value) => value.length > 0),
   );
+}
+
+function normalizeTableSelector(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return "";
+  return trimmed.includes(".") ? trimmed : tableKey("public", trimmed);
 }
 
 function normalizeNullifyColumnMap(values: Record<string, string[]> | undefined): Map<string, Set<string>> {
   const out = new Map<string, Set<string>>();
   if (!values) return out;
   for (const [tableName, columns] of Object.entries(values)) {
-    const normalizedTable = tableName.trim();
+    const normalizedTable = normalizeTableSelector(tableName);
     if (normalizedTable.length === 0) continue;
     const normalizedColumns = new Set(
       columns
@@ -235,8 +241,7 @@ function tableKey(schemaName: string, tableName: string): string {
 function nonSystemSchemaPredicate(identifier: string): string {
   return `${identifier} NOT IN ('pg_catalog', 'information_schema')
     AND ${identifier} NOT LIKE 'pg_toast%'
-    AND ${identifier} NOT LIKE 'pg_temp_%'
-    AND ${identifier} NOT LIKE 'pg_toast_temp_%'`;
+    AND ${identifier} NOT LIKE 'pg_temp_%'`;
 }
 
 function hasBackupTransforms(opts: RunDatabaseBackupOptions): boolean {
@@ -606,7 +611,6 @@ export async function runDatabaseBackup(opts: RunDatabaseBackupOptions): Promise
     );
 
     const schemas = new Set<string>(includedSchemas);
-    for (const table of tables) schemas.add(table.schema_name);
     for (const seq of sequences) schemas.add(seq.sequence_schema);
     const extraSchemas = [...schemas].filter((schemaName) => schemaName !== "public");
     if (extraSchemas.length > 0) {
@@ -847,9 +851,10 @@ export async function runDatabaseBackup(opts: RunDatabaseBackupOptions): Promise
 
     // Dump data for each table
     for (const { schema_name, tablename } of tables) {
+      const currentTableKey = tableKey(schema_name, tablename);
       const qualifiedTableName = quoteQualifiedName(schema_name, tablename);
       const count = await sql.unsafe<{ n: number }[]>(`SELECT count(*)::int AS n FROM ${qualifiedTableName}`);
-      if (excludedTableNames.has(tablename) || (count[0]?.n ?? 0) === 0) continue;
+      if (excludedTableNames.has(currentTableKey) || (count[0]?.n ?? 0) === 0) continue;
 
       // Get column info for this table
       const cols = await sql<{ column_name: string; data_type: string }[]>`
@@ -862,7 +867,7 @@ export async function runDatabaseBackup(opts: RunDatabaseBackupOptions): Promise
 
       emit(`-- Data for: ${schema_name}.${tablename} (${count[0]!.n} rows)`);
 
-      const nullifiedColumns = nullifiedColumnsByTable.get(tablename) ?? new Set<string>();
+      const nullifiedColumns = nullifiedColumnsByTable.get(currentTableKey) ?? new Set<string>();
       if (backupEngine !== "javascript" && nullifiedColumns.size === 0) {
         emit(`COPY ${qualifiedTableName} (${colNames}) FROM stdin;`);
         await writer.writeRaw("\n");
