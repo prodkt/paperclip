@@ -3101,6 +3101,8 @@ export function IssueChatThread({
   const lastUserMessageIdRef = useRef<string | null>(null);
   const spacerBaselineAnchorRef = useRef<string | null>(null);
   const spacerInitialReserveRef = useRef(0);
+  const latestSettleTimeoutsRef = useRef<number[]>([]);
+  const latestSettleCleanupRef = useRef<(() => void) | null>(null);
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0);
   const displayLiveRuns = useMemo(() => {
     const deduped = new Map<string, LiveRunForIssue>();
@@ -3141,6 +3143,17 @@ export function IssueChatThread({
     }
     return ids;
   }, [displayLiveRuns]);
+  const clearLatestSettleTimeouts = useCallback(() => {
+    for (const timeout of latestSettleTimeoutsRef.current) {
+      window.clearTimeout(timeout);
+    }
+    latestSettleTimeoutsRef.current = [];
+    latestSettleCleanupRef.current?.();
+    latestSettleCleanupRef.current = null;
+  }, []);
+
+  useEffect(() => clearLatestSettleTimeouts, [clearLatestSettleTimeouts]);
+
   const { transcriptByRun, hasOutputForRun } = useLiveRunTranscripts({
     runs: enableLiveTranscriptPolling ? transcriptRuns : [],
     companyId,
@@ -3404,6 +3417,7 @@ export function IssueChatThread({
     const TICK_MS = 80;
     const TOLERANCE_PX = 4;
 
+    clearLatestSettleTimeouts();
     const resolveScrollContainer = (): HTMLElement | null =>
       (document.getElementById("main-content") as HTMLElement | null);
     const cancelTarget = resolveScrollContainer() ?? window;
@@ -3417,13 +3431,31 @@ export function IssueChatThread({
       cancelled = true;
     };
 
-    const finish = () => {
+    const cleanup = () => {
       cancelTarget.removeEventListener("wheel", cancel);
       cancelTarget.removeEventListener("touchstart", cancel);
     };
 
     cancelTarget.addEventListener("wheel", cancel, { once: true, passive: true });
     cancelTarget.addEventListener("touchstart", cancel, { once: true, passive: true });
+    latestSettleCleanupRef.current = cleanup;
+
+    const finish = () => {
+      cleanup();
+      latestSettleCleanupRef.current = null;
+      for (const timeout of latestSettleTimeoutsRef.current) {
+        window.clearTimeout(timeout);
+      }
+      latestSettleTimeoutsRef.current = [];
+    };
+
+    const scheduleTick = (delay: number) => {
+      const timeout = window.setTimeout(() => {
+        latestSettleTimeoutsRef.current = latestSettleTimeoutsRef.current.filter((entry) => entry !== timeout);
+        tick();
+      }, delay);
+      latestSettleTimeoutsRef.current.push(timeout);
+    };
 
     const tick = () => {
       const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -3440,7 +3472,7 @@ export function IssueChatThread({
           align: "end",
           behavior: "auto",
         });
-        window.setTimeout(tick, TICK_MS);
+        scheduleTick(TICK_MS);
         return;
       }
 
@@ -3471,13 +3503,13 @@ export function IssueChatThread({
       }
       lastScrollTop = currentScrollTop;
       lastScrollHeight = currentScrollHeight;
-      window.setTimeout(tick, TICK_MS);
+      scheduleTick(TICK_MS);
     };
 
     // Hold the first iteration off for one frame so the initial smooth
     // scroll has begun (and the virtualizer has rendered the buffer around
     // the target) before we start settling.
-    window.setTimeout(tick, 120);
+    scheduleTick(120);
   }
 
   function handleJumpToLatest() {
