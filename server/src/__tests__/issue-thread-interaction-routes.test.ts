@@ -394,7 +394,7 @@ describe.sequential("issue thread interaction routes", () => {
     );
   });
 
-  it("cancels question interactions without emitting a continuation wake", async () => {
+  it("cancels question interactions and emits a continuation wake", async () => {
     const app = await createApp();
 
     const res = await request(app)
@@ -409,7 +409,19 @@ describe.sequential("issue thread interaction routes", () => {
       {},
       expect.objectContaining({ userId: "local-board" }),
     );
-    expect(mockHeartbeatService.wakeup).not.toHaveBeenCalled();
+    expect(mockHeartbeatService.wakeup).toHaveBeenCalledWith(
+      ASSIGNEE_AGENT_ID,
+      expect.objectContaining({
+        reason: "issue_commented",
+        payload: expect.objectContaining({
+          interactionId: "interaction-2",
+          interactionKind: "ask_user_questions",
+          interactionStatus: "cancelled",
+          sourceCommentId: "comment-2",
+          sourceRunId: "run-2",
+        }),
+      }),
+    );
     expect(mockLogActivity).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({

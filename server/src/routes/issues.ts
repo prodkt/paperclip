@@ -3289,6 +3289,14 @@ export function issueRoutes(
         },
       });
 
+      queueResolvedInteractionContinuationWakeup({
+        heartbeat,
+        issue,
+        interaction,
+        actor,
+        source: "issue.interaction.cancel",
+      });
+
       res.json(interaction);
     },
   );
