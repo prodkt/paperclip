@@ -7,7 +7,7 @@ import { RECOVERY_REASON_KINDS } from "./origins.js";
 export const RUN_LIVENESS_CONTINUATION_REASON = RECOVERY_REASON_KINDS.runLivenessContinuation;
 export const DEFAULT_MAX_LIVENESS_CONTINUATION_ATTEMPTS = 2;
 
-const ACTIONABLE_LIVENESS_STATES = new Set<RunLivenessState>(["plan_only", "empty_response"]);
+const ACTIONABLE_LIVENESS_STATES = new Set<RunLivenessState>(["plan_only", "empty_response", "advanced"]);
 const CONTINUATION_ACTIVE_ISSUE_STATUSES = new Set(["todo", "in_progress"]);
 // A prior adapter error should not permanently suppress bounded liveness
 // continuations; the max-attempt/idempotency guards prevent unbounded retries.
@@ -126,6 +126,9 @@ export function decideRunLivenessContinuation(input: {
   }
   if (budgetBlocked) {
     return { kind: "skip", reason: "budget hard stop blocks continuation" };
+  }
+  if (livenessState === "advanced" && !nextAction) {
+    return { kind: "skip", reason: "advanced run has no concrete continuation instruction" };
   }
 
   const currentAttempt = readContinuationAttempt(run.continuationAttempt);
