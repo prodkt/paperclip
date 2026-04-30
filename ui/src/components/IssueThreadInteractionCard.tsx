@@ -792,21 +792,23 @@ function AskUserQuestionsCard({
               Submit once after you finish the full form.
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!onCancelInteraction || working || cancelling}
-                onClick={() => void handleCancel()}
-              >
-                {cancelling ? (
-                  <>
-                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                    Cancelling...
-                  </>
-                ) : (
-                  "Cancel question"
-                )}
-              </Button>
+              {onCancelInteraction ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={working || cancelling}
+                  onClick={() => void handleCancel()}
+                >
+                  {cancelling ? (
+                    <>
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    "Cancel question"
+                  )}
+                </Button>
+              ) : null}
               <Button
                 size="sm"
                 disabled={!onSubmitInteractionAnswers || !canSubmit || working || cancelling}

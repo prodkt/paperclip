@@ -1,4 +1,5 @@
 import { and, desc, eq, gte, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { Db } from "@paperclipai/db";
 import { activityLog, agents, companies, costEvents, issues, projects } from "@paperclipai/db";
 import { notFound, unprocessable } from "../errors.js";
@@ -135,6 +136,9 @@ export function costService(db: Db, budgetHooks: BudgetServiceHooks = {}) {
     },
 
     issueTreeSummary: async (companyId: string, issueId: string) => {
+      // Callers must resolve and authorize a visible root issue before invoking this.
+      // The route does that so zero counts are not mistaken for a missing root.
+      const childIssues = alias(issues, "child");
       const issueTreeCondition = sql<boolean>`
         ${issues.id} IN (
           WITH RECURSIVE issue_tree(id) AS (
@@ -143,12 +147,12 @@ export function costService(db: Db, budgetHooks: BudgetServiceHooks = {}) {
             WHERE ${issues.companyId} = ${companyId}
               AND ${issues.id} = ${issueId}
               AND ${issues.hiddenAt} IS NULL
-            UNION
-            SELECT child.id
-            FROM ${issues} child
-            JOIN issue_tree ON child.parent_id = issue_tree.id
-            WHERE child.company_id = ${companyId}
-              AND child.hidden_at IS NULL
+            UNION ALL
+            SELECT ${childIssues.id}
+            FROM ${issues} ${childIssues}
+            JOIN issue_tree ON ${childIssues.parentId} = issue_tree.id
+            WHERE ${childIssues.companyId} = ${companyId}
+              AND ${childIssues.hiddenAt} IS NULL
           )
           SELECT id FROM issue_tree
         )
