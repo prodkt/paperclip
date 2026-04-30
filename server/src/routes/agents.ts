@@ -2745,8 +2745,8 @@ export function agentRoutes(
       )
       .orderBy(desc(heartbeatRuns.createdAt));
 
-    const liveRuns = limit > 0 ? await liveRunsQuery.limit(limit) : await liveRunsQuery;
-    const targetRunCount = limit > 0 ? Math.min(minCount, limit) : minCount;
+    const liveRuns = await liveRunsQuery.limit(limit);
+    const targetRunCount = Math.min(minCount, limit);
 
     if (targetRunCount > 0 && liveRuns.length < targetRunCount) {
       const activeIds = liveRuns.map((r) => r.id);
