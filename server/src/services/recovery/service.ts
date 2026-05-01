@@ -204,6 +204,7 @@ function isProductiveContinuationRun(latestRun: LatestIssueRun) {
 function isRepeatedProductiveContinuationRecovery(latestRun: SuccessfulLatestIssueRun) {
   const latestContext = parseObject(latestRun.contextSnapshot);
   return readNonEmptyString(latestContext.retryReason) === "issue_continuation_needed" &&
+    readNonEmptyString(latestContext.source) === "issue.productive_terminal_continuation_recovery" &&
     isProductiveContinuationRun(latestRun);
 }
 
