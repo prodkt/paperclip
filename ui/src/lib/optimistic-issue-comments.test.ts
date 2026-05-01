@@ -751,6 +751,36 @@ describe("optimistic issue comments", () => {
     ).toBe(false);
   });
 
+  it("does not mark the active run context comment as queued", () => {
+    expect(
+      isQueuedIssueComment({
+        comment: {
+          id: "context-comment",
+          createdAt: new Date("2026-03-28T16:20:05.000Z"),
+        },
+        activeRunStartedAt: new Date("2026-03-28T16:20:00.000Z"),
+        activeRunCommentId: "context-comment",
+        activeRunWakeCommentId: "wake-comment",
+        runId: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("does not mark the active run wake comment as queued", () => {
+    expect(
+      isQueuedIssueComment({
+        comment: {
+          id: "wake-comment",
+          createdAt: new Date("2026-03-28T16:20:05.000Z"),
+        },
+        activeRunStartedAt: new Date("2026-03-28T16:20:00.000Z"),
+        activeRunCommentId: "context-comment",
+        activeRunWakeCommentId: "wake-comment",
+        runId: null,
+      }),
+    ).toBe(false);
+  });
+
   it("does not mark comments with an associated run as queued", () => {
     expect(
       isQueuedIssueComment({
