@@ -1002,17 +1002,20 @@ export function buildInboxKeyboardNavEntries(
     }
     if (isCollapsed) continue;
 
-    const addIssueChildren = (issueId: string) => {
+    const addIssueChildren = (issueId: string, seen: ReadonlySet<string>) => {
       const children = group.childrenByIssueId.get(issueId);
       if (!children?.length || collapsedInboxParents.has(issueId)) return;
 
       for (const child of children) {
+        if (seen.has(child.id)) continue;
+        const nextSeen = new Set(seen);
+        nextSeen.add(child.id);
         entries.push({
           type: "child",
           issueId: child.id,
           issue: child,
         });
-        addIssueChildren(child.id);
+        addIssueChildren(child.id, nextSeen);
       }
     };
 
@@ -1024,7 +1027,7 @@ export function buildInboxKeyboardNavEntries(
       });
 
       if (item.kind !== "issue") continue;
-      addIssueChildren(item.issue.id);
+      addIssueChildren(item.issue.id, new Set([item.issue.id]));
     }
   }
 

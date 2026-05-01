@@ -2436,8 +2436,15 @@ export function Inbox() {
                     const hasChildren = childIssues.length > 0;
                     const isExpanded = hasChildren && !collapsedInboxParents.has(issue.id);
                     const canArchiveIssue = canArchiveFromTab && group.searchSection === "none";
-                    const renderChildIssueRows = (children: Issue[], depth: number): ReactNode[] =>
+                    const renderChildIssueRows = (
+                      children: Issue[],
+                      depth: number,
+                      seen: ReadonlySet<string>,
+                    ): ReactNode[] =>
                       children.flatMap((child) => {
+                        if (seen.has(child.id)) return [];
+                        const nextSeen = new Set(seen);
+                        nextSeen.add(child.id);
                         const childNavIdx = childFlatIndex.get(child.id) ?? -1;
                         const isChildSelected = selectedIndex === childNavIdx;
                         const grandchildIssues = group.childrenByIssueId.get(child.id) ?? [];
@@ -2475,7 +2482,7 @@ export function Inbox() {
                         );
 
                         return childIsExpanded
-                          ? [row, ...renderChildIssueRows(grandchildIssues, depth + 1)]
+                          ? [row, ...renderChildIssueRows(grandchildIssues, depth + 1, nextSeen)]
                           : [row];
                       });
                     const parentRow = renderInboxIssue({
@@ -2501,7 +2508,7 @@ export function Inbox() {
                     ) : parentRow));
 
                     if (isExpanded) {
-                      elements.push(...renderChildIssueRows(childIssues, 1));
+                      elements.push(...renderChildIssueRows(childIssues, 1, new Set([issue.id])));
                     }
                   }
 

@@ -673,6 +673,32 @@ describe("inbox helpers", () => {
     ).toEqual([parentIssue.id, childIssue.id]);
   });
 
+  it("stops cyclic child issue traversal when building keyboard navigation", () => {
+    const parentIssue = makeIssue("parent", true);
+    const childIssue = makeIssue("child", true);
+    childIssue.parentId = parentIssue.id;
+    parentIssue.parentId = childIssue.id;
+
+    const groupedSections = [
+      {
+        key: "workspace:default",
+        displayItems: [{ kind: "issue", timestamp: 2, issue: parentIssue } satisfies InboxWorkItem],
+        childrenByIssueId: new Map([
+          [parentIssue.id, [childIssue]],
+          [childIssue.id, [parentIssue]],
+        ]),
+      },
+    ];
+
+    expect(
+      buildInboxKeyboardNavEntries(groupedSections, new Set(), new Set()).map((entry) => entry.type === "top"
+        ? entry.item.kind === "issue" ? entry.item.issue.id : "other"
+        : entry.type === "child"
+          ? entry.issueId
+          : entry.groupKey),
+    ).toEqual([parentIssue.id, childIssue.id]);
+  });
+
   it("emits a group nav entry for labeled groups and omits children when the group is collapsed", () => {
     const visibleIssue = makeIssue("visible", true);
     const hiddenIssue = makeIssue("hidden", true);

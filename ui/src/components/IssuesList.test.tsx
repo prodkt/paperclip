@@ -1114,8 +1114,8 @@ describe("IssuesList", () => {
         title: `Issue ${index + 1}`,
       }),
     );
-  const onLoadMoreIssues = vi.fn();
-  setDocumentScrollMetrics({ innerHeight: 2000, scrollY: 0, scrollHeight: 1000 });
+    const onLoadMoreIssues = vi.fn();
+    setDocumentScrollMetrics({ innerHeight: 2000, scrollY: 0, scrollHeight: 1000 });
 
     const { root } = renderWithQueryClient(
       <IssuesList
