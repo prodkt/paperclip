@@ -394,10 +394,8 @@ function ExecutionWorkspaceRoutinesList({
   });
 
   const workspaceRoutines = useMemo(
-    () => (routines ?? [])
-      .filter((routine) => routine.projectId === workspace.projectId)
-      .filter(routineHasWorkspaceSpecificVariables),
-    [routines, workspace.projectId],
+    () => (routines ?? []).filter(routineHasWorkspaceSpecificVariables),
+    [routines],
   );
 
   const runRoutine = useMutation({
@@ -419,7 +417,7 @@ function ExecutionWorkspaceRoutinesList({
     onSuccess: async (_, { id }) => {
       setRunDialogRoutine(null);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.routines.list(workspace.companyId) }),
+        queryClient.invalidateQueries({ queryKey: ["routines", workspace.companyId] }),
         queryClient.invalidateQueries({ queryKey: queryKeys.routines.detail(id) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.issues.listByExecutionWorkspace(workspace.companyId, workspace.id) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(workspace.companyId) }),
