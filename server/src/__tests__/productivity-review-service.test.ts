@@ -19,6 +19,7 @@ import {
   DEFAULT_PRODUCTIVITY_REVIEW_MAX_REFRESH_COMMENTS,
   DEFAULT_PRODUCTIVITY_REVIEW_NO_COMMENT_STREAK_RUNS,
   DEFAULT_PRODUCTIVITY_REVIEW_REFRESH_INTERVAL_MS,
+  PRODUCTIVITY_REVIEW_REFRESH_COMMENT_PREFIX,
   PRODUCTIVITY_REVIEW_ORIGIN_KIND,
   productivityReviewService,
 } from "../services/productivity-review.ts";
@@ -173,7 +174,7 @@ describeEmbeddedPostgres("productivity review service", () => {
       .from(issueComments)
       .where(and(
         eq(issueComments.issueId, reviewIssueId),
-        sql`${issueComments.body} like 'Productivity review evidence refreshed.%'`,
+        sql`${issueComments.body} like ${`${PRODUCTIVITY_REVIEW_REFRESH_COMMENT_PREFIX}%`}`,
       ))
       .orderBy(issueComments.createdAt);
   }
@@ -292,6 +293,47 @@ describeEmbeddedPostgres("productivity review service", () => {
     expect(result.created).toBe(0);
     expect(result.creationCapped).toBe(1);
     expect(await listProductivityReviews(seeded.companyId)).toHaveLength(3);
+  });
+
+  it("does not count cancelled productivity reviews toward the creation cap", async () => {
+    const now = new Date("2026-04-28T12:00:00.000Z");
+    const seeded = await seedAssignedIssue();
+    await insertRuns({
+      companyId: seeded.companyId,
+      agentId: seeded.coderId,
+      issueId: seeded.issueId,
+      count: DEFAULT_PRODUCTIVITY_REVIEW_NO_COMMENT_STREAK_RUNS,
+      now,
+    });
+    await db.insert(issues).values(
+      [8, 9, 10].map((hoursAgo, index) => {
+        const createdAt = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
+        return {
+          id: randomUUID(),
+          companyId: seeded.companyId,
+          title: `Cancelled productivity review ${index + 1}`,
+          status: "cancelled",
+          priority: "high",
+          originKind: PRODUCTIVITY_REVIEW_ORIGIN_KIND,
+          originId: seeded.issueId,
+          originFingerprint: `productivity-review:${seeded.issueId}`,
+          parentId: seeded.issueId,
+          issueNumber: index + 2,
+          identifier: `${seeded.issuePrefix}-${index + 2}`,
+          createdAt,
+          updatedAt: createdAt,
+        };
+      }),
+    );
+
+    const result = await productivityReviewService(db).reconcileProductivityReviews({
+      now,
+      companyId: seeded.companyId,
+    });
+
+    expect(result.created).toBe(1);
+    expect(result.creationCapped).toBe(0);
+    expect(await listProductivityReviews(seeded.companyId)).toHaveLength(4);
   });
 
   it("creates a long-active review without enabling a continuation hold", async () => {
