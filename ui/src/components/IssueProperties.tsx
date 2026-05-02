@@ -25,6 +25,7 @@ import { getRecentProjectIds, trackRecentProject } from "../lib/recent-projects"
 import { orderItemsBySelectedAndRecent } from "../lib/recent-selections";
 import { formatAssigneeUserLabel } from "../lib/assignees";
 import { buildExecutionPolicy, stageParticipantValues } from "../lib/issue-execution-policy";
+import { formatMonitorOffset } from "../lib/issue-monitor";
 import { StatusIcon } from "./StatusIcon";
 import { PriorityIcon } from "./PriorityIcon";
 import { Identity } from "./Identity";
@@ -124,19 +125,6 @@ function toDateTimeLocalValue(value: string | null | undefined) {
   if (Number.isNaN(date.getTime())) return "";
   const offsetMs = date.getTimezoneOffset() * 60_000;
   return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
-}
-
-function formatMonitorOffset(nextCheckAt: Date | string): string {
-  const deltaMs = new Date(nextCheckAt).getTime() - Date.now();
-  const absMinutes = Math.round(Math.abs(deltaMs) / 60_000);
-  if (absMinutes <= 0) return "now";
-  if (absMinutes < 60) return deltaMs >= 0 ? `in ${absMinutes}m` : `${absMinutes}m ago`;
-
-  const absHours = Math.round(absMinutes / 60);
-  if (absHours < 24) return deltaMs >= 0 ? `in ${absHours}h` : `${absHours}h ago`;
-
-  const absDays = Math.round(absHours / 24);
-  return deltaMs >= 0 ? `in ${absDays}d` : `${absDays}d ago`;
 }
 
 interface IssuePropertiesProps {
@@ -540,11 +528,11 @@ export function IssueProperties({
     if (issue.executionPolicy?.monitor?.nextCheckAt) {
       return `Next check ${formatDate(new Date(issue.executionPolicy.monitor.nextCheckAt))}`;
     }
-    if (issue.monitorLastTriggeredAt) {
-      return `Last triggered ${timeAgo(issue.monitorLastTriggeredAt)}`;
-    }
     if (issue.executionState?.monitor?.status === "cleared") {
       return "Cleared";
+    }
+    if (issue.monitorLastTriggeredAt) {
+      return `Last triggered ${timeAgo(issue.monitorLastTriggeredAt)}`;
     }
     return "Not scheduled";
   })();

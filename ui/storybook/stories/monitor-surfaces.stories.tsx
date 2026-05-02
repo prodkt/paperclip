@@ -91,6 +91,36 @@ const clearedIssue: Issue = {
   executionPolicy: {
     ...(baseIssue.executionPolicy ?? { mode: "normal", commentRequired: true, stages: [] }),
   },
+  executionState: {
+    ...(baseIssue.executionState ?? {
+      status: "pending",
+      currentStageId: null,
+      currentStageIndex: null,
+      currentStageType: null,
+      currentParticipant: null,
+      returnAssignee: null,
+      reviewRequest: null,
+      completedStageIds: [],
+      lastDecisionId: null,
+      lastDecisionOutcome: null,
+    }),
+    monitor: {
+      status: "cleared",
+      nextCheckAt: null,
+      lastTriggeredAt: null,
+      attemptCount: 0,
+      notes: null,
+      scheduledBy: "board",
+      kind: null,
+      serviceName: null,
+      externalRef: null,
+      timeoutAt: null,
+      maxAttempts: null,
+      recoveryPolicy: null,
+      clearedAt: new Date(Date.now() - 60_000).toISOString(),
+      clearReason: "manual",
+    },
+  },
 };
 
 function MonitorSurfaceStories() {
