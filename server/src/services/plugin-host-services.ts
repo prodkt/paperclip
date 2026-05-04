@@ -1159,6 +1159,7 @@ export function buildHostServices(
           pluginId,
           pluginKey,
           projectKey: params.projectKey,
+          createIfMissing: false,
         });
       },
       async reconcileManaged(params) {

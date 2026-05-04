@@ -425,6 +425,21 @@ describeEmbeddedPostgres("plugin orchestration APIs", () => {
     });
 
     const services = buildHostServices(db, pluginId, "paperclip.missions", createEventBusStub());
+    const missing = await services.projects.getManaged({ companyId, projectKey: "operations" });
+    expect(missing.status).toBe("missing");
+    expect(missing.projectId).toBeNull();
+    await expect(
+      db
+        .select()
+        .from(pluginManagedResources)
+        .where(and(
+          eq(pluginManagedResources.companyId, companyId),
+          eq(pluginManagedResources.pluginId, pluginId),
+          eq(pluginManagedResources.resourceKind, "project"),
+          eq(pluginManagedResources.resourceKey, "operations"),
+        )),
+    ).resolves.toHaveLength(0);
+
     const created = await services.projects.reconcileManaged({ companyId, projectKey: "operations" });
 
     expect(created.status).toBe("created");

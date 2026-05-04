@@ -536,6 +536,7 @@ export function projectService(db: Db) {
       pluginKey: string;
       projectKey: string;
       reset?: boolean;
+      createIfMissing?: boolean;
     }): Promise<PluginManagedProjectResolution> => {
       const plugin = await db
         .select({ id: plugins.id, pluginKey: plugins.pluginKey, manifestJson: plugins.manifestJson })
@@ -598,10 +599,12 @@ export function projectService(db: Db) {
               })
               .where(and(eq(projects.companyId, input.companyId), eq(projects.id, existingBinding.resourceId)));
           }
-          await db
-            .update(pluginManagedResources)
-            .set({ defaultsJson: defaults, updatedAt: new Date() })
-            .where(eq(pluginManagedResources.id, existingBinding.id));
+          if (input.createIfMissing !== false) {
+            await db
+              .update(pluginManagedResources)
+              .set({ defaultsJson: defaults, updatedAt: new Date() })
+              .where(eq(pluginManagedResources.id, existingBinding.id));
+          }
           const project = await getProjectById(existingBinding.resourceId);
           return {
             pluginKey: input.pluginKey,
@@ -611,6 +614,18 @@ export function projectService(db: Db) {
             projectId: project?.id ?? existingBinding.resourceId,
             project: project as import("@paperclipai/shared").Project | null,
             status: input.reset ? "reset" : "resolved",
+          };
+        }
+
+        if (input.createIfMissing === false) {
+          return {
+            pluginKey: input.pluginKey,
+            resourceKind: "project",
+            resourceKey: input.projectKey,
+            companyId: input.companyId,
+            projectId: null,
+            project: null,
+            status: "missing",
           };
         }
 
@@ -633,6 +648,18 @@ export function projectService(db: Db) {
           projectId: hydrated?.id ?? project.id,
           project: hydrated as import("@paperclipai/shared").Project | null,
           status: "relinked",
+        };
+      }
+
+      if (input.createIfMissing === false) {
+        return {
+          pluginKey: input.pluginKey,
+          resourceKind: "project",
+          resourceKey: input.projectKey,
+          companyId: input.companyId,
+          projectId: null,
+          project: null,
+          status: "missing",
         };
       }
 
