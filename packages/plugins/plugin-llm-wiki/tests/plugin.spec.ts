@@ -957,6 +957,18 @@ Route sidebar state stays attached to the selected wiki page.
 
   it("repairs all managed maintenance routines through one action", async () => {
     const harness = createTestHarness({ manifest });
+    const originalReset = harness.ctx.routines.managed.reset.bind(harness.ctx.routines.managed);
+    const originalReconcile = harness.ctx.routines.managed.reconcile.bind(harness.ctx.routines.managed);
+    const routineCalls: string[] = [];
+    harness.ctx.routines.managed.reset = async (...args) => {
+      routineCalls.push(`reset:${String(args[0])}`);
+      return originalReset(...args);
+    };
+    harness.ctx.routines.managed.reconcile = async (...args) => {
+      routineCalls.push(`reconcile:${String(args[0])}`);
+      return originalReconcile(...args);
+    };
+
     await plugin.definition.setup(harness.ctx);
     await harness.performAction("bootstrap-root", { companyId: COMPANY_ID, path: "/tmp/company-wiki" });
 
@@ -966,6 +978,7 @@ Route sidebar state stays attached to the selected wiki page.
 
     expect(repaired.managedRoutines).toHaveLength(WIKI_MAINTENANCE_ROUTINE_KEYS.length);
     expect(repaired.managedRoutines.map((routine) => routine.resourceKey)).toEqual([...WIKI_MAINTENANCE_ROUTINE_KEYS]);
+    expect(routineCalls).toEqual(WIKI_MAINTENANCE_ROUTINE_KEYS.map((routineKey) => `reconcile:${routineKey}`));
     for (const routine of repaired.managedRoutines) {
       expect(routine.routine).toEqual(expect.objectContaining({
         assigneeAgentId: expect.any(String),

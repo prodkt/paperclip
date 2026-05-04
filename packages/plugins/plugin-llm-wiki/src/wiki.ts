@@ -1156,7 +1156,7 @@ export async function reconcileWikiRoutineResources(
 
   const managedRoutines = await Promise.all(
     WIKI_MAINTENANCE_ROUTINE_KEYS.map((routineKey) =>
-      ctx.routines.managed.reset(routineKey, companyId, {
+      ctx.routines.managed.reconcile(routineKey, companyId, {
         assigneeAgentId: managedAgent.agentId,
         projectId: managedProject.projectId,
       })),
