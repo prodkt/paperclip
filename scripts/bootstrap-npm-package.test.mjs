@@ -23,6 +23,16 @@ test("parseArgs accepts an explicit otp value", () => {
   });
 });
 
+test("parseArgs leaves otp null when omitted", () => {
+  assert.deepEqual(parseArgs(["packages/adapters/acpx-local", "--publish"]), {
+    help: false,
+    selector: "packages/adapters/acpx-local",
+    publish: true,
+    skipBuild: false,
+    otp: null,
+  });
+});
+
 test("parseArgs returns help mode", () => {
   assert.deepEqual(parseArgs(["--help"]), {
     help: true,
