@@ -113,8 +113,8 @@ export function RoutineHistoryTab({
       pushToast({
         title: `Restored revision ${restoredFromNumber} as revision ${newNumber}`,
         body: data.secretMaterials.length > 0
-          ? "Paused triggers stay paused. New webhook secret available in the banner above."
-          : "Paused triggers stay paused.",
+          ? "Trigger enabled state was restored from the snapshot. New webhook secrets are available in the banner above."
+          : "Trigger enabled state was restored from the snapshot.",
         tone: "success",
       });
       onRestoreSecretMaterials(data);
