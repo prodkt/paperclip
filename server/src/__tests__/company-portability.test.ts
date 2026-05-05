@@ -2417,7 +2417,10 @@ describe("company portability", () => {
       adapterOverrides: {
         claudecoder: {
           adapterType: "codex_local",
-          adapterConfig: {},
+          adapterConfig: {
+            extraArgs: [],
+            args: ["--legacy-arg"],
+          },
         },
       },
     }, "user-1");
@@ -2426,6 +2429,7 @@ describe("company portability", () => {
       adapterType: "codex_local",
       adapterConfig: expect.objectContaining({
         extraArgs: ["--skip-git-repo-check"],
+        args: ["--legacy-arg"],
       }),
     }));
     expect(agentSvc.create).toHaveBeenLastCalledWith("company-imported", expect.objectContaining({
@@ -2572,7 +2576,12 @@ describe("company portability", () => {
       "issue-imported",
       "Paperclip needs a disposition before this issue can continue.",
       { agentId: undefined, userId: undefined },
-      { authorType: "system", presentation, metadata },
+      {
+        authorType: "system",
+        presentation,
+        metadata,
+        createdAt: "2026-05-04T12:00:00.000Z",
+      },
     );
   });
 

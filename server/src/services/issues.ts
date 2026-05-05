@@ -3790,6 +3790,7 @@ export function issueService(db: Db) {
         authorType?: IssueCommentAuthorType | null;
         presentation?: IssueCommentPresentation | null;
         metadata?: IssueCommentMetadata | null;
+        createdAt?: Date | string | null;
       },
     ) => {
       const issue = await db
@@ -3810,6 +3811,7 @@ export function issueService(db: Db) {
       assertIssueCommentAuthorTypeAllowed(actor, authorType);
       const presentation = issueCommentPresentationSchema.nullable().parse(options?.presentation ?? null);
       const metadata = issueCommentMetadataSchema.nullable().parse(options?.metadata ?? null);
+      const createdAt = options?.createdAt ? new Date(options.createdAt) : null;
       const [comment] = await db
         .insert(issueComments)
         .values({
@@ -3822,6 +3824,7 @@ export function issueService(db: Db) {
           body: redactedBody,
           presentation,
           metadata,
+          ...(createdAt && !Number.isNaN(createdAt.getTime()) ? { createdAt } : {}),
         })
         .returning();
 

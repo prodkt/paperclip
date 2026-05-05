@@ -712,7 +712,7 @@ function readPortableIssueComments(
 
 function appendCodexImportArg(adapterConfig: Record<string, unknown>, arg: string) {
   const extraArgs = readStringArray(adapterConfig.extraArgs);
-  if (extraArgs && extraArgs.length > 0) {
+  if (extraArgs) {
     if (!extraArgs.includes(arg)) adapterConfig.extraArgs = [...extraArgs, arg];
     return;
   }
@@ -723,7 +723,7 @@ function appendCodexImportArg(adapterConfig: Record<string, unknown>, arg: strin
     return;
   }
 
-  if (extraArgs?.includes(arg) || legacyArgs?.includes(arg)) return;
+  if (legacyArgs?.includes(arg)) return;
   adapterConfig.extraArgs = [arg];
 }
 
@@ -4645,6 +4645,7 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
             authorType,
             presentation: comment.presentation,
             metadata: comment.metadata,
+            createdAt: comment.createdAt,
           });
         }
       }
