@@ -5,6 +5,7 @@ import {
   DEFAULT_ACPX_LOCAL_NON_INTERACTIVE_PERMISSIONS,
   DEFAULT_ACPX_LOCAL_PERMISSION_MODE,
   DEFAULT_ACPX_LOCAL_TIMEOUT_SEC,
+  DEFAULT_ACPX_LOCAL_WARM_HANDLE_IDLE_MS,
 } from "../index.js";
 
 function parseCommaArgs(value: string): string[] {
@@ -88,7 +89,7 @@ export function buildAcpxLocalConfig(v: CreateConfigValues): Record<string, unkn
     nonInteractivePermissions:
       schemaValues.nonInteractivePermissions || DEFAULT_ACPX_LOCAL_NON_INTERACTIVE_PERMISSIONS,
     timeoutSec: readNumber(schemaValues.timeoutSec, DEFAULT_ACPX_LOCAL_TIMEOUT_SEC),
-    warmHandleIdleMs: readNumber(schemaValues.warmHandleIdleMs, 0),
+    warmHandleIdleMs: readNumber(schemaValues.warmHandleIdleMs, DEFAULT_ACPX_LOCAL_WARM_HANDLE_IDLE_MS),
   };
 
   for (const key of [

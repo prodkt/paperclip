@@ -273,6 +273,45 @@ describe("acpx_local execute", () => {
     }
   });
 
+  it("logs a clear error when configured session options need unsupported runtime controls", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-acpx-missing-config-controls-"));
+    try {
+      const runtime = new FakeRuntime({} as AcpRuntimeOptions);
+      Object.defineProperty(runtime, "setConfigOption", { value: undefined });
+      const logs: LogEntry[] = [];
+      const execute = createAcpxLocalExecutor({
+        createRuntime: () => runtime,
+      });
+      const result = await execute(buildContext(root, {
+        config: {
+          agent: "codex",
+          cwd: root,
+          stateDir: path.join(root, "state"),
+          promptTemplate: "Do the assigned work.",
+          model: "gpt-5.4",
+        },
+        onLog: async (stream, chunk) => logs.push({ stream, chunk }),
+      }));
+
+      expect(result.exitCode).toBe(1);
+      expect(result.errorMessage).toContain("does not expose session config controls");
+      expect(logs).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          stream: "stderr",
+          chunk: expect.stringContaining("upgrade ACPX or remove configured model"),
+        }),
+      ]));
+      expect(runtime.closeInputs).toEqual([
+        expect.objectContaining({
+          reason: "paperclip config cleanup",
+          discardPersistentState: false,
+        }),
+      ]);
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reuses a compatible warm session and starts fresh when cwd changes", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-acpx-reuse-"));
     const other = path.join(root, "other");

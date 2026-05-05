@@ -832,7 +832,10 @@ async function applySessionConfigOptions(input: {
   const options = sessionConfigOptions(input.prepared);
   if (options.length === 0) return;
   if (!input.runtime.setConfigOption) {
-    throw new Error("ACPX runtime does not expose session config controls.");
+    const message =
+      "ACPX runtime does not expose session config controls; upgrade ACPX or remove configured model, effort, and fast mode overrides.";
+    await input.onLog("stderr", `[paperclip] ${message}\n`);
+    throw new Error(message);
   }
   for (const option of options) {
     await input.runtime.setConfigOption({
