@@ -40,10 +40,6 @@ vi.mock("@/lib/router", () => ({
   },
 }));
 
-vi.mock("./CompanyRail", () => ({
-  CompanyRail: () => <div>Company rail</div>,
-}));
-
 vi.mock("./Sidebar", () => ({
   Sidebar: () => <div>Main company nav</div>,
 }));
