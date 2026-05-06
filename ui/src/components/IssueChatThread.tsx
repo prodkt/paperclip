@@ -1991,12 +1991,13 @@ function issueStatusIsTerminalDisposition(issueStatus: string | undefined) {
 
 function sourceRunIdFromSuccessfulRunHandoffMetadata(metadata: IssueCommentMetadata | null) {
   if (metadata?.sourceRunId) return metadata.sourceRunId;
+  const runLinks = [];
   for (const section of metadata?.sections ?? []) {
     for (const row of section.rows) {
-      if (row.type === "run_link") return row.runId;
+      if (row.type === "run_link") runLinks.push(row.runId);
     }
   }
-  return null;
+  return runLinks.length === 1 ? runLinks[0] : null;
 }
 
 function isStaleSuccessfulRunHandoffNotice(input: {

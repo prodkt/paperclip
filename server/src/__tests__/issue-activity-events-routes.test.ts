@@ -1,5 +1,6 @@
 import express from "express";
 import request from "supertest";
+import { getTableName } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { normalizeIssueExecutionPolicy } from "../services/issue-execution-policy.ts";
 
@@ -267,12 +268,12 @@ describe("issue activity event routes", () => {
   }, 15_000);
 
   it("logs readable workspace change activity details for issue updates", async () => {
-    const previousWorkspaceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-    const nextWorkspaceId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const previousProjectWorkspaceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const nextExecutionWorkspaceId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
     const issue = {
       ...makeIssue(),
       projectId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-      projectWorkspaceId: previousWorkspaceId,
+      projectWorkspaceId: previousProjectWorkspaceId,
       executionWorkspaceId: null,
       executionWorkspacePreference: "shared_workspace",
       executionWorkspaceSettings: { mode: "shared_workspace" },
@@ -286,18 +287,24 @@ describe("issue activity event routes", () => {
 
     const dbMock = {
       select: vi.fn(() => ({
-        from: () => ({
-          where: async () => [
-            { id: previousWorkspaceId, name: "Main workspace" },
-            { id: nextWorkspaceId, name: "Feature workspace" },
-          ],
+        from: (table: unknown) => ({
+          where: async () => {
+            const tableName = getTableName(table as Parameters<typeof getTableName>[0]);
+            if (tableName === "project_workspaces") {
+              return [{ id: previousProjectWorkspaceId, name: "Main workspace" }];
+            }
+            if (tableName === "execution_workspaces") {
+              return [{ id: nextExecutionWorkspaceId, name: "Feature workspace" }];
+            }
+            return [];
+          },
         }),
       })),
     };
 
     const res = await request(await createApp(dbMock))
       .patch(`/api/issues/${issue.id}`)
-      .send({ projectWorkspaceId: nextWorkspaceId });
+      .send({ executionWorkspaceId: nextExecutionWorkspaceId });
 
     expect(res.status).toBe(200);
     await vi.waitFor(() => {
@@ -306,23 +313,23 @@ describe("issue activity event routes", () => {
         expect.objectContaining({
           action: "issue.updated",
           details: expect.objectContaining({
-            projectWorkspaceId: nextWorkspaceId,
+            executionWorkspaceId: nextExecutionWorkspaceId,
             workspaceChange: {
               from: {
                 label: "Main workspace",
-                projectWorkspaceId: previousWorkspaceId,
+                projectWorkspaceId: previousProjectWorkspaceId,
                 executionWorkspaceId: null,
                 mode: "shared_workspace",
               },
               to: {
                 label: "Feature workspace",
-                projectWorkspaceId: nextWorkspaceId,
-                executionWorkspaceId: null,
+                projectWorkspaceId: previousProjectWorkspaceId,
+                executionWorkspaceId: nextExecutionWorkspaceId,
                 mode: "shared_workspace",
               },
             },
             _previous: expect.objectContaining({
-              projectWorkspaceId: previousWorkspaceId,
+              executionWorkspaceId: null,
             }),
           }),
         }),
