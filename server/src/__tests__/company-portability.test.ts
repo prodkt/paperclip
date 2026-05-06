@@ -2389,6 +2389,7 @@ describe("company portability", () => {
       collisionStrategy: "rename",
     }, "user-1");
 
+    // Imports must preserve safe-by-default local adapter settings unless the package says otherwise.
     const firstCreateInput = agentSvc.create.mock.calls[0]?.[1] as Record<string, any>;
     expect(firstCreateInput?.adapterConfig).toBeTruthy();
     expect(firstCreateInput.adapterConfig?.dangerouslySkipPermissions).toBeUndefined();
