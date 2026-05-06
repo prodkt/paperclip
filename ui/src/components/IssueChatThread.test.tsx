@@ -836,6 +836,9 @@ describe("IssueChatThread", () => {
       authorAgentId: "agent-perf-codex",
       authorUserId: null,
       body: "Older loaded comment",
+      authorType: "agent" as const,
+      presentation: null,
+      metadata: null,
       createdAt: new Date("2026-04-06T12:00:00.000Z"),
       updatedAt: new Date("2026-04-06T12:00:00.000Z"),
     };
@@ -1056,6 +1059,9 @@ describe("IssueChatThread", () => {
       authorAgentId: "agent-1",
       authorUserId: null,
       body: "Agent summary with **markdown**",
+      authorType: "agent" as const,
+      presentation: null,
+      metadata: null,
       createdAt: new Date("2026-04-06T12:00:00.000Z"),
       updatedAt: new Date("2026-04-06T12:00:00.000Z"),
     }];
@@ -1135,6 +1141,9 @@ describe("IssueChatThread", () => {
               authorAgentId: null,
               authorUserId: "local-board",
               body: "Please continue validation.",
+              authorType: "user",
+              presentation: null,
+              metadata: null,
               followUpRequested: true,
               createdAt: new Date("2026-03-11T10:00:00.000Z"),
               updatedAt: new Date("2026-03-11T10:00:00.000Z"),
@@ -1487,6 +1496,49 @@ describe("IssueChatThread", () => {
     });
   });
 
+  it("invokes the cancel callback for pending question interactions", async () => {
+    const root = createRoot(container);
+    const onCancelInteraction = vi.fn(async () => undefined);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <IssueChatThread
+            comments={[]}
+            interactions={[createQuestionInteraction()]}
+            linkedRuns={[]}
+            timelineEvents={[]}
+            liveRuns={[]}
+            onAdd={async () => {}}
+            onCancelInteraction={onCancelInteraction}
+            showComposer={false}
+            enableLiveTranscriptPolling={false}
+          />
+        </MemoryRouter>,
+      );
+    });
+
+    const cancelButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Cancel question"),
+    );
+    expect(cancelButton).toBeTruthy();
+
+    await act(async () => {
+      cancelButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onCancelInteraction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "interaction-question-1",
+        kind: "ask_user_questions",
+      }),
+    );
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it("folds expired request confirmations into an activity row by default", async () => {
     const root = createRoot(container);
 
@@ -1545,6 +1597,9 @@ describe("IssueChatThread", () => {
               authorAgentId: "agent-1",
               authorUserId: null,
               body: "Agent summary",
+              authorType: "agent",
+              presentation: null,
+              metadata: null,
               createdAt: new Date("2026-04-06T12:00:00.000Z"),
               updatedAt: new Date("2026-04-06T12:00:00.000Z"),
             }]}
@@ -1581,6 +1636,9 @@ describe("IssueChatThread", () => {
               authorAgentId: null,
               authorUserId: "user-1",
               body: "Need a quick update",
+              authorType: "user",
+              presentation: null,
+              metadata: null,
               queueState: "queued",
               queueReason: "hold",
               createdAt: new Date("2026-04-06T12:00:00.000Z"),
@@ -1610,6 +1668,9 @@ describe("IssueChatThread", () => {
               authorAgentId: null,
               authorUserId: "user-1",
               body: "Queue behind active run",
+              authorType: "user",
+              presentation: null,
+              metadata: null,
               queueState: "queued",
               queueReason: "active_run",
               createdAt: new Date("2026-04-06T12:01:00.000Z"),
@@ -1954,6 +2015,9 @@ describe("IssueChatThread", () => {
               authorAgentId: null,
               authorUserId: "user-1",
               body: "hello",
+              authorType: "user",
+              presentation: null,
+              metadata: null,
               createdAt: new Date("2026-04-22T12:00:00.000Z"),
               updatedAt: new Date("2026-04-22T12:00:00.000Z"),
             }]}

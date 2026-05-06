@@ -60,7 +60,7 @@ import {
 } from "../lib/optimistic-issue-comments";
 import { clearIssueExecutionRun, removeLiveRunById, upsertInterruptedRun } from "../lib/optimistic-issue-runs";
 import { useProjectOrder } from "../hooks/useProjectOrder";
-import { relativeTime, cn, formatTokens, visibleRunCostUsd } from "../lib/utils";
+import { relativeTime, cn, formatDurationMs, formatTokens, visibleRunCostUsd } from "../lib/utils";
 import { ApprovalCard } from "../components/ApprovalCard";
 import { InlineEditor } from "../components/InlineEditor";
 import { IssueChatThread, type IssueChatComposerHandle } from "../components/IssueChatThread";
@@ -70,6 +70,7 @@ import { IssuesList } from "../components/IssuesList";
 import { AgentIcon } from "../components/AgentIconPicker";
 import { IssueReferenceActivitySummary } from "../components/IssueReferenceActivitySummary";
 import { IssueRelatedWorkPanel } from "../components/IssueRelatedWorkPanel";
+import { IssueMonitorActivityCard } from "../components/IssueMonitorActivityCard";
 import { IssueProperties } from "../components/IssueProperties";
 import { IssueRunLedger } from "../components/IssueRunLedger";
 import { IssueWorkspaceCard } from "../components/IssueWorkspaceCard";
@@ -104,7 +105,13 @@ import { shouldRenderRichSubIssuesSection } from "../lib/issue-detail-subissues"
 import { filterIssueDescendants } from "../lib/issue-tree";
 import { buildSubIssueDefaultsForViewer } from "../lib/subIssueDefaults";
 import {
+  SUCCESSFUL_RUN_HANDOFF_ESCALATED_ACTION,
+  SUCCESSFUL_RUN_HANDOFF_REQUIRED_ACTION,
+  successfulRunHandoffActivityTone,
+} from "../lib/successful-run-handoff";
+import {
   Activity as ActivityIcon,
+  AlertTriangle,
   Archive,
   ArrowLeft,
   Check,
@@ -577,6 +584,7 @@ type IssueDetailChatTabProps = {
   executionRunId: string | null;
   blockedBy: Issue["blockedBy"];
   blockerAttention: Issue["blockerAttention"] | null;
+  successfulRunHandoff: Issue["successfulRunHandoff"] | null;
   comments: IssueDetailComment[];
   locallyQueuedCommentRunIds: ReadonlyMap<string, string>;
   interactions: IssueThreadInteraction[];
@@ -634,6 +642,7 @@ const IssueDetailChatTab = memo(function IssueDetailChatTab({
   executionRunId,
   blockedBy,
   blockerAttention,
+  successfulRunHandoff,
   comments,
   locallyQueuedCommentRunIds,
   interactions,
@@ -778,6 +787,8 @@ const IssueDetailChatTab = memo(function IssueDetailChatTab({
           comment: nextComment,
           activeRunStartedAt,
           activeRunAgentId: runningIssueRun?.agentId ?? null,
+          activeRunCommentId: runningIssueRun?.contextCommentId ?? null,
+          activeRunWakeCommentId: runningIssueRun?.contextWakeCommentId ?? null,
           runId: meta?.runId ?? nextComment.runId ?? null,
           interruptedRunId: meta?.interruptedRunId ?? nextComment.interruptedRunId ?? null,
         })
@@ -833,6 +844,7 @@ const IssueDetailChatTab = memo(function IssueDetailChatTab({
         activeRun={resolvedActiveRun}
         blockedBy={blockedBy ?? []}
         blockerAttention={blockerAttention}
+        successfulRunHandoff={successfulRunHandoff}
         companyId={companyId}
         projectId={projectId}
         issueStatus={issueStatus}
@@ -879,6 +891,7 @@ const IssueDetailChatTab = memo(function IssueDetailChatTab({
 });
 
 type IssueDetailActivityTabProps = {
+  issue: Issue;
   issueId: string;
   companyId: string;
   issueStatus: Issue["status"];
@@ -889,10 +902,13 @@ type IssueDetailActivityTabProps = {
   userProfileMap: Map<string, import("../lib/company-members").CompanyUserProfile>;
   pendingApprovalAction: { approvalId: string; action: "approve" | "reject" } | null;
   onApprovalAction: (approvalId: string, action: "approve" | "reject") => void;
+  onCheckMonitorNow: () => void;
+  checkingMonitorNow: boolean;
   handoffFocusSignal?: number;
 };
 
 function IssueDetailActivityTab({
+  issue,
   issueId,
   companyId,
   issueStatus,
@@ -903,6 +919,8 @@ function IssueDetailActivityTab({
   userProfileMap,
   pendingApprovalAction,
   onApprovalAction,
+  onCheckMonitorNow,
+  checkingMonitorNow,
   handoffFocusSignal = 0,
 }: IssueDetailActivityTabProps) {
   const { data: activity, isLoading: activityLoading } = useQuery({
@@ -948,8 +966,11 @@ function IssueDetailActivityTab({
     let output = 0;
     let cached = 0;
     let cost = 0;
+    let runtimeMs = 0;
+    let runCount = 0;
     let hasCost = false;
     let hasTokens = false;
+    const nowMs = Date.now();
 
     for (const run of linkedRuns ?? []) {
       const usage = asRecord(run.usageJson);
@@ -969,6 +990,15 @@ function IssueDetailActivityTab({
       output += runOutput;
       cached += runCached;
       cost += runCost;
+
+      if (run.startedAt) {
+        const startMs = new Date(run.startedAt).getTime();
+        const endMs = run.finishedAt ? new Date(run.finishedAt).getTime() : nowMs;
+        if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs >= startMs) {
+          runtimeMs += endMs - startMs;
+          runCount += 1;
+        }
+      }
     }
 
     return {
@@ -979,6 +1009,9 @@ function IssueDetailActivityTab({
       totalTokens: input + output,
       hasCost,
       hasTokens,
+      runtimeMs,
+      runCount,
+      hasRuntime: runtimeMs > 0,
     };
   }, [linkedRuns]);
   const issueTreeCostTokens =
@@ -988,6 +1021,7 @@ function IssueDetailActivityTab({
     && (issueTreeCostSummary.costCents > 0
       || issueTreeCostTokens > 0
       || issueTreeCostSummary.cachedInputTokens > 0
+      || issueTreeCostSummary.runtimeMs > 0
       || issueTreeCostSummary.issueCount > 1);
   const shouldShowCostSummary =
     (linkedRuns && linkedRuns.length > 0) || hasIssueTreeCost;
@@ -1020,7 +1054,13 @@ function IssueDetailActivityTab({
                       : ` (in ${formatTokens(issueCostSummary.input)}, out ${formatTokens(issueCostSummary.output)})`}
                   </span>
                 ) : null}
-                {!issueCostSummary.hasCost && !issueCostSummary.hasTokens ? (
+                {issueCostSummary.hasRuntime ? (
+                  <span>
+                    Runtime {formatDurationMs(issueCostSummary.runtimeMs)}
+                    {` (${issueCostSummary.runCount} run${issueCostSummary.runCount === 1 ? "" : "s"})`}
+                  </span>
+                ) : null}
+                {!issueCostSummary.hasCost && !issueCostSummary.hasTokens && !issueCostSummary.hasRuntime ? (
                   <span>No direct cost data.</span>
                 ) : null}
               </div>
@@ -1040,6 +1080,12 @@ function IssueDetailActivityTab({
                       ? ` (in ${formatTokens(issueTreeCostSummary.inputTokens)}, out ${formatTokens(issueTreeCostSummary.outputTokens)}, cached ${formatTokens(issueTreeCostSummary.cachedInputTokens)})`
                       : ` (in ${formatTokens(issueTreeCostSummary.inputTokens)}, out ${formatTokens(issueTreeCostSummary.outputTokens)})`}
                   </span>
+                  {issueTreeCostSummary.runCount > 0 ? (
+                    <span>
+                      Runtime {formatDurationMs(issueTreeCostSummary.runtimeMs)}
+                      {` (${issueTreeCostSummary.runCount} run${issueTreeCostSummary.runCount === 1 ? "" : "s"})`}
+                    </span>
+                  ) : null}
                   <span>{issueTreeCostSummary.issueCount} issue{issueTreeCostSummary.issueCount === 1 ? "" : "s"}</span>
                 </div>
               ) : null}
@@ -1056,16 +1102,25 @@ function IssueDetailActivityTab({
           agentMap={agentMap}
           hasLiveRuns={hasLiveRuns}
           activityEvents={activity ?? []}
-          renderActivityEvent={(evt) => (
-            <div className="space-y-1.5 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <ActorIdentity evt={evt} agentMap={agentMap} userProfileMap={userProfileMap} />
-                <span>{formatIssueActivityAction(evt.action, evt.details, { agentMap, userProfileMap, currentUserId })}</span>
-                <span className="ml-auto shrink-0">{relativeTime(evt.createdAt)}</span>
+          renderActivityEvent={(evt) => {
+            const tone = successfulRunHandoffActivityTone(evt.action);
+            const isHandoffWarning =
+              evt.action === SUCCESSFUL_RUN_HANDOFF_REQUIRED_ACTION
+              || evt.action === SUCCESSFUL_RUN_HANDOFF_ESCALATED_ACTION;
+            return (
+              <div className={cn("space-y-1.5 rounded-lg border px-3 py-2 text-xs", tone.className)}>
+                <div className="flex items-center gap-1.5">
+                  {isHandoffWarning ? (
+                    <AlertTriangle className={cn("h-3.5 w-3.5 shrink-0", tone.iconClassName)} />
+                  ) : null}
+                  <ActorIdentity evt={evt} agentMap={agentMap} userProfileMap={userProfileMap} />
+                  <span>{formatIssueActivityAction(evt.action, evt.details, { agentMap, userProfileMap, currentUserId })}</span>
+                  <span className="ml-auto shrink-0">{relativeTime(evt.createdAt)}</span>
+                </div>
+                <IssueReferenceActivitySummary event={evt} />
               </div>
-              <IssueReferenceActivitySummary event={evt} />
-            </div>
-          )}
+            );
+          }}
         />
       </div>
       {linkedApprovals && linkedApprovals.length > 0 && (
@@ -1089,6 +1144,11 @@ function IssueDetailActivityTab({
         </div>
       )}
       <IssueContinuationHandoff document={continuationHandoff} focusSignal={handoffFocusSignal} />
+      <IssueMonitorActivityCard
+        issue={issue}
+        onCheckNow={onCheckMonitorNow}
+        checkingNow={checkingMonitorNow}
+      />
     </>
   );
 }
@@ -1751,6 +1811,26 @@ export function IssueDetail() {
   const handleChildIssueUpdate = useCallback((id: string, data: Record<string, unknown>) => {
     updateChildIssue.mutate({ id, data });
   }, [updateChildIssue]);
+
+  const checkIssueMonitorNow = useMutation({
+    mutationFn: () => issuesApi.checkMonitorNow(issueId!),
+    onSuccess: () => {
+      invalidateIssueDetail();
+      invalidateIssueRunState();
+      invalidateIssueCollections();
+      pushToast({
+        title: "Monitor check queued",
+        tone: "success",
+      });
+    },
+    onError: (err) => {
+      pushToast({
+        title: "Monitor check failed",
+        body: err instanceof Error ? err.message : "Unable to trigger the monitor right now",
+        tone: "error",
+      });
+    },
+  });
 
   const approvalDecision = useMutation({
     mutationFn: async ({ approvalId, action }: { approvalId: string; action: "approve" | "reject" }) => {
@@ -3414,6 +3494,7 @@ export function IssueDetail() {
             createIssueLabel="Sub-issue"
             defaultSortField="workflow"
             showProgressSummary
+            parentIssueIdForCostSummary={issue.id}
             onUpdateIssue={handleChildIssueUpdate}
           />
         </div>
@@ -3628,6 +3709,7 @@ export function IssueDetail() {
               executionRunId={issue.executionRunId ?? null}
               blockedBy={issue.blockedBy ?? []}
               blockerAttention={issue.blockerAttention ?? null}
+              successfulRunHandoff={issue.successfulRunHandoff ?? null}
               comments={threadComments}
               locallyQueuedCommentRunIds={locallyQueuedCommentRunIds}
               interactions={interactions}
@@ -3674,6 +3756,7 @@ export function IssueDetail() {
         <TabsContent value="activity">
           {detailTab === "activity" ? (
             <IssueDetailActivityTab
+              issue={issue}
               issueId={issue.id}
               companyId={issue.companyId}
               issueStatus={issue.status}
@@ -3687,6 +3770,8 @@ export function IssueDetail() {
               onApprovalAction={(approvalId, action) => {
                 approvalDecision.mutate({ approvalId, action });
               }}
+              onCheckMonitorNow={() => checkIssueMonitorNow.mutate()}
+              checkingMonitorNow={checkIssueMonitorNow.isPending}
             />
           ) : null}
         </TabsContent>

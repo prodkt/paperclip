@@ -14,6 +14,7 @@ import { authApi } from "../api/auth";
 import { assetsApi } from "../api/assets";
 import { buildCompanyUserInlineOptions, buildMarkdownMentionOptions } from "../lib/company-members";
 import { queryKeys } from "../lib/queryKeys";
+import { orderReusableExecutionWorkspaces } from "../lib/reusable-execution-workspaces";
 import { useProjectOrder } from "../hooks/useProjectOrder";
 import { getRecentAssigneeIds, sortAgentsByRecency, trackRecentAssignee } from "../lib/recent-assignees";
 import { getRecentProjectIds, trackRecentProject } from "../lib/recent-projects";
@@ -239,6 +240,21 @@ function defaultExecutionWorkspaceModeForProject(project: { executionWorkspacePo
     return defaultMode === "adapter_default" ? "agent_default" : defaultMode;
   }
   return "shared_workspace";
+}
+
+function defaultExecutionWorkspaceModeForIssueDefaults(
+  defaults: {
+    executionWorkspaceId?: unknown;
+    executionWorkspaceMode?: unknown;
+  },
+  project: { executionWorkspacePolicy?: { enabled?: boolean; defaultMode?: string | null } | null } | null | undefined,
+) {
+  if (typeof defaults.executionWorkspaceId === "string" && defaults.executionWorkspaceId.length > 0) {
+    return "reuse_existing";
+  }
+  return typeof defaults.executionWorkspaceMode === "string" && defaults.executionWorkspaceMode.length > 0
+    ? defaults.executionWorkspaceMode
+    : defaultExecutionWorkspaceModeForProject(project);
 }
 
 const IssueTitleTextarea = memo(function IssueTitleTextarea({
@@ -685,9 +701,7 @@ export function NewIssueDialog() {
       const hasExplicitProjectWorkspaceId = newIssueDefaults.projectWorkspaceId !== undefined;
       const defaultProjectWorkspaceId = newIssueDefaults.projectWorkspaceId
         ?? defaultProjectWorkspaceIdForProject(defaultProject);
-      const defaultExecutionWorkspaceMode = newIssueDefaults.executionWorkspaceId
-        ? "reuse_existing"
-        : (newIssueDefaults.executionWorkspaceMode ?? defaultExecutionWorkspaceModeForProject(defaultProject));
+      const defaultExecutionWorkspaceMode = defaultExecutionWorkspaceModeForIssueDefaults(newIssueDefaults, defaultProject);
       setIssueText(newIssueDefaults.title ?? "", newIssueDefaults.description ?? "");
       setStatus(newIssueDefaults.status ?? "todo");
       setPriority(newIssueDefaults.priority ?? "");
@@ -709,8 +723,9 @@ export function NewIssueDialog() {
       setPriority(newIssueDefaults.priority ?? "");
       const defaultProjectId = newIssueDefaults.projectId ?? "";
       const defaultProject = orderedProjects.find((project) => project.id === defaultProjectId);
+      const hasExplicitProjectWorkspaceId = newIssueDefaults.projectWorkspaceId !== undefined;
       setProjectId(defaultProjectId);
-      setProjectWorkspaceId(defaultProjectWorkspaceIdForProject(defaultProject));
+      setProjectWorkspaceId(newIssueDefaults.projectWorkspaceId ?? defaultProjectWorkspaceIdForProject(defaultProject));
       setAssigneeValue(assigneeValueFromSelection(newIssueDefaults));
       setReviewerValue("");
       setApproverValue("");
@@ -719,12 +734,17 @@ export function NewIssueDialog() {
       setAssigneeModelOverride("");
       setAssigneeThinkingEffort("");
       setAssigneeChrome(false);
-      setExecutionWorkspaceMode(defaultExecutionWorkspaceModeForProject(defaultProject));
-      setSelectedExecutionWorkspaceId("");
-      executionWorkspaceDefaultProjectId.current = defaultProject ? defaultProjectId || null : null;
+      setExecutionWorkspaceMode(defaultExecutionWorkspaceModeForIssueDefaults(newIssueDefaults, defaultProject));
+      setSelectedExecutionWorkspaceId(newIssueDefaults.executionWorkspaceId ?? "");
+      executionWorkspaceDefaultProjectId.current = hasExplicitProjectWorkspaceId || newIssueDefaults.executionWorkspaceId || defaultProject
+        ? defaultProjectId || null
+        : null;
     } else if (draft && draft.title.trim()) {
       const restoredProjectId = newIssueDefaults.projectId ?? draft.projectId;
       const restoredProject = orderedProjects.find((project) => project.id === restoredProjectId);
+      const hasExplicitProjectWorkspaceId = newIssueDefaults.projectWorkspaceId !== undefined;
+      const hasExplicitExecutionWorkspaceId = newIssueDefaults.executionWorkspaceId !== undefined;
+      const hasExplicitExecutionWorkspaceMode = newIssueDefaults.executionWorkspaceMode !== undefined;
       setIssueText(draft.title, draft.description);
       setStatus(draft.status || "todo");
       setPriority(draft.priority);
@@ -738,27 +758,40 @@ export function NewIssueDialog() {
       setShowReviewerRow(!!(draft.reviewerValue));
       setShowApproverRow(!!(draft.approverValue));
       setProjectId(restoredProjectId);
-      setProjectWorkspaceId(draft.projectWorkspaceId ?? defaultProjectWorkspaceIdForProject(restoredProject));
+      setProjectWorkspaceId(
+        hasExplicitProjectWorkspaceId
+          ? (newIssueDefaults.projectWorkspaceId ?? "")
+          : (draft.projectWorkspaceId ?? defaultProjectWorkspaceIdForProject(restoredProject)),
+      );
       setAssigneeModelLane(draft.assigneeModelLane ?? "primary");
       setAssigneeModelOverride(draft.assigneeModelOverride ?? "");
       setAssigneeThinkingEffort(draft.assigneeThinkingEffort ?? "");
       setAssigneeChrome(draft.assigneeChrome ?? false);
       setExecutionWorkspaceMode(
-        draft.executionWorkspaceMode
-          ?? (draft.useIsolatedExecutionWorkspace ? "isolated_workspace" : defaultExecutionWorkspaceModeForProject(restoredProject)),
+        hasExplicitExecutionWorkspaceId || hasExplicitExecutionWorkspaceMode
+          ? defaultExecutionWorkspaceModeForIssueDefaults(newIssueDefaults, restoredProject)
+          : (
+              draft.executionWorkspaceMode
+              ?? (draft.useIsolatedExecutionWorkspace ? "isolated_workspace" : defaultExecutionWorkspaceModeForProject(restoredProject))
+            ),
       );
-      setSelectedExecutionWorkspaceId(draft.selectedExecutionWorkspaceId ?? "");
-      executionWorkspaceDefaultProjectId.current = draft.projectWorkspaceId || restoredProject
+      setSelectedExecutionWorkspaceId(
+        hasExplicitExecutionWorkspaceId
+          ? (newIssueDefaults.executionWorkspaceId ?? "")
+          : (draft.selectedExecutionWorkspaceId ?? ""),
+      );
+      executionWorkspaceDefaultProjectId.current = hasExplicitProjectWorkspaceId || hasExplicitExecutionWorkspaceId || draft.projectWorkspaceId || restoredProject
         ? restoredProjectId || null
         : null;
     } else {
       const defaultProjectId = newIssueDefaults.projectId ?? "";
       const defaultProject = orderedProjects.find((project) => project.id === defaultProjectId);
+      const hasExplicitProjectWorkspaceId = newIssueDefaults.projectWorkspaceId !== undefined;
       setIssueText("", "");
       setStatus(newIssueDefaults.status ?? "todo");
       setPriority(newIssueDefaults.priority ?? "");
       setProjectId(defaultProjectId);
-      setProjectWorkspaceId(defaultProjectWorkspaceIdForProject(defaultProject));
+      setProjectWorkspaceId(newIssueDefaults.projectWorkspaceId ?? defaultProjectWorkspaceIdForProject(defaultProject));
       setAssigneeValue(assigneeValueFromSelection(newIssueDefaults));
       setReviewerValue("");
       setApproverValue("");
@@ -767,9 +800,11 @@ export function NewIssueDialog() {
       setAssigneeModelOverride("");
       setAssigneeThinkingEffort("");
       setAssigneeChrome(false);
-      setExecutionWorkspaceMode(defaultExecutionWorkspaceModeForProject(defaultProject));
-      setSelectedExecutionWorkspaceId("");
-      executionWorkspaceDefaultProjectId.current = defaultProject ? defaultProjectId || null : null;
+      setExecutionWorkspaceMode(defaultExecutionWorkspaceModeForIssueDefaults(newIssueDefaults, defaultProject));
+      setSelectedExecutionWorkspaceId(newIssueDefaults.executionWorkspaceId ?? "");
+      executionWorkspaceDefaultProjectId.current = hasExplicitProjectWorkspaceId || newIssueDefaults.executionWorkspaceId || defaultProject
+        ? defaultProjectId || null
+        : null;
     }
   }, [newIssueOpen, newIssueDefaults, orderedProjects, selectedCompanyId, setIssueText]);
 
@@ -1003,16 +1038,7 @@ export function NewIssueDialog() {
       : null;
   const currentProjectSupportsExecutionWorkspace = Boolean(currentProjectExecutionWorkspacePolicy?.enabled);
   const deduplicatedReusableWorkspaces = useMemo(() => {
-    const workspaces = reusableExecutionWorkspaces ?? [];
-    const seen = new Map<string, typeof workspaces[number]>();
-    for (const ws of workspaces) {
-      const key = ws.cwd ?? ws.id;
-      const existing = seen.get(key);
-      if (!existing || new Date(ws.lastUsedAt) > new Date(existing.lastUsedAt)) {
-        seen.set(key, ws);
-      }
-    }
-    return Array.from(seen.values());
+    return orderReusableExecutionWorkspaces(reusableExecutionWorkspaces ?? []);
   }, [reusableExecutionWorkspaces]);
   const selectedReusableExecutionWorkspace = deduplicatedReusableWorkspaces.find(
     (workspace) => workspace.id === selectedExecutionWorkspaceId,
