@@ -461,7 +461,9 @@ describe("NewIssueDialog", () => {
 
     expect(container.textContent).toContain("New issue");
     expect(container.textContent).not.toContain("New sub-issue");
-    expect(container.textContent).toContain("Reusing PAP-100");
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Reusing PAP-100");
+    });
 
     const submitButton = Array.from(container.querySelectorAll("button"))
       .find((button) => button.textContent?.includes("Create Issue"));
