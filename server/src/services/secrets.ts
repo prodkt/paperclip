@@ -800,7 +800,7 @@ export function secretService(db: Db) {
   }
 
   async function buildRemoteImportConflictMaps(companyId: string, provider: SecretProvider) {
-    const existingSecrets = await db
+    const activeSecrets = await db
       .select({
         id: companySecrets.id,
         name: companySecrets.name,
@@ -811,8 +811,7 @@ export function secretService(db: Db) {
         status: companySecrets.status,
       })
       .from(companySecrets)
-      .where(eq(companySecrets.companyId, companyId));
-    const activeSecrets = existingSecrets.filter((secret) => secret.status !== "deleted");
+      .where(and(eq(companySecrets.companyId, companyId), ne(companySecrets.status, "deleted")));
     return {
       byProviderConfigExternalRef: new Map(
         activeSecrets
