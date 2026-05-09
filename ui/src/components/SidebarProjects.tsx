@@ -28,6 +28,7 @@ import {
   getProjectSortModeStorageKey,
   PROJECT_SORT_MODE_UPDATED_EVENT,
   readProjectSortMode,
+  type ProjectSortModeUpdatedDetail,
   type ProjectSidebarSortMode,
   writeProjectSortMode,
 } from "../lib/project-order";
@@ -40,11 +41,6 @@ const PROJECT_SORT_CHOICES: SidebarSectionRadioChoice[] = [
   { value: "alphabetical", label: "Alphabetical" },
   { value: "recent", label: "Recent" },
 ];
-
-type ProjectSortModeUpdatedDetail = {
-  storageKey: string;
-  sortMode: ProjectSidebarSortMode;
-};
 
 type ProjectItemProps = {
   activeProjectRef: string | null;

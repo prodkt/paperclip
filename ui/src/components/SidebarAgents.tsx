@@ -24,6 +24,7 @@ import {
   AGENT_SORT_MODE_UPDATED_EVENT,
   getAgentSortModeStorageKey,
   readAgentSortMode,
+  type AgentSortModeUpdatedDetail,
   type AgentSidebarSortMode,
   writeAgentSortMode,
 } from "../lib/agent-order";
@@ -45,11 +46,6 @@ const AGENT_SORT_CHOICES: SidebarSectionRadioChoice[] = [
   { value: "alphabetical", label: "Alphabetical" },
   { value: "recent", label: "Recent" },
 ];
-
-type AgentSortModeUpdatedDetail = {
-  storageKey: string;
-  sortMode: AgentSidebarSortMode;
-};
 
 function agentTimestamp(agent: Agent, field: "lastHeartbeatAt" | "updatedAt" | "createdAt"): number {
   const raw = agent[field];

@@ -13,7 +13,7 @@ type AgentOrderUpdatedDetail = {
   orderedIds: string[];
 };
 
-type AgentSortModeUpdatedDetail = {
+export type AgentSortModeUpdatedDetail = {
   storageKey: string;
   sortMode: AgentSidebarSortMode;
 };

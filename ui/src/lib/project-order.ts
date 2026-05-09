@@ -13,7 +13,7 @@ type ProjectOrderUpdatedDetail = {
   orderedIds: string[];
 };
 
-type ProjectSortModeUpdatedDetail = {
+export type ProjectSortModeUpdatedDetail = {
   storageKey: string;
   sortMode: ProjectSidebarSortMode;
 };
