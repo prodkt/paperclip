@@ -15,6 +15,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./telemetry": "./src/telemetry/index.ts",
+    "./space-paths": "./src/space-paths.ts",
     "./*": "./src/*.ts"
   },
   "publishConfig": {
@@ -27,6 +28,10 @@
       "./telemetry": {
         "types": "./dist/telemetry/index.d.ts",
         "import": "./dist/telemetry/index.js"
+      },
+      "./space-paths": {
+        "types": "./dist/space-paths.d.ts",
+        "import": "./dist/space-paths.js"
       },
       "./*": {
         "types": "./dist/*.d.ts",

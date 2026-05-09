@@ -29,7 +29,7 @@ describe("applyDataDirOverride", () => {
     expect(home).toBe(expectedHome);
     expect(process.env.PAPERCLIP_HOME).toBe(expectedHome);
     expect(process.env.PAPERCLIP_CONFIG).toBe(
-      path.resolve(expectedHome, "instances", "default", "config.json"),
+      path.resolve(expectedHome, "instances", "default", "spaces", "default", "config.json"),
     );
     expect(process.env.PAPERCLIP_CONTEXT).toBe(path.resolve(expectedHome, "context.json"));
     expect(process.env.PAPERCLIP_INSTANCE_ID).toBe("default");
@@ -46,7 +46,7 @@ describe("applyDataDirOverride", () => {
     expect(home).toBe(path.resolve("/tmp/paperclip-alt"));
     expect(process.env.PAPERCLIP_INSTANCE_ID).toBe("dev_1");
     expect(process.env.PAPERCLIP_CONFIG).toBe(
-      path.resolve("/tmp/paperclip-alt", "instances", "dev_1", "config.json"),
+      path.resolve("/tmp/paperclip-alt", "instances", "dev_1", "spaces", "default", "config.json"),
     );
   });
 

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -9,20 +10,30 @@ import {
 } from "../config/home.js";
 
 const ORIGINAL_ENV = { ...process.env };
+const ORIGINAL_CWD = process.cwd();
 
 describe("home path resolution", () => {
   afterEach(() => {
     process.env = { ...ORIGINAL_ENV };
+    process.chdir(ORIGINAL_CWD);
   });
 
   it("defaults to ~/.paperclip and default instance", () => {
-    delete process.env.PAPERCLIP_HOME;
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-home-paths-"));
+    process.env.PAPERCLIP_HOME = home;
     delete process.env.PAPERCLIP_INSTANCE_ID;
+    process.chdir(home);
 
     const paths = describeLocalInstancePaths();
-    expect(paths.homeDir).toBe(path.resolve(os.homedir(), ".paperclip"));
+    expect(paths.homeDir).toBe(home);
     expect(paths.instanceId).toBe("default");
-    expect(paths.configPath).toBe(path.resolve(os.homedir(), ".paperclip", "instances", "default", "config.json"));
+    expect(paths.activeSpaceId).toBe("default");
+    expect(paths.activeSpaceRoot).toBe(
+      path.resolve(home, "instances", "default", "spaces", "default"),
+    );
+    expect(paths.configPath).toBe(
+      path.resolve(home, "instances", "default", "spaces", "default", "config.json"),
+    );
   });
 
   it("supports PAPERCLIP_HOME and explicit instance ids", () => {
@@ -34,7 +45,7 @@ describe("home path resolution", () => {
   });
 
   it("rejects invalid instance ids", () => {
-    expect(() => resolvePaperclipInstanceId("bad/id")).toThrow(/Invalid instance id/);
+    expect(() => resolvePaperclipInstanceId("bad/id")).toThrow(/Invalid PAPERCLIP_INSTANCE_ID/);
   });
 
   it("expands ~ prefixes", () => {

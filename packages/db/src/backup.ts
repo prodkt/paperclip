@@ -1,7 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { formatDatabaseBackupResult, runDatabaseBackup } from "./backup-lib.js";
+import {
+  expandHomePrefix,
+  resolveDefaultBackupDir as resolveSharedDefaultBackupDir,
+  resolvePaperclipConfigPathForInstance,
+} from "@paperclipai/shared/space-paths";
 
 type PartialConfig = {
   database?: {
@@ -15,28 +19,8 @@ type PartialConfig = {
   };
 };
 
-function expandHomePrefix(value: string): string {
-  if (value === "~") return os.homedir();
-  if (value.startsWith("~/")) return path.resolve(os.homedir(), value.slice(2));
-  return value;
-}
-
-function resolvePaperclipHomeDir(): string {
-  const envHome = process.env.PAPERCLIP_HOME?.trim();
-  if (envHome) return path.resolve(expandHomePrefix(envHome));
-  return path.resolve(os.homedir(), ".paperclip");
-}
-
-function resolvePaperclipInstanceId(): string {
-  const raw = process.env.PAPERCLIP_INSTANCE_ID?.trim() || "default";
-  if (!/^[a-zA-Z0-9_-]+$/.test(raw)) {
-    throw new Error(`Invalid PAPERCLIP_INSTANCE_ID '${raw}'.`);
-  }
-  return raw;
-}
-
 function resolveDefaultConfigPath(): string {
-  return path.resolve(resolvePaperclipHomeDir(), "instances", resolvePaperclipInstanceId(), "config.json");
+  return resolvePaperclipConfigPathForInstance();
 }
 
 function readConfig(configPath: string): PartialConfig | null {
@@ -73,7 +57,7 @@ function resolveConnectionString(config: PartialConfig | null): string {
 }
 
 function resolveDefaultBackupDir(): string {
-  return path.resolve(resolvePaperclipHomeDir(), "instances", resolvePaperclipInstanceId(), "data", "backups");
+  return resolveSharedDefaultBackupDir();
 }
 
 function resolveBackupDir(config: PartialConfig | null): string {

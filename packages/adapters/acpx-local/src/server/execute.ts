@@ -5,6 +5,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import type { AdapterExecutionContext, AdapterExecutionResult } from "@paperclipai/adapter-utils";
 import { readAdapterExecutionTarget, adapterExecutionTargetSessionIdentity } from "@paperclipai/adapter-utils/execution-target";
+import { resolvePaperclipSpaceRoot } from "@paperclipai/shared/space-paths";
 import {
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
   applyPaperclipWorkspaceEnv,
@@ -114,7 +115,11 @@ function shortHash(value: unknown): string {
 function defaultPaperclipInstanceDir(): string {
   const home = process.env.PAPERCLIP_HOME?.trim() || path.join(os.homedir(), ".paperclip");
   const instanceId = process.env.PAPERCLIP_INSTANCE_ID?.trim() || "default";
-  return path.join(home, "instances", instanceId);
+  return resolvePaperclipSpaceRoot({
+    homeDir: home,
+    instanceId,
+    spaceId: process.env.PAPERCLIP_SPACE_ID?.trim() || undefined,
+  });
 }
 
 function defaultStateDir(companyId: string, agentId: string): string {

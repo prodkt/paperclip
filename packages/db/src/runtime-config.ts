@@ -1,11 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
-
-const DEFAULT_INSTANCE_ID = "default";
-const CONFIG_BASENAME = "config.json";
-const ENV_BASENAME = ".env";
-const INSTANCE_ID_RE = /^[a-zA-Z0-9_-]+$/;
+import {
+  PAPERCLIP_CONFIG_BASENAME,
+  resolveDefaultEmbeddedPostgresDir as resolveSharedDefaultEmbeddedPostgresDir,
+  resolveHomeAwarePath,
+  resolvePaperclipConfigPathForInstance,
+  resolvePaperclipEnvPathForConfig,
+} from "@paperclipai/shared/space-paths";
 
 type PartialConfig = {
   database?: {
@@ -35,48 +36,15 @@ export type ResolvedDatabaseTarget =
       envPath: string;
     };
 
-function expandHomePrefix(value: string): string {
-  if (value === "~") return os.homedir();
-  if (value.startsWith("~/")) return path.resolve(os.homedir(), value.slice(2));
-  return value;
-}
-
-function resolvePaperclipHomeDir(): string {
-  const envHome = process.env.PAPERCLIP_HOME?.trim();
-  if (envHome) return path.resolve(expandHomePrefix(envHome));
-  return path.resolve(os.homedir(), ".paperclip");
-}
-
-function resolvePaperclipInstanceId(): string {
-  const raw = process.env.PAPERCLIP_INSTANCE_ID?.trim() || DEFAULT_INSTANCE_ID;
-  if (!INSTANCE_ID_RE.test(raw)) {
-    throw new Error(`Invalid PAPERCLIP_INSTANCE_ID '${raw}'.`);
-  }
-  return raw;
-}
-
-function resolveDefaultConfigPath(): string {
-  return path.resolve(
-    resolvePaperclipHomeDir(),
-    "instances",
-    resolvePaperclipInstanceId(),
-    CONFIG_BASENAME,
-  );
-}
-
 function resolveDefaultEmbeddedPostgresDir(): string {
-  return path.resolve(resolvePaperclipHomeDir(), "instances", resolvePaperclipInstanceId(), "db");
-}
-
-function resolveHomeAwarePath(value: string): string {
-  return path.resolve(expandHomePrefix(value));
+  return resolveSharedDefaultEmbeddedPostgresDir();
 }
 
 function findConfigFileFromAncestors(startDir: string): string | null {
   let currentDir = path.resolve(startDir);
 
   while (true) {
-    const candidate = path.resolve(currentDir, ".paperclip", CONFIG_BASENAME);
+    const candidate = path.resolve(currentDir, ".paperclip", PAPERCLIP_CONFIG_BASENAME);
     if (existsSync(candidate)) return candidate;
 
     const nextDir = path.resolve(currentDir, "..");
@@ -89,11 +57,11 @@ function resolvePaperclipConfigPath(): string {
   if (process.env.PAPERCLIP_CONFIG?.trim()) {
     return path.resolve(process.env.PAPERCLIP_CONFIG.trim());
   }
-  return findConfigFileFromAncestors(process.cwd()) ?? resolveDefaultConfigPath();
+  return findConfigFileFromAncestors(process.cwd()) ?? resolvePaperclipConfigPathForInstance();
 }
 
 function resolvePaperclipEnvPath(configPath: string): string {
-  return path.resolve(path.dirname(configPath), ENV_BASENAME);
+  return resolvePaperclipEnvPathForConfig(configPath);
 }
 
 function parseEnvFile(contents: string): Record<string, string> {
