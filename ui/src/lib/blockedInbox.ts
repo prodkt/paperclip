@@ -94,7 +94,8 @@ export function compareBlockedAttention(
   if (sevDiff !== 0) return sevDiff;
   const aSince = a.stoppedSinceAt ? new Date(a.stoppedSinceAt).getTime() : Number.POSITIVE_INFINITY;
   const bSince = b.stoppedSinceAt ? new Date(b.stoppedSinceAt).getTime() : Number.POSITIVE_INFINITY;
-  return aSince - bSince;
+  const sinceDiff = aSince - bSince;
+  return Number.isFinite(sinceDiff) ? sinceDiff : 0;
 }
 
 export interface BlockedInboxIssueRow {

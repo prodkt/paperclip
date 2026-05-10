@@ -138,6 +138,12 @@ describe("blockedInbox", () => {
     expect(compareBlockedAttention(b, c)).toBeLessThan(0);
   });
 
+  it("keeps equal unstopped attention comparisons deterministic", () => {
+    const a = makeAttention({ severity: "high", stoppedSinceAt: null });
+    const b = makeAttention({ severity: "high", stoppedSinceAt: null });
+    expect(compareBlockedAttention(a, b)).toBe(0);
+  });
+
   it("buildBlockedInboxRows skips issues without attention", () => {
     const issues = [
       makeIssue({ id: "issue-1" }, makeAttention()),

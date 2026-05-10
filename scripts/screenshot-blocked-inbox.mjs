@@ -5,7 +5,7 @@
 import http from "node:http";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { chromium } from "@playwright/test";
 
 async function main() {
   const [, , staticDir, outDir] = process.argv;
@@ -13,23 +13,19 @@ async function main() {
     console.error("usage: node scripts/screenshot-blocked-inbox.mjs <storybook-static-dir> <output-dir>");
     process.exit(1);
   }
-  const playwrightModule = await import(
-    pathToFileURL(
-      path.resolve(
-        path.dirname(fileURLToPath(import.meta.url)),
-        "..",
-        "node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/index.mjs",
-      ),
-    ).href
-  );
-  const { chromium } = playwrightModule;
   await fs.mkdir(outDir, { recursive: true });
+  const absStaticDir = path.resolve(staticDir);
 
   const server = http.createServer(async (req, res) => {
     try {
       let urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
       if (urlPath.endsWith("/")) urlPath += "iframe.html";
-      const filePath = path.join(staticDir, urlPath);
+      const filePath = path.resolve(absStaticDir, `.${urlPath}`);
+      if (!filePath.startsWith(absStaticDir + path.sep) && filePath !== absStaticDir) {
+        res.writeHead(403);
+        res.end("Forbidden");
+        return;
+      }
       const buf = await fs.readFile(filePath);
       const ext = path.extname(filePath).toLowerCase();
       const mime = {

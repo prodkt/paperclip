@@ -2477,20 +2477,11 @@ async function listIssueBlockedInboxAttentionMap(
   return result;
 }
 
-async function listBlockedInboxIssues(
+async function blockedInboxIssueConditions(
   dbOrTx: any,
   companyId: string,
   filters?: IssueFilters,
-): Promise<Array<IssueWithLabelsAndRun & {
-  blockedBy?: IssueRelationIssueSummary[];
-  blockerAttention?: IssueBlockerAttention;
-  blockedInboxAttention: IssueBlockedInboxAttention;
-  productivityReview?: IssueProductivityReview | null;
-  lastActivityAt: Date;
-  myLastTouchAt?: Date | null;
-  lastExternalCommentAt?: Date | null;
-  isUnreadForMe?: boolean;
-}>> {
+) {
   const conditions = [
     eq(issues.companyId, companyId),
     isNull(issues.hiddenAt),
@@ -2549,12 +2540,31 @@ async function listBlockedInboxIssues(
       .select({ issueId: issueLabels.issueId })
       .from(issueLabels)
       .where(and(eq(issueLabels.companyId, companyId), eq(issueLabels.labelId, filters.labelId)));
-    if (labeledIssueIds.length === 0) return [];
+    if (labeledIssueIds.length === 0) return { conditions: [sql<boolean>`false`], contextUserId };
     conditions.push(inArray(issues.id, labeledIssueIds.map((row: { issueId: string }) => row.issueId)));
   }
   if (filters?.excludeRoutineExecutions && !filters?.originKind && !filters?.originId) {
     conditions.push(ne(issues.originKind, "routine_execution"));
   }
+
+  return { conditions, contextUserId };
+}
+
+async function listBlockedInboxIssues(
+  dbOrTx: any,
+  companyId: string,
+  filters?: IssueFilters,
+): Promise<Array<IssueWithLabelsAndRun & {
+  blockedBy?: IssueRelationIssueSummary[];
+  blockerAttention?: IssueBlockerAttention;
+  blockedInboxAttention: IssueBlockedInboxAttention;
+  productivityReview?: IssueProductivityReview | null;
+  lastActivityAt: Date;
+  myLastTouchAt?: Date | null;
+  lastExternalCommentAt?: Date | null;
+  isUnreadForMe?: boolean;
+}>> {
+  const { conditions, contextUserId } = await blockedInboxIssueConditions(dbOrTx, companyId, filters);
 
   const rows = (await dbOrTx
     .select(issueListSelect)
@@ -2654,8 +2664,43 @@ async function listBlockedInboxIssues(
 }
 
 async function countBlockedInboxIssues(dbOrTx: any, companyId: string, filters?: IssueFilters): Promise<number> {
-  const rows = await listBlockedInboxIssues(dbOrTx, companyId, { ...filters, limit: undefined, offset: undefined });
-  return rows.length;
+  const { conditions } = await blockedInboxIssueConditions(dbOrTx, companyId, filters);
+  const rows = (await dbOrTx
+    .select()
+    .from(issues)
+    .where(and(...conditions))) as IssueRow[];
+  if (rows.length === 0) return 0;
+
+  const blockedInboxAttentionByIssueId = await listIssueBlockedInboxAttentionMap(dbOrTx, companyId, rows);
+  const rawSearchInput = filters?.q?.trim() ?? "";
+  const rawSearch = rawSearchInput.toLowerCase();
+  const commentSearchMatchIssueIds = new Set<string>();
+  if (rawSearchInput) {
+    const issueIds = rows.map((row) => row.id);
+    const containsPattern = `%${escapeLikePattern(rawSearchInput)}%`;
+    for (const issueIdChunk of chunkList(issueIds, ISSUE_LIST_RELATED_QUERY_CHUNK_SIZE)) {
+      const commentRows = await dbOrTx
+        .select({ issueId: issueComments.issueId })
+        .from(issueComments)
+        .where(and(
+          eq(issueComments.companyId, companyId),
+          inArray(issueComments.issueId, issueIdChunk),
+          sql<boolean>`${issueComments.body} ILIKE ${containsPattern} ESCAPE '\\'`,
+        ));
+      for (const row of commentRows as Array<{ issueId: string }>) commentSearchMatchIssueIds.add(row.issueId);
+    }
+  }
+
+  return rows.reduce((count: number, row: IssueRow) => {
+    const attention = blockedInboxAttentionByIssueId.get(row.id);
+    if (!attention) return count;
+    if (
+      rawSearch
+      && !blockedInboxSearchText(attention, row).includes(rawSearch)
+      && !commentSearchMatchIssueIds.has(row.id)
+    ) return count;
+    return count + 1;
+  }, 0);
 }
 
 export function issueService(db: Db) {
