@@ -40,6 +40,7 @@ import {
   FINISH_SUCCESSFUL_RUN_HANDOFF_REASON,
   SUCCESSFUL_RUN_MISSING_STATE_REASON,
   buildSuccessfulRunHandoffExhaustedNotice,
+  noticeMetadataReferencesRecoveryAction,
   type SuccessfulRunHandoffNotice,
 } from "./successful-run-handoff.js";
 import {
@@ -1846,7 +1847,7 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
       const escalationCommentMarker = `Recovery action: \`${recoveryAction.id}\``;
 
       const hasEscalationComment = await db
-        .select({ id: issueComments.id, body: issueComments.body })
+        .select({ id: issueComments.id, body: issueComments.body, metadata: issueComments.metadata })
         .from(issueComments)
         .where(
           and(
@@ -1856,7 +1857,10 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
         )
         .orderBy(desc(issueComments.createdAt))
         .limit(50)
-        .then((rows) => rows.some((row) => (row.body ?? "").includes(escalationCommentMarker)));
+        .then((rows) => rows.some((row) =>
+          (row.body ?? "").includes(escalationCommentMarker) ||
+          noticeMetadataReferencesRecoveryAction(row.metadata, recoveryAction.id),
+        ));
 
       if (!hasEscalationComment) {
         if (notice) {

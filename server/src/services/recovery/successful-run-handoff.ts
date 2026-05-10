@@ -61,6 +61,19 @@ export type SuccessfulRunHandoffNotice = {
   metadata: IssueCommentMetadata;
 };
 
+export function noticeMetadataReferencesRecoveryAction(
+  metadata: IssueCommentMetadata | null | undefined,
+  recoveryActionId: string,
+) {
+  return (metadata?.sections ?? []).some((section) =>
+    section.rows.some((row) =>
+      row.type === "key_value" &&
+      row.label === "Recovery action" &&
+      row.value === recoveryActionId,
+    ),
+  );
+}
+
 export type SuccessfulRunHandoffDecision =
   | {
       kind: "enqueue";
