@@ -24,8 +24,8 @@ const ENSURE_NPM_PREAMBLE =
   'mkdir -p "$HOME/.local"; ' +
   'curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/${NODE_TARBALL}" -o "/tmp/${NODE_TARBALL}" && ' +
   'tar -xJf "/tmp/${NODE_TARBALL}" -C "$HOME/.local" --strip-components=1 && ' +
-  'rm -f "/tmp/${NODE_TARBALL}"; ' +
-  'export PATH="$HOME/.local/bin:$PATH"; ' +
+  'rm -f "/tmp/${NODE_TARBALL}" && ' +
+  'export PATH="$HOME/.local/bin:$PATH" && ' +
   "PAPERCLIP_NPM_BOOTSTRAPPED=1; " +
   "fi;";
 
