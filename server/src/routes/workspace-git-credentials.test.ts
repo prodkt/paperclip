@@ -33,13 +33,24 @@ function deps(overrides?: Partial<WorkspaceGitCredentialsDeps>): WorkspaceGitCre
 
 describe("POST /api/workspace/git-credentials", () => {
   it("returns username/password for an authorized run", async () => {
-    const handler = createWorkspaceGitCredentialsRoute(deps());
+    const issueGitCredentials = vi.fn(async () => ({
+      ok: true as const,
+      username: "x-access-token",
+      password: "ghs_test",
+      expiresAt: "2026-06-01T00:00:00Z",
+    }));
+    const handler = createWorkspaceGitCredentialsRoute(deps({ issueGitCredentials }));
     const res = await handler({
       headers: { authorization: "Bearer fake.jwt" },
       body: { repoUrl: "https://github.com/acme/repo.git" },
     });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ username: "x-access-token", password: "ghs_test" });
+    expect(issueGitCredentials).toHaveBeenCalledWith({
+      runId: "r-1",
+      companyId: "c-1",
+      repoUrl: "https://github.com/acme/repo.git",
+    });
   });
 
   it("returns 503 when issuer is not configured", async () => {

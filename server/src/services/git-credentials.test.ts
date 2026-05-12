@@ -10,6 +10,8 @@ let dbHandle: EmbeddedPostgresTestDatabase;
 let db: Db;
 let clusterId: string;
 let companyId: string;
+let agentId: string;
+let runId: string;
 
 beforeAll(async () => {
   dbHandle = await startEmbeddedPostgresTestDatabase("paperclip-git-creds-");
@@ -22,6 +24,22 @@ beforeAll(async () => {
   clusterId = (c[0] as { id: string }).id;
   const co = await db.execute(sql`INSERT INTO companies (name) VALUES ('Acme') RETURNING id`);
   companyId = (co[0] as { id: string }).id;
+  const agentRows = await db.execute(sql`
+    INSERT INTO agents (company_id, name)
+    VALUES (${companyId}, 'Agent')
+    RETURNING id
+  `);
+  agentId = (agentRows[0] as { id: string }).id;
+  const runRows = await db.execute(sql`
+    INSERT INTO heartbeat_runs (company_id, agent_id, context_snapshot)
+    VALUES (
+      ${companyId},
+      ${agentId},
+      ${JSON.stringify({ paperclipWorkspace: { repoUrl: "https://github.com/acme/repo.git" } })}::jsonb
+    )
+    RETURNING id
+  `);
+  runId = (runRows[0] as { id: string }).id;
 });
 afterAll(async () => { await dbHandle.cleanup(); });
 
@@ -41,7 +59,7 @@ describe("issueGitCredentials", () => {
       db,
       secretService: makeFakeSecretService(new Map()),
       clusterTenantPolicies: clusterTenantPoliciesService(db),
-    }, { companyId, clusterConnectionId: clusterId, repoUrl: "https://github.com/acme/repo.git" });
+    }, { runId, companyId, clusterConnectionId: clusterId, repoUrl: "https://github.com/acme/repo.git" });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe("not_configured");
   });
@@ -66,7 +84,7 @@ describe("issueGitCredentials", () => {
       db,
       secretService: fakeSecrets,
       clusterTenantPolicies: clusterTenantPoliciesService(db),
-    }, { companyId, clusterConnectionId: clusterId, repoUrl: "https://github.com/acme/repo.git" });
+    }, { runId, companyId, clusterConnectionId: clusterId, repoUrl: "https://github.com/acme/repo.git" });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.username).toBe("x-access-token");
@@ -94,7 +112,7 @@ describe("issueGitCredentials", () => {
       db,
       secretService: fakeSecrets,
       clusterTenantPolicies: clusterTenantPoliciesService(db),
-    }, { companyId, clusterConnectionId: clusterId, repoUrl: "https://github.com/acme/repo.git" });
+    }, { runId, companyId, clusterConnectionId: clusterId, repoUrl: "https://github.com/acme/repo.git" });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe("internal_error");
   });
@@ -119,8 +137,18 @@ describe("issueGitCredentials", () => {
       db,
       secretService: fakeSecrets,
       clusterTenantPolicies: clusterTenantPoliciesService(db),
-    }, { companyId, clusterConnectionId: clusterId, repoUrl: "https://github.com/acme/repo.git" });
+    }, { runId, companyId, clusterConnectionId: clusterId, repoUrl: "https://github.com/acme/repo.git" });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe("internal_error");
+  });
+
+  it("denies credentials when repoUrl does not match the run workspace", async () => {
+    const r = await issueGitCredentials({
+      db,
+      secretService: makeFakeSecretService(new Map()),
+      clusterTenantPolicies: clusterTenantPoliciesService(db),
+    }, { runId, companyId, clusterConnectionId: clusterId, repoUrl: "https://github.com/acme/other.git" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe("denied");
   });
 });

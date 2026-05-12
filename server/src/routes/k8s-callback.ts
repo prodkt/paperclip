@@ -214,7 +214,7 @@ export async function k8sCallbackRoutes(db: Db, options: K8sCallbackRoutesOption
   const secretService = createDbBackedSecretService(db);
   const gitCredentialsHandler = createWorkspaceGitCredentialsRoute({
     runJwt,
-    issueGitCredentials: async ({ companyId, repoUrl }) => {
+    issueGitCredentials: async ({ runId, companyId, repoUrl }) => {
       // Resolve the cluster context from the company. The route surface (and
       // the run-JWT it verifies) doesn't carry clusterConnectionId, and the
       // tenant policy is keyed on (clusterConnectionId, companyId). For V1 we
@@ -229,7 +229,7 @@ export async function k8sCallbackRoutes(db: Db, options: K8sCallbackRoutesOption
       }
       return issueGitCredentials(
         { db, secretService, clusterTenantPolicies: tenantPolicies },
-        { companyId, clusterConnectionId: policies[0]!.clusterConnectionId, repoUrl },
+        { runId, companyId, clusterConnectionId: policies[0]!.clusterConnectionId, repoUrl },
       );
     },
   });
