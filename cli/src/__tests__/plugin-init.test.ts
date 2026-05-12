@@ -8,10 +8,11 @@ const mocks = vi.hoisted(() => ({
   scaffoldPluginProject: vi.fn((options: { outputDir: string }) => options.outputDir),
 }));
 
-vi.mock("@paperclipai/create-paperclip-plugin", async () => {
-  const actual = await vi.importActual<typeof import("@paperclipai/create-paperclip-plugin")>(
-    "@paperclipai/create-paperclip-plugin",
-  );
+vi.mock("../../../packages/plugins/create-paperclip-plugin/src/index.js", async () => {
+  const actual =
+    await vi.importActual<typeof import("../../../packages/plugins/create-paperclip-plugin/src/index.js")>(
+      "../../../packages/plugins/create-paperclip-plugin/src/index.js",
+    );
   return {
     ...actual,
     scaffoldPluginProject: mocks.scaffoldPluginProject,
