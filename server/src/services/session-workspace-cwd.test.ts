@@ -14,6 +14,9 @@ describe("isUnsafeSessionWorkspaceCwd", () => {
     expect(isUnsafeSessionWorkspaceCwd("/sys")).toBe(true);
     expect(isUnsafeSessionWorkspaceCwd("/dev")).toBe(true);
     expect(isUnsafeSessionWorkspaceCwd("/run")).toBe(true);
+    expect(isUnsafeSessionWorkspaceCwd("/tmp/.")).toBe(true);
+    expect(isUnsafeSessionWorkspaceCwd("/tmp/..")).toBe(true);
+    expect(isUnsafeSessionWorkspaceCwd("/var/./run")).toBe(true);
   });
 
   it("allows concrete workspace descendants", () => {

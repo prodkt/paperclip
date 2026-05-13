@@ -1,3 +1,5 @@
+import path from "node:path";
+
 const SESSION_CWD_SYSTEM_ROOTS = new Set([
   "/",
   "/tmp",
@@ -17,6 +19,6 @@ const SESSION_CWD_SYSTEM_ROOTS = new Set([
 export function isUnsafeSessionWorkspaceCwd(cwd: string | null | undefined): boolean {
   const value = typeof cwd === "string" && cwd.trim().length > 0 ? cwd.trim() : null;
   if (!value) return false;
-  const normalized = value.replace(/\/+$/, "") || "/";
+  const normalized = path.normalize(value.replace(/\/+$/, "") || "/");
   return SESSION_CWD_SYSTEM_ROOTS.has(normalized);
 }
