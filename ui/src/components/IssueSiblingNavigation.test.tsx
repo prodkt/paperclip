@@ -84,6 +84,7 @@ describe("IssueSiblingNavigation", () => {
     );
 
     const nav = node.querySelector("nav");
+    expect(nav?.getAttribute("aria-label")).toBe("Sub-issue navigation");
     expect(nav?.className).toContain("sm:grid-cols-2");
     expect(nav?.className).not.toContain("border-t");
 
