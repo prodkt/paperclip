@@ -1,4 +1,4 @@
-CREATE TABLE "bootstrap_tokens" (
+CREATE TABLE IF NOT EXISTS "bootstrap_tokens" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"token_hash" text NOT NULL,
 	"agent_id" uuid NOT NULL,
@@ -10,6 +10,18 @@ CREATE TABLE "bootstrap_tokens" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX "bootstrap_tokens_token_hash_idx" ON "bootstrap_tokens" USING btree ("token_hash");--> statement-breakpoint
-CREATE INDEX "bootstrap_tokens_run_id_idx" ON "bootstrap_tokens" USING btree ("run_id");--> statement-breakpoint
-CREATE INDEX "bootstrap_tokens_expires_idx" ON "bootstrap_tokens" USING btree ("expires_at");
+DO $$ BEGIN
+	IF EXISTS (
+		SELECT 1
+		FROM pg_class idx
+		JOIN pg_index i ON i.indexrelid = idx.oid
+		WHERE idx.relnamespace = 'public'::regnamespace
+			AND idx.relname = 'bootstrap_tokens_token_hash_idx'
+			AND i.indisunique = false
+	) THEN
+		DROP INDEX "bootstrap_tokens_token_hash_idx";
+	END IF;
+END $$;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "bootstrap_tokens_token_hash_idx" ON "bootstrap_tokens" USING btree ("token_hash");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "bootstrap_tokens_run_id_idx" ON "bootstrap_tokens" USING btree ("run_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "bootstrap_tokens_expires_idx" ON "bootstrap_tokens" USING btree ("expires_at");
