@@ -212,8 +212,10 @@ export function documentService(db: Db) {
         .then((rows) => rows[0] ?? null);
       if (!issue) throw notFound("Issue not found");
 
-      try {
-        return await db.transaction(async (tx) => {
+      const maxAttempts = input.lockedDocumentStrategy === "create_new_document" ? 3 : 1;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        try {
+          return await db.transaction(async (tx) => {
           const now = new Date();
           const existing = await tx
             .select({
@@ -484,13 +486,19 @@ export function documentService(db: Db) {
               updatedAt: document.updatedAt,
             },
           };
-        });
-      } catch (error) {
-        if (isUniqueViolation(error)) {
-          throw conflict("Document key already exists on this issue", { key });
+          });
+        } catch (error) {
+          if (isUniqueViolation(error)) {
+            if (input.lockedDocumentStrategy === "create_new_document" && attempt < maxAttempts - 1) {
+              continue;
+            }
+            throw conflict("Document key already exists on this issue", { key });
+          }
+          throw error;
         }
-        throw error;
       }
+
+      throw conflict("Unable to choose a new document key for locked document", { key });
     },
 
     restoreIssueDocumentRevision: async (input: {
