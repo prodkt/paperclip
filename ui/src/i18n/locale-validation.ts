@@ -19,7 +19,7 @@ function hasRawHtml(value: string) {
 }
 
 function hasEventHandlerAttribute(value: string) {
-  return /\son[A-Za-z]+\s*=/.test(value);
+  return /\son[A-Za-z]+\s*=/i.test(value);
 }
 
 function urlsIn(value: string) {
@@ -35,12 +35,15 @@ function hasBlockedData(value: string, englishValue: string) {
     [hasRawHtml(value), hasRawHtml(englishValue), "raw HTML tag"],
   ];
 
-  const blocked = checks.find(([candidateHas, englishHas]) => candidateHas && !englishHas);
-  if (blocked) return blocked[2];
+  const blocked = checks
+    .filter(([candidateHas, englishHas]) => candidateHas && !englishHas)
+    .map(([, , blockedPayload]) => blockedPayload);
 
   const englishUrls = new Set(urlsIn(englishValue));
   const unexpectedUrl = urlsIn(value).find((url) => !englishUrls.has(url));
-  return unexpectedUrl ? "unexpected URL" : null;
+  if (unexpectedUrl) blocked.push("unexpected URL");
+
+  return blocked;
 }
 
 function validateString(path: string[], candidateValue: string, englishValue: string, errors: string[]) {
@@ -54,8 +57,7 @@ function validateString(path: string[], candidateValue: string, englishValue: st
     );
   }
 
-  const blockedPayload = hasBlockedData(candidateValue, englishValue);
-  if (blockedPayload) {
+  for (const blockedPayload of hasBlockedData(candidateValue, englishValue)) {
     errors.push(`${formatPath(path)} contains disallowed ${blockedPayload}`);
   }
 

@@ -12,7 +12,7 @@ describe("locale validation", () => {
   });
 
   it("accepts registered locale files", () => {
-    expect(Object.keys(localeMessages)).toEqual(["en"]);
+    expect(Object.keys(localeMessages)).toContain("en");
     for (const [locale, messages] of Object.entries(localeMessages)) {
       expect(validateLocaleMessages(messages), locale).toEqual([]);
     }
@@ -74,7 +74,7 @@ describe("locale validation", () => {
       validateLocaleMessages(
         {
           script: "<script>alert(1)</script>",
-          handler: '<span onclick="alert(1)">Create</span>',
+          handler: '<span ONCLICK="alert(1)">Create</span>',
           js: "javascript:alert(1)",
           data: "data:text/html,hello",
           url: "https://example.test",

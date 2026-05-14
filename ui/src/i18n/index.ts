@@ -14,7 +14,9 @@ const i18nextOptions: InitOptions = {
   initAsync: false,
 };
 
-i18n.use(initReactI18next).init(i18nextOptions);
+void i18n.use(initReactI18next).init(i18nextOptions).catch((error: unknown) => {
+  console.error("Failed to initialize i18next", error);
+});
 
 export function t(key: string, options: TOptions = {}) {
   return i18n.t(key, options);
