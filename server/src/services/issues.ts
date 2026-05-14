@@ -51,6 +51,7 @@ import {
   normalizeIssueIdentifier as normalizeIssueReferenceIdentifier,
 } from "@paperclipai/shared";
 import { conflict, HttpError, notFound, unprocessable } from "../errors.js";
+import { logger } from "../middleware/logger.js";
 import { parseObject } from "../adapters/utils.js";
 import {
   defaultIssueExecutionWorkspaceSettingsForProject,
@@ -2804,6 +2805,7 @@ export function issueService(db: Db) {
   }
 
   async function readRunLogText(run: {
+    runId?: string | null;
     logStore: string | null;
     logRef: string | null;
     logBytes: number | null;
@@ -2834,6 +2836,10 @@ export function issueService(db: Db) {
       }
     } catch (err) {
       if (err instanceof HttpError && err.status === 404) {
+        logger.warn(
+          { err, runId: run.runId ?? undefined, logRef: run.logRef },
+          "missing heartbeat run log while deriving issue comment metadata",
+        );
         return content;
       }
       throw err;
