@@ -106,15 +106,7 @@ describe("LiveUpdatesProvider issue invalidation", () => {
       invalidateQueries: (input: unknown) => {
         invalidations.push(input);
       },
-      getQueryData: (key: unknown) => {
-        if (JSON.stringify(key) === JSON.stringify(queryKeys.issues.detail("PAP-9403"))) {
-          return {
-            id: "issue-1",
-            identifier: "PAP-9403",
-          };
-        }
-        return undefined;
-      },
+      getQueryData: () => undefined,
     };
 
     __liveUpdatesTestUtils.invalidateActivityQueries(
