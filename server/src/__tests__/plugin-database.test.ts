@@ -31,8 +31,6 @@ const embeddedPostgresSupport = await getEmbeddedPostgresTestSupport();
 const describeEmbeddedPostgres = embeddedPostgresSupport.supported ? describe : describe.skip;
 const multiMigrationPluginKey = "paperclip.dbfixture";
 const llmWikiPluginKey = "paperclipai.plugin-llm-wiki";
-const legacyLlmWikiSpacesMigrationChecksum =
-  "e4d706d9035ec6ad4612377cba810540187081481736a709702af5d8dd8669aa";
 
 if (!embeddedPostgresSupport.supported) {
   console.warn(
@@ -354,9 +352,6 @@ describeEmbeddedPostgres("plugin database namespaces", () => {
       "002_paperclip_distillation.sql",
       "003_spaces.sql",
     ]);
-    expect(migrations.find((migration) => migration.migrationKey === "003_spaces.sql")?.checksum).toBe(
-      legacyLlmWikiSpacesMigrationChecksum,
-    );
 
     const constraintRows = Array.from(
       await db.execute(
@@ -392,21 +387,6 @@ describeEmbeddedPostgres("plugin database namespaces", () => {
     expect(uniqueColumnSets).not.toContain("paperclip_distillation_cursors:company_id,wiki_id,source_scope,scope_key,source_kind");
     expect(uniqueColumnSets).not.toContain("paperclip_distillation_work_items:company_id,wiki_id,idempotency_key");
     expect(uniqueColumnSets).not.toContain("paperclip_page_bindings:company_id,wiki_id,page_path");
-  });
-
-  it("reactivates LLM Wiki installs with the stable legacy spaces migration checksum", async () => {
-    const pluginManifest = llmWikiManifest();
-    const repoRoot = path.basename(process.cwd()) === "server" ? path.resolve(process.cwd(), "..") : process.cwd();
-    const packageRoot = path.join(repoRoot, "packages", "plugins", "plugin-llm-wiki");
-    const namespace = derivePluginDatabaseNamespace(pluginManifest.id, pluginManifest.database?.namespaceSlug);
-    const pluginId = await installPluginRecord(pluginManifest);
-    const pluginDb = pluginDatabaseService(db);
-
-    await pluginDb.applyMigrations(pluginId, pluginManifest, packageRoot);
-
-    await expect(pluginDb.applyMigrations(pluginId, pluginManifest, packageRoot)).resolves.toEqual(
-      expect.objectContaining({ namespaceName: namespace }),
-    );
   });
 
   it("applies migrations once and allows whitelisted core joins at runtime", async () => {

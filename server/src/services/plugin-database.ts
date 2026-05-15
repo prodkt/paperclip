@@ -355,46 +355,6 @@ export interface ApplyPluginMigrationsOptions {
   persistFailure?: boolean;
 }
 
-const LEGACY_LLM_WIKI_SPACES_MIGRATION = {
-  pluginKey: "paperclipai.plugin-llm-wiki",
-  migrationKey: "003_spaces.sql",
-  checksum: "e4d706d9035ec6ad4612377cba810540187081481736a709702af5d8dd8669aa",
-  dynamicConstraintDropPattern: /DO \$\$\nDECLARE\n[\s\S]*?\nEND \$\$;/,
-  explicitConstraintDrops: `
-ALTER TABLE plugin_llm_wiki_8f50da974f.wiki_pages
-  DROP CONSTRAINT IF EXISTS wiki_pages_company_id_wiki_id_path_key;
-ALTER TABLE plugin_llm_wiki_8f50da974f.paperclip_distillation_cursors
-  DROP CONSTRAINT IF EXISTS paperclip_distillation_cursor_company_id_wiki_id_source_sco_key;
-ALTER TABLE plugin_llm_wiki_8f50da974f.paperclip_distillation_work_items
-  DROP CONSTRAINT IF EXISTS paperclip_distillation_work_i_company_id_wiki_id_idempotenc_key;
-ALTER TABLE plugin_llm_wiki_8f50da974f.paperclip_page_bindings
-  DROP CONSTRAINT IF EXISTS paperclip_page_bindings_company_id_wiki_id_page_path_key;`,
-} as const;
-
-function rewritePluginMigrationContent(input: {
-  pluginKey: string;
-  migrationKey: string;
-  checksum: string;
-  content: string;
-}): string {
-  if (
-    input.pluginKey !== LEGACY_LLM_WIKI_SPACES_MIGRATION.pluginKey ||
-    input.migrationKey !== LEGACY_LLM_WIKI_SPACES_MIGRATION.migrationKey ||
-    input.checksum !== LEGACY_LLM_WIKI_SPACES_MIGRATION.checksum
-  ) {
-    return input.content;
-  }
-
-  const rewritten = input.content.replace(
-    LEGACY_LLM_WIKI_SPACES_MIGRATION.dynamicConstraintDropPattern,
-    LEGACY_LLM_WIKI_SPACES_MIGRATION.explicitConstraintDrops,
-  );
-  if (rewritten === input.content) {
-    throw new Error(`Unable to rewrite legacy plugin migration ${input.migrationKey}`);
-  }
-  return rewritten;
-}
-
 export function pluginDatabaseService(db: PluginDatabaseRootClient) {
   async function getPluginRecord(pluginId: string) {
     const rows = await db.select().from(plugins).where(eq(plugins.id, pluginId)).limit(1);
@@ -534,13 +494,7 @@ export function pluginDatabaseService(db: PluginDatabaseRootClient) {
             continue;
           }
 
-          const executableContent = rewritePluginMigrationContent({
-            pluginKey: manifest.id,
-            migrationKey,
-            checksum,
-            content,
-          });
-          const statements = splitSqlStatements(executableContent);
+          const statements = splitSqlStatements(content);
           try {
             if (statements.length === 0) {
               throw new Error(`Plugin migration ${migrationKey} is empty`);
