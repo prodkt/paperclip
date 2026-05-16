@@ -55,9 +55,6 @@ importers:
       '@paperclipai/adapter-gemini-local':
         specifier: workspace:*
         version: link:../packages/adapters/gemini-local
-      '@paperclipai/adapter-grok-local':
-        specifier: workspace:*
-        version: link:../packages/adapters/grok-local
       '@paperclipai/adapter-openclaw-gateway':
         specifier: workspace:*
         version: link:../packages/adapters/openclaw-gateway
@@ -207,22 +204,6 @@ importers:
         version: 5.9.3
 
   packages/adapters/gemini-local:
-    dependencies:
-      '@paperclipai/adapter-utils':
-        specifier: workspace:*
-        version: link:../../adapter-utils
-      picocolors:
-        specifier: ^1.1.1
-        version: 1.1.1
-    devDependencies:
-      '@types/node':
-        specifier: ^24.6.0
-        version: 24.12.0
-      typescript:
-        specifier: ^5.7.3
-        version: 5.9.3
-
-  packages/adapters/grok-local:
     dependencies:
       '@paperclipai/adapter-utils':
         specifier: workspace:*
@@ -611,9 +592,6 @@ importers:
       '@paperclipai/adapter-gemini-local':
         specifier: workspace:*
         version: link:../packages/adapters/gemini-local
-      '@paperclipai/adapter-grok-local':
-        specifier: workspace:*
-        version: link:../packages/adapters/grok-local
       '@paperclipai/adapter-openclaw-gateway':
         specifier: workspace:*
         version: link:../packages/adapters/openclaw-gateway
@@ -777,9 +755,6 @@ importers:
       '@paperclipai/adapter-gemini-local':
         specifier: workspace:*
         version: link:../packages/adapters/gemini-local
-      '@paperclipai/adapter-grok-local':
-        specifier: workspace:*
-        version: link:../packages/adapters/grok-local
       '@paperclipai/adapter-openclaw-gateway':
         specifier: workspace:*
         version: link:../packages/adapters/openclaw-gateway
