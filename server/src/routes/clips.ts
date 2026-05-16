@@ -19,10 +19,11 @@ import {
   createClipVoteSchema,
   publishClipSchema,
   updateClipSchema,
+  isUuidLike,
   type CompanyPortabilityFileEntry,
 } from "@paperclipai/shared";
 import { validate } from "../middleware/validate.js";
-import { forbidden, unprocessable } from "../errors.js";
+import { badRequest, forbidden, unprocessable } from "../errors.js";
 import { assertAuthenticated, assertCompanyAccess, getActorInfo } from "./authz.js";
 import { clipService } from "../services/clips.js";
 import { companyPortabilityService, companyService, logActivity } from "../services/index.js";
@@ -62,6 +63,14 @@ function requireAuthenticatedClipActor(req: Request) {
   const actor = actorForClip(req);
   if (actor.actorType === "anonymous") throw forbidden("Authenticated actor required");
   return actor;
+}
+
+function getClipCompanyIdParam(req: Request) {
+  const companyId = req.params.companyId as string;
+  if (!isUuidLike(companyId)) {
+    throw badRequest("Invalid companyId path parameter.");
+  }
+  return companyId;
 }
 
 function consumeClipRateLimit(req: Request, res: { setHeader(name: string, value: string): void; status(code: number): { json(value: unknown): void } }, action: string) {
@@ -279,7 +288,7 @@ export function clipRoutes(db: Db, storage?: StorageService) {
   });
 
   router.post("/companies/:companyId/clips/profiles", validate(createClipCreatorProfileSchema), async (req, res) => {
-    const companyId = req.params.companyId as string;
+    const companyId = getClipCompanyIdParam(req);
     assertCompanyAccess(req, companyId);
     const profile = await svc.createCreatorProfile(companyId, req.body);
     const actor = getActorInfo(req);
@@ -298,7 +307,7 @@ export function clipRoutes(db: Db, storage?: StorageService) {
   });
 
   router.post("/companies/:companyId/clips/share-preview", validate(clipSharePreviewSchema), async (req, res) => {
-    const companyId = req.params.companyId as string;
+    const companyId = getClipCompanyIdParam(req);
     assertCompanyAccess(req, companyId);
     const company = await companies.getById(companyId);
     if (!company) {
@@ -477,7 +486,7 @@ export function clipRoutes(db: Db, storage?: StorageService) {
   });
 
   router.post("/companies/:companyId/clips/publish", validate(publishClipSchema), async (req, res) => {
-    const companyId = req.params.companyId as string;
+    const companyId = getClipCompanyIdParam(req);
     assertCompanyAccess(req, companyId);
     if (!consumeClipRateLimit(req, res, "publish")) return;
     const result = await svc.publish(companyId, req.body);
@@ -503,7 +512,7 @@ export function clipRoutes(db: Db, storage?: StorageService) {
   });
 
   router.post("/companies/:companyId/clips/import-preview", validate(clipImportPreviewSchema), async (req, res) => {
-    const companyId = req.params.companyId as string;
+    const companyId = getClipCompanyIdParam(req);
     assertCompanyAccess(req, companyId);
     const result = await buildClipImportPreview(companyId, req.body);
     res.json({
@@ -515,7 +524,7 @@ export function clipRoutes(db: Db, storage?: StorageService) {
   });
 
   router.post("/companies/:companyId/clips/import", validate(clipImportApplySchema), async (req, res) => {
-    const companyId = req.params.companyId as string;
+    const companyId = getClipCompanyIdParam(req);
     assertCompanyAccess(req, companyId);
     const result = await buildClipImportPreview(companyId, req.body);
     const importResult = await portability.importBundle({
