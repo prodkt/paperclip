@@ -3629,12 +3629,11 @@ export function issueRoutes(
       existing.status === "blocked" &&
       issue.status === "todo" &&
       (req.body.status !== undefined || reopened);
-    const revalidatedRecoveryAction = await revalidateActiveSourceRecovery({
+    const revalidatedRecoveryAction = await revalidateActiveSourceRecoveryAfterCommittedWrite({
       issue,
       trigger: "issue_update",
       actor,
-      activeRecoveryAction:
-        activeRecoveryActionBeforeUpdate ?? await recoveryActionsSvc.getActiveForIssue(issue.companyId, issue.id),
+      activeRecoveryAction: activeRecoveryActionBeforeUpdate ?? undefined,
       statusChanged: existing.status !== issue.status,
       assigneeChanged:
         existing.assigneeAgentId !== issue.assigneeAgentId ||
