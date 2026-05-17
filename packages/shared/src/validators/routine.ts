@@ -85,7 +85,7 @@ export const routineRevisionSnapshotRoutineV1Schema = z.object({
   concurrencyPolicy: z.enum(ROUTINE_CONCURRENCY_POLICIES),
   catchUpPolicy: z.enum(ROUTINE_CATCH_UP_POLICIES),
   variables: z.array(routineVariableSchema),
-  env: envConfigSchema.nullable(),
+  env: envConfigSchema.nullable().default(null),
 }).strict();
 
 export const routineRevisionSnapshotTriggerV1Schema = z.object({
