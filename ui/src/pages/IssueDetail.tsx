@@ -3010,6 +3010,7 @@ export function IssueDetail() {
           void resolveRecoveryAction.mutateAsync({ actionId, outcome: "blocked", sourceIssueStatus: "blocked" });
           return;
         case "delegated":
+          // The API also permits "blocked" for delegated recovery when a first-class blocker should keep the source parked.
           void resolveRecoveryAction.mutateAsync({
             actionId,
             outcome: "delegated",

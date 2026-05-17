@@ -1557,18 +1557,16 @@ export function issueRoutes(
       blocks?: IssueRelationIssueSummary[];
     }>;
     const issueIds = issuesWithRelations.map((issue) => issue.id);
-    const relationRecoveryCandidateIds = [
-      ...new Set(issuesWithRelations.flatMap((issue) => [
-        ...((issue.blockedBy ?? []).flatMap((summary) => [
-          summary.id,
-          ...((summary.terminalBlockers ?? []).map((terminal) => terminal.id)),
-        ])),
-        ...((issue.blocks ?? []).flatMap((summary) => [
-          summary.id,
-          ...((summary.terminalBlockers ?? []).map((terminal) => terminal.id)),
-        ])),
-      ])),
-    ];
+    const relationRecoveryCandidateIdSet = new Set<string>();
+    const collectRelationRecoveryCandidateIds = (summary: IssueRelationIssueSummary) => {
+      relationRecoveryCandidateIdSet.add(summary.id);
+      summary.terminalBlockers?.forEach(collectRelationRecoveryCandidateIds);
+    };
+    issuesWithRelations.forEach((issue) => {
+      issue.blockedBy?.forEach(collectRelationRecoveryCandidateIds);
+      issue.blocks?.forEach(collectRelationRecoveryCandidateIds);
+    });
+    const relationRecoveryCandidateIds = [...relationRecoveryCandidateIdSet];
     const [handoffStates, recoveryActionByIssue] = await Promise.all([
       listSuccessfulRunHandoffStates(db, companyId, issueIds),
       recoveryActionsSvc.listActiveForIssues(companyId, [...issueIds, ...relationRecoveryCandidateIds]),

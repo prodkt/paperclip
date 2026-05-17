@@ -2511,7 +2511,7 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
           eq(issueRecoveryActions.kind, "issue_graph_liveness"),
           eq(issueRecoveryActions.cause, "issue_graph_liveness"),
           eq(issueRecoveryActions.fingerprint, livenessRecoveryLeafFingerprint(finding)),
-          inArray(issueRecoveryActions.status, ["resolved", "cancelled"]),
+          eq(issueRecoveryActions.status, "resolved"),
         ),
       )
       .orderBy(desc(issueRecoveryActions.resolvedAt), desc(issueRecoveryActions.updatedAt))
