@@ -65,6 +65,11 @@
     "publishFromCi": true
   },
   {
+    "dir": "packages/plugins/plugin-workspace-diff",
+    "name": "@paperclipai/plugin-workspace-diff",
+    "publishFromCi": false
+  },
+  {
     "dir": "server",
     "name": "@paperclipai/server",
     "publishFromCi": true
