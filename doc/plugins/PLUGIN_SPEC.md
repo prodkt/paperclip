@@ -322,6 +322,7 @@ export interface PaperclipPluginManifestV1 {
   author: string;
   categories: Array<"connector" | "workspace" | "automation" | "ui">;
   minimumHostVersion?: string;
+  /** @deprecated Use `minimumHostVersion` instead. Retained for backwards compatibility. */
   minimumPaperclipVersion?: string;
   capabilities: string[];
   entrypoints: {
