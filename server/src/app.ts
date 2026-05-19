@@ -59,6 +59,7 @@ import { pluginRegistryService } from "./services/plugin-registry.js";
 import { createHostClientHandlers } from "@paperclipai/plugin-sdk";
 import type { BetterAuthSessionResult } from "./auth/better-auth.js";
 import { createCachedViteHtmlRenderer } from "./vite-html-renderer.js";
+import { PORTABLE_JSON_BODY_LIMIT } from "./http/body-limits.js";
 
 type UiMode = "none" | "static" | "vite-dev";
 const FEEDBACK_EXPORT_FLUSH_INTERVAL_MS = 5_000;
@@ -139,7 +140,7 @@ export async function createApp(
 
   app.use(express.json({
     // Company import/export payloads can inline full portable packages.
-    limit: "10mb",
+    limit: PORTABLE_JSON_BODY_LIMIT,
     verify: (req, _res, buf) => {
       (req as unknown as { rawBody: Buffer }).rawBody = buf;
     },
