@@ -28,9 +28,21 @@ const DEFAULT_OPENAI_MODEL_RATES: Record<string, Rate> = {
   "gpt-5.2": { inputUsdPerMillion: 1.75, cachedInputUsdPerMillion: 0.175, outputUsdPerMillion: 14, source: "openai_api_pricing_2026-05-19" },
 };
 
+let configuredRatesCacheRaw: string | undefined;
+let configuredRatesCache: Record<string, Rate> | null = null;
+
 function readConfiguredOpenAiRates(): Record<string, Rate> {
   const raw = process.env.PAPERCLIP_OPENAI_MODEL_RATES_JSON;
-  if (!raw?.trim()) return {};
+  if (configuredRatesCache !== null && configuredRatesCacheRaw === raw) {
+    return configuredRatesCache;
+  }
+
+  configuredRatesCacheRaw = raw;
+  if (!raw?.trim()) {
+    configuredRatesCache = {};
+    return configuredRatesCache;
+  }
+
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const rates: Record<string, Rate> = {};
@@ -50,9 +62,11 @@ function readConfiguredOpenAiRates(): Record<string, Rate> {
         source: typeof record.source === "string" && record.source.trim() ? record.source.trim() : "env:PAPERCLIP_OPENAI_MODEL_RATES_JSON",
       };
     }
-    return rates;
+    configuredRatesCache = rates;
+    return configuredRatesCache;
   } catch {
-    return {};
+    configuredRatesCache = {};
+    return configuredRatesCache;
   }
 }
 
@@ -117,7 +131,7 @@ export function resolveCostProvenance(result: Pick<
   AdapterExecutionResult,
   "provider" | "biller" | "model" | "billingType" | "costUsd" | "costSource" | "costMetadata" | "usage"
 >): ResolvedCostProvenance {
-  if (typeof result.costUsd === "number" && Number.isFinite(result.costUsd) && result.costUsd > 0) {
+  if (typeof result.costUsd === "number" && Number.isFinite(result.costUsd) && result.costUsd >= 0) {
     return {
       costUsd: result.costUsd,
       costSource: result.costSource === "estimated" ? "estimated" : "reported",

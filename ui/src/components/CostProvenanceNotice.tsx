@@ -30,6 +30,7 @@ export function unavailableMeteredTokens(totals: CostProvenanceTotals | null | u
 
 export function hasCostProvenanceWarning(totals: CostProvenanceTotals | null | undefined) {
   return (totals?.estimatedMeteredCostCents ?? 0) > 0 ||
+    (totals?.estimatedMeteredEventCount ?? 0) > 0 ||
     unavailableMeteredTokens(totals) > 0 ||
     (totals?.unavailableMeteredEventCount ?? 0) > 0;
 }
@@ -37,9 +38,12 @@ export function hasCostProvenanceWarning(totals: CostProvenanceTotals | null | u
 export function formatCostProvenanceSummary(totals: CostProvenanceTotals | null | undefined) {
   const parts: string[] = [];
   const estimatedCost = totals?.estimatedMeteredCostCents ?? 0;
+  const estimatedEvents = totals?.estimatedMeteredEventCount ?? 0;
   const unpricedTokens = unavailableMeteredTokens(totals);
   if (estimatedCost > 0) {
     parts.push(`${formatCents(estimatedCost)} estimated metered API`);
+  } else if (estimatedEvents > 0) {
+    parts.push(`${estimatedEvents} estimated metered API event${estimatedEvents === 1 ? "" : "s"}`);
   }
   if (unpricedTokens > 0) {
     parts.push(`${formatTokens(unpricedTokens)} unpriced metered API`);
@@ -75,9 +79,9 @@ export function CostProvenanceNotice({
 
   return (
     <div className={cn("border border-amber-300/70 bg-amber-50/60 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-200", className)}>
-      {estimatedCost > 0 ? (
+      {estimatedCost > 0 || estimatedEvents > 0 ? (
         <div>
-          {formatCents(estimatedCost)} is estimated metered API spend
+          {estimatedCost > 0 ? `${formatCents(estimatedCost)} is estimated metered API spend` : "Metered API spend is estimated"}
           {estimatedEvents > 0 ? ` across ${estimatedEvents} event${estimatedEvents === 1 ? "" : "s"}` : ""}.
         </div>
       ) : null}

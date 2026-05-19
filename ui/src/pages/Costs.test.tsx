@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { formatCostProvenanceSummary, hasCostProvenanceWarning } from "../components/CostProvenanceNotice";
 import { Costs } from "./Costs";
 
 const mockCostsApi = vi.hoisted(() => ({
@@ -187,5 +188,18 @@ describe("Costs", () => {
     expect(container.textContent).toContain("1.3k tokens of metered API usage are unpriced");
     expect(container.textContent).toContain("$2.50 estimated metered API");
     expect(container.textContent).toContain("1.3k unpriced metered API");
+  });
+
+  it("warns for estimated metered events even when spend rounds to zero cents", () => {
+    const zeroCentEstimated = {
+      estimatedMeteredCostCents: 0,
+      estimatedMeteredInputTokens: 1,
+      estimatedMeteredCachedInputTokens: 0,
+      estimatedMeteredOutputTokens: 1,
+      estimatedMeteredEventCount: 1,
+    };
+
+    expect(hasCostProvenanceWarning(zeroCentEstimated)).toBe(true);
+    expect(formatCostProvenanceSummary(zeroCentEstimated)).toBe("1 estimated metered API event");
   });
 });

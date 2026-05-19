@@ -401,6 +401,7 @@ async function applyRepairs(sql: PostgresSql, repairs: Repair[]) {
 
   const affectedAgents = new Map<string, string>();
   const affectedCompanies = new Set<string>();
+  let updatedEvents = 0;
   await sql.begin(async (tx) => {
     for (const repair of repairs) {
       const result = await tx`
@@ -417,6 +418,7 @@ async function applyRepairs(sql: PostgresSql, repairs: Repair[]) {
           AND (input_tokens + cached_input_tokens + output_tokens) > 0
       `;
       if (result.count > 0) {
+        updatedEvents += result.count;
         affectedAgents.set(repair.agentId, repair.companyId);
         affectedCompanies.add(repair.companyId);
       }
@@ -459,7 +461,7 @@ async function applyRepairs(sql: PostgresSql, repairs: Repair[]) {
   });
 
   return {
-    updatedEvents: repairs.length,
+    updatedEvents,
     recomputedAgents: affectedAgents.size,
     recomputedCompanies: affectedCompanies.size,
   };
