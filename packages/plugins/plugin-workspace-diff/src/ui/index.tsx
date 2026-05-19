@@ -129,14 +129,16 @@ function writeStoredFileSidebarWidth(width: number) {
 }
 
 function useIsDesktopDiffLayout() {
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+    return window.matchMedia("(min-width: 1024px)").matches;
+  });
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
 
     const query = window.matchMedia("(min-width: 1024px)");
     const update = () => setIsDesktop(query.matches);
-    update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
