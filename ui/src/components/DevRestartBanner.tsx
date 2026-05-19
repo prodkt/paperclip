@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, RotateCcw, TimerReset } from "lucide-react";
 import { healthApi, type DevServerHealthStatus } from "../api/health";
+
+const RESTART_PENDING_RESET_MS = 30_000;
 
 function formatRelativeTimestamp(value: string | null): string | null {
   if (!value) return null;
@@ -29,6 +31,14 @@ function describeReason(devServer: DevServerHealthStatus): string {
 
 export function DevRestartBanner({ devServer }: { devServer?: DevServerHealthStatus }) {
   const [restartPending, setRestartPending] = useState(false);
+  useEffect(() => {
+    if (!restartPending) return;
+    const timeout = window.setTimeout(() => {
+      setRestartPending(false);
+    }, RESTART_PENDING_RESET_MS);
+    return () => window.clearTimeout(timeout);
+  }, [restartPending]);
+
   if (!devServer?.enabled || !devServer.restartRequired) return null;
 
   const currentDevServer = devServer;

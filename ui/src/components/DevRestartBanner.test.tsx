@@ -47,6 +47,7 @@ afterEach(() => {
   container?.remove();
   container = null;
   vi.restoreAllMocks();
+  vi.useRealTimers();
   mockHealthApi.requestDevServerRestart.mockReset();
 });
 
@@ -87,5 +88,26 @@ describe("DevRestartBanner", () => {
     });
 
     expect(mockHealthApi.requestDevServerRestart).not.toHaveBeenCalled();
+  });
+
+  it("re-enables the manual restart action when a request does not refresh the page", async () => {
+    vi.useFakeTimers();
+    const node = render();
+    const button = [...node.querySelectorAll("button")]
+      .find((entry) => entry.textContent?.includes("Restart now")) as HTMLButtonElement | undefined;
+
+    await act(async () => {
+      button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(button?.disabled).toBe(true);
+    expect(node.textContent).toContain("Restart requested");
+
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+
+    expect(button?.disabled).toBe(false);
+    expect(node.textContent).toContain("Restart now");
   });
 });

@@ -814,6 +814,26 @@ describe("MarkdownEditor", () => {
     });
   });
 
+  it("caps rendered mention matches while keeping the menu scrollable", async () => {
+    const handleChange = vi.fn();
+    const mentions = Array.from({ length: 60 }, (_, index) => ({
+      id: `project:project-${index}`,
+      kind: "project" as const,
+      name: `Paperclip App ${index}`,
+      projectId: `project-${index}`,
+      projectColor: "#336699",
+    }));
+    const { menu, root } = await openMentionMenuFor(handleChange, mentions);
+
+    const options = Array.from(menu.querySelectorAll('button[type="button"]'));
+    expect(options).toHaveLength(50);
+    expect(menu.className).toContain("overflow-y-auto");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("scrolls the active mention option into view during keyboard navigation", async () => {
     const handleChange = vi.fn();
     const scrollIntoView = vi.fn();

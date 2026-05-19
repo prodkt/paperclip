@@ -212,6 +212,7 @@ const MENTION_MENU_HEIGHT = 208;
 const MENTION_MENU_PADDING = 8;
 const MENTION_MENU_ROW_HEIGHT = 34;
 const MENTION_MENU_CHROME_HEIGHT = 8;
+const MAX_AUTOCOMPLETE_OPTIONS = 50;
 /** Roughly one space-width of breathing room between the caret and the menu. */
 const MENTION_MENU_CARET_GAP = 10;
 
@@ -648,10 +649,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
         .filter((command) => {
           if (!q) return true;
           return command.aliases.some((alias) => alias.toLowerCase().includes(q));
-        });
+        })
+        .slice(0, MAX_AUTOCOMPLETE_OPTIONS);
     }
     if (!mentions) return [];
-    return mentions.filter((m) => m.name.toLowerCase().includes(q));
+    return mentions
+      .filter((m) => m.name.toLowerCase().includes(q))
+      .slice(0, MAX_AUTOCOMPLETE_OPTIONS);
   }, [mentionState, mentions, slashCommands]);
 
   useImperativeHandle(forwardedRef, () => ({
