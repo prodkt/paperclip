@@ -86,8 +86,6 @@ const VITE_DEV_STATIC_PATHS = new Set([
 export function isDatabaseConnectionUnavailableError(err: unknown): boolean {
   const error = err as { code?: unknown; message?: unknown; cause?: unknown };
   if (error?.code === "ECONNREFUSED") return true;
-  const message = typeof error?.message === "string" ? error.message : "";
-  if (message.includes("ECONNREFUSED")) return true;
   return Boolean(error?.cause && isDatabaseConnectionUnavailableError(error.cause));
 }
 

@@ -1068,6 +1068,13 @@ export function issueThreadInteractionService(db: Db) {
 
       const now = new Date();
       const expired: IssueThreadInteraction[] = [];
+      const supersededByComment = new Map<
+        string,
+        {
+          comment: (typeof comments)[number];
+          rowIds: string[];
+        }
+      >();
       for (const row of rows) {
         const interaction = hydrateInteraction(row) as RequestConfirmationInteraction;
         if (!shouldSupersedeRequestConfirmationOnUserComment(interaction)) continue;
@@ -1078,26 +1085,38 @@ export function issueThreadInteractionService(db: Db) {
         }));
         if (!supersedingComment) continue;
 
-        const [updated] = await db
+        const group = supersededByComment.get(supersedingComment.id);
+        if (group) {
+          group.rowIds.push(row.id);
+        } else {
+          supersededByComment.set(supersedingComment.id, {
+            comment: supersedingComment,
+            rowIds: [row.id],
+          });
+        }
+      }
+
+      for (const { comment, rowIds } of supersededByComment.values()) {
+        const updatedRows = await db
           .update(issueThreadInteractions)
           .set({
             status: "expired",
             result: {
               version: 1,
               outcome: "superseded_by_comment",
-              commentId: supersedingComment.id,
+              commentId: comment.id,
             },
             resolvedByAgentId: null,
-            resolvedByUserId: supersedingComment.authorUserId,
+            resolvedByUserId: comment.authorUserId,
             resolvedAt: now,
             updatedAt: now,
           })
           .where(and(
-            eq(issueThreadInteractions.id, row.id),
+            inArray(issueThreadInteractions.id, rowIds),
             eq(issueThreadInteractions.status, "pending"),
           ))
           .returning();
-        if (updated) expired.push(hydrateInteraction(updated));
+        expired.push(...updatedRows.map(hydrateInteraction));
       }
 
       if (expired.length > 0) {
