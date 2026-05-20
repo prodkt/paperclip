@@ -538,6 +538,28 @@ describe.sequential("company portability routes", () => {
     expect(mockLogActivity).not.toHaveBeenCalled();
   });
 
+  it.sequential("accepts trusted Cloud async import jobs before validating the full import payload", async () => {
+    const app = await createApp(cloudTenantActor());
+
+    const accepted = await request(app)
+      .post("/api/companies/import")
+      .set("x-paperclip-cloud-async-import", "1")
+      .set(cloudHeaders)
+      .send({ target: { mode: "existing_company", companyId } });
+
+    expect(accepted.status).toBe(202);
+    expect(accepted.body.job.status).toBe("running");
+    expect(mockCompanyPortabilityService.importBundle).not.toHaveBeenCalled();
+
+    const failed = await waitForImportJobStatus(app, accepted.body.statusUrl, "failed");
+
+    expect(failed.status).toBe(200);
+    expect(failed.body.job.status).toBe("failed");
+    expect(failed.body.job.error.message).toEqual(expect.any(String));
+    expect(mockCompanyPortabilityService.importBundle).not.toHaveBeenCalled();
+    expect(mockLogActivity).not.toHaveBeenCalled();
+  });
+
   it.sequential("keeps global import apply synchronous when Cloud async opt-in is absent", async () => {
     mockCompanyPortabilityService.importBundle.mockResolvedValueOnce(createImportResult("created"));
     const app = await createApp(cloudTenantActor());
