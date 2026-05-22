@@ -110,21 +110,6 @@ function mergeScrollableBlockStyle(style?: React.CSSProperties): React.CSSProper
   };
 }
 
-function mergeCodeBlockStyle(
-  style: React.CSSProperties | undefined,
-  wrapped: boolean,
-): React.CSSProperties {
-  if (!wrapped) return mergeScrollableBlockStyle(style);
-  return {
-    ...style,
-    maxWidth: "100%",
-    overflowX: "hidden",
-    whiteSpace: "pre-wrap",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
-  };
-}
-
 function flattenText(value: ReactNode): string {
   if (value == null) return "";
   if (typeof value === "string" || typeof value === "number") return String(value);
@@ -379,7 +364,7 @@ function CodeBlock({
 }) {
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [wrapped, setWrapped] = useState(false);
+  const [wrapLines, setWrapLines] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -417,39 +402,50 @@ function CodeBlock({
     }, 1500);
   }, [children]);
 
-  const label = failed ? "Copy failed" : copied ? "Copied!" : "Copy";
-  const wrapLabel = wrapped ? "Disable line wrap" : "Wrap lines";
+  const copyLabel = failed ? "Copy failed" : copied ? "Copied!" : "Copy";
+  const wrapLabel = wrapLines ? "Unwrap lines" : "Wrap lines";
 
   return (
-    <div className="paperclip-markdown-codeblock">
+    <div className="paperclip-markdown-codeblock" data-wrap-lines={wrapLines || undefined}>
       <pre
         {...preProps}
         ref={preRef}
-        style={mergeCodeBlockStyle(preProps.style as React.CSSProperties | undefined, wrapped)}
+        style={{
+          ...mergeScrollableBlockStyle(preProps.style as React.CSSProperties | undefined),
+          ...(wrapLines
+            ? {
+                overflowX: "hidden",
+                whiteSpace: "pre-wrap",
+                overflowWrap: "anywhere",
+                wordBreak: "break-word",
+              }
+            : null),
+        }}
       >
         {children}
       </pre>
       <div
         className="paperclip-markdown-codeblock-actions"
-        data-active={copied || failed || wrapped || undefined}
+        data-active={copied || failed || wrapLines || undefined}
       >
         <button
           type="button"
-          onClick={() => setWrapped((next) => !next)}
+          onClick={() => setWrapLines((value) => !value)}
           aria-label={wrapLabel}
           title={wrapLabel}
-          aria-pressed={wrapped}
-          className="paperclip-markdown-codeblock-button paperclip-markdown-codeblock-wrap"
-          data-wrapped={wrapped || undefined}
+          className="paperclip-markdown-codeblock-action paperclip-markdown-codeblock-wrap"
+          aria-pressed={wrapLines}
+          data-active={wrapLines || undefined}
         >
           <WrapText aria-hidden="true" className="h-3.5 w-3.5" />
+          <span className="paperclip-markdown-codeblock-action-label">{wrapLabel}</span>
         </button>
         <button
           type="button"
           onClick={handleCopy}
           aria-label="Copy code"
-          title={label}
-          className="paperclip-markdown-codeblock-button paperclip-markdown-codeblock-copy"
+          title={copyLabel}
+          className="paperclip-markdown-codeblock-action paperclip-markdown-codeblock-copy"
           data-copied={copied || undefined}
           data-failed={failed || undefined}
         >
@@ -458,7 +454,7 @@ function CodeBlock({
           ) : (
             <Copy aria-hidden="true" className="h-3.5 w-3.5" />
           )}
-          <span className="paperclip-markdown-codeblock-copy-label">{label}</span>
+          <span className="paperclip-markdown-codeblock-action-label">{copyLabel}</span>
         </button>
       </div>
     </div>

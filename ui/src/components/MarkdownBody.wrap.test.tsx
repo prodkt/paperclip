@@ -81,7 +81,7 @@ describe("MarkdownBody code block wrapping", () => {
     });
 
     expect(wrapButton?.getAttribute("aria-pressed")).toBe("true");
-    expect(wrapButton?.getAttribute("aria-label")).toBe("Disable line wrap");
+    expect(wrapButton?.getAttribute("aria-label")).toBe("Unwrap lines");
     expect(actions?.getAttribute("data-active")).toBe("true");
     expect(pre?.style.overflowX).toBe("hidden");
     expect(pre?.style.whiteSpace).toBe("pre-wrap");

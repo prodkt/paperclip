@@ -6,7 +6,7 @@ const items = [
   { value: "general", label: "General", href: "/company/settings" },
   { value: "environments", label: "Environments", href: "/company/settings/environments" },
   { value: "cloud-upstream", label: "Cloud upstream", href: "/company/settings/cloud-upstream" },
-  { value: "access", label: "Access", href: "/company/settings/access" },
+  { value: "members", label: "Members", href: "/company/settings/members" },
   { value: "invites", label: "Invites", href: "/company/settings/invites" },
   { value: "secrets", label: "Secrets", href: "/company/settings/secrets" },
 ] as const;
@@ -22,8 +22,8 @@ export function getCompanySettingsTab(pathname: string): CompanySettingsTab {
     return "cloud-upstream";
   }
 
-  if (pathname.includes("/company/settings/access")) {
-    return "access";
+  if (pathname.includes("/company/settings/members") || pathname.includes("/company/settings/access")) {
+    return "members";
   }
 
   if (pathname.includes("/company/settings/invites")) {

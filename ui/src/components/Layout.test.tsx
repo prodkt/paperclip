@@ -361,7 +361,7 @@ describe("Layout", () => {
     expect(selector?.textContent).toContain("General");
     expect(selector?.textContent).toContain("Environments");
     expect(selector?.textContent).toContain("Cloud upstream");
-    expect(selector?.textContent).toContain("Access");
+    expect(selector?.textContent).toContain("Members");
     expect(selector?.textContent).toContain("Invites");
     expect(selector?.textContent).toContain("Secrets");
 
