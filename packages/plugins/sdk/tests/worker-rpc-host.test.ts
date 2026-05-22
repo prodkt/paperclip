@@ -1,63 +1,26 @@
 import fs from "node:fs";
 import os from "node:os";
-import { PassThrough } from "node:stream";
 import path from "node:path";
+import { createInterface } from "node:readline";
+import { PassThrough } from "node:stream";
 import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { definePlugin } from "../src/define-plugin.js";
-import type { JsonRpcResponse } from "../src/protocol.js";
+import {
+  createRequest,
+  createErrorResponse,
+  createSuccessResponse,
+  isJsonRpcRequest,
+  isJsonRpcResponse,
+  parseMessage,
+  PLUGIN_RPC_ERROR_CODES,
+  serializeMessage,
+  type JsonRpcResponse,
+  type PluginInvocationContext,
+} from "../src/protocol.js";
 import { isWorkerEntrypoint, startWorkerRpcHost } from "../src/worker-rpc-host.js";
-
-function createWorkerHarness() {
-  const stdin = new PassThrough();
-  const stdout = new PassThrough();
-  let buffer = "";
-  const messages: JsonRpcResponse[] = [];
-  const waiters = new Map<string | number | null, Array<(message: JsonRpcResponse) => void>>();
-
-  stdout.setEncoding("utf8");
-  stdout.on("data", (chunk) => {
-    buffer += String(chunk);
-    let newlineIndex = buffer.indexOf("\n");
-    while (newlineIndex >= 0) {
-      const line = buffer.slice(0, newlineIndex).trim();
-      buffer = buffer.slice(newlineIndex + 1);
-      if (line) {
-        const message = JSON.parse(line) as JsonRpcResponse;
-        const waiter = waiters.get(message.id)?.shift();
-        if (waiter) {
-          waiter(message);
-        } else {
-          messages.push(message);
-        }
-      }
-      newlineIndex = buffer.indexOf("\n");
-    }
-  });
-
-  async function request(method: string, params: unknown, id: string | number): Promise<JsonRpcResponse> {
-    const existingIndex = messages.findIndex((message) => message.id === id);
-    if (existingIndex >= 0) {
-      return messages.splice(existingIndex, 1)[0]!;
-    }
-    const response = new Promise<JsonRpcResponse>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`Timed out waiting for ${method}`)), 1_000);
-      const wrappedResolve = (message: JsonRpcResponse) => {
-        clearTimeout(timer);
-        resolve(message);
-      };
-      const existing = waiters.get(id) ?? [];
-      existing.push(wrappedResolve);
-      waiters.set(id, existing);
-    });
-    stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
-    return response;
-  }
-
-  return { stdin, stdout, request };
-}
 
 describe("isWorkerEntrypoint", () => {
   const tempRoots: string[] = [];
@@ -110,7 +73,11 @@ describe("isWorkerEntrypoint", () => {
 
 describe("worker performAction context", () => {
   it("does not derive context companyId from caller params without host actor context", async () => {
-    const harness = createWorkerHarness();
+    const hostToWorker = new PassThrough();
+    const workerToHost = new PassThrough();
+    const hostReadline = createInterface({ input: workerToHost });
+    const pending = new Map<string, (response: JsonRpcResponse) => void>();
+    let nextRequestId = 1;
     const plugin = definePlugin({
       async setup(ctx) {
         ctx.actions.register("inspect", async (params, context) => ({
@@ -120,14 +87,36 @@ describe("worker performAction context", () => {
         }));
       },
     });
-    const host = startWorkerRpcHost({
+    const worker = startWorkerRpcHost({
       plugin,
-      stdin: harness.stdin,
-      stdout: harness.stdout,
+      stdin: hostToWorker,
+      stdout: workerToHost,
+    });
+
+    function callWorker(method: string, params: unknown) {
+      const id = `host-${nextRequestId++}`;
+      const result = new Promise<unknown>((resolve, reject) => {
+        pending.set(id, (response) => {
+          if ("error" in response && response.error) {
+            reject(new Error(response.error.message));
+            return;
+          }
+          resolve((response as { result?: unknown }).result);
+        });
+      });
+      hostToWorker.write(serializeMessage(createRequest(method, params, id)));
+      return result;
+    }
+
+    hostReadline.on("line", (line) => {
+      const message = parseMessage(line);
+      if (!isJsonRpcResponse(message)) return;
+      pending.get(String(message.id))?.(message);
+      pending.delete(String(message.id));
     });
 
     try {
-      const initialize = await harness.request("initialize", {
+      await expect(callWorker("initialize", {
         manifest: {
           id: "paperclip.test-worker-context",
           apiVersion: 1,
@@ -141,15 +130,12 @@ describe("worker performAction context", () => {
         },
         config: {},
         databaseNamespace: null,
-      }, 1);
-      expect("result" in initialize ? initialize.result : null).toMatchObject({ ok: true });
+      })).resolves.toMatchObject({ ok: true });
 
-      const response = await harness.request("performAction", {
+      await expect(callWorker("performAction", {
         key: "inspect",
         params: { companyId: "spoofed-company" },
-      }, 2);
-
-      expect("result" in response ? response.result : null).toEqual({
+      })).resolves.toEqual({
         paramsCompanyId: "spoofed-company",
         actor: {
           type: "system",
@@ -161,7 +147,152 @@ describe("worker performAction context", () => {
         companyId: null,
       });
     } finally {
-      host.stop();
+      worker.stop();
+      hostReadline.close();
+      hostToWorker.destroy();
+      workerToHost.destroy();
+    }
+  });
+});
+
+describe("worker invocation scope propagation", () => {
+  it("keeps overlapping company scopes local to each getData invocation", async () => {
+    const hostToWorker = new PassThrough();
+    const workerToHost = new PassThrough();
+    const hostReadline = createInterface({ input: workerToHost });
+    const pending = new Map<string, (response: JsonRpcResponse) => void>();
+    const nestedInvocationIds: string[] = [];
+    const invocationCompanies = new Map([
+      ["invocation-a", "company-a"],
+      ["invocation-b", "company-b"],
+    ]);
+    let releaseCompanyA: (() => void) | null = null;
+    let nextRequestId = 1;
+
+    const plugin = definePlugin({
+      async setup(ctx) {
+        ctx.data.register("probe", async (params) => {
+          if (params.label === "a") {
+            await new Promise<void>((resolve) => {
+              releaseCompanyA = resolve;
+            });
+          }
+          const company = await ctx.companies.get(String(params.requestedCompanyId));
+          return { label: params.label, company };
+        });
+      },
+    });
+
+    const worker = startWorkerRpcHost({
+      plugin,
+      stdin: hostToWorker,
+      stdout: workerToHost,
+    });
+
+    function callWorker(method: string, params: unknown, invocation?: PluginInvocationContext) {
+      const id = `host-${nextRequestId++}`;
+      const request = {
+        ...createRequest(method, params, id),
+        ...(invocation ? { paperclipInvocation: invocation } : {}),
+      };
+      const result = new Promise<unknown>((resolve, reject) => {
+        pending.set(id, (response) => {
+          if ("error" in response && response.error) {
+            reject(new Error(response.error.message));
+            return;
+          }
+          resolve((response as { result?: unknown }).result);
+        });
+      });
+      hostToWorker.write(serializeMessage(request));
+      return result;
+    }
+
+    hostReadline.on("line", (line) => {
+      const message = parseMessage(line);
+      if (isJsonRpcResponse(message)) {
+        pending.get(String(message.id))?.(message);
+        pending.delete(String(message.id));
+        return;
+      }
+
+      if (!isJsonRpcRequest(message)) return;
+      if (message.method !== "companies.get") return;
+
+      const invocationId = (message as { paperclipInvocationId?: string }).paperclipInvocationId ?? "";
+      const requestedCompanyId = (message.params as { companyId?: string }).companyId;
+      const allowedCompanyId = invocationCompanies.get(invocationId);
+      nestedInvocationIds.push(invocationId);
+      if (requestedCompanyId !== allowedCompanyId) {
+        hostToWorker.write(serializeMessage(createErrorResponse(
+          message.id,
+          PLUGIN_RPC_ERROR_CODES.CAPABILITY_DENIED,
+          `requested company "${requestedCompanyId}" but invocation "${invocationId}" is scoped to "${allowedCompanyId}"`,
+        )));
+        return;
+      }
+
+      hostToWorker.write(serializeMessage(createSuccessResponse(message.id, {
+        id: requestedCompanyId,
+      })));
+
+      if (invocationId === "invocation-b") {
+        releaseCompanyA?.();
+      }
+    });
+
+    try {
+      await callWorker("initialize", {
+        manifest: {
+          id: "paperclip.scope-test",
+          apiVersion: 1,
+          version: "1.0.0",
+          displayName: "Scope test",
+          description: "Scope test",
+          author: "Paperclip",
+          categories: ["automation"],
+          capabilities: ["companies.read"],
+          entrypoints: { worker: "dist/worker.js" },
+        },
+        config: {},
+        instanceInfo: { instanceId: "test", hostVersion: "0.0.0" },
+        apiVersion: 1,
+      });
+
+      const companyARequest = callWorker(
+        "getData",
+        {
+          key: "probe",
+          companyId: "company-a",
+          params: { label: "a", requestedCompanyId: "company-b" },
+        },
+        { id: "invocation-a", scope: { companyId: "company-a" } },
+      );
+      const companyAExpectation = expect(companyARequest).rejects.toThrow(
+        /requested company "company-b"/,
+      );
+      const companyBRequest = callWorker(
+        "getData",
+        {
+          key: "probe",
+          companyId: "company-b",
+          params: { label: "b", requestedCompanyId: "company-b" },
+        },
+        { id: "invocation-b", scope: { companyId: "company-b" } },
+      );
+
+      await expect(companyBRequest).resolves.toEqual({
+        label: "b",
+        company: { id: "company-b" },
+      });
+      await companyAExpectation;
+
+      expect(nestedInvocationIds).toEqual(["invocation-b", "invocation-a"]);
+    } finally {
+      worker.stop();
+      hostReadline.close();
+      hostToWorker.destroy();
+      workerToHost.destroy();
     }
   });
 });

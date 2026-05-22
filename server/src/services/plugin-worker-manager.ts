@@ -40,9 +40,12 @@ import {
 } from "@paperclipai/plugin-sdk";
 import type {
   JsonRpcId,
+  PluginInvocationContext,
+  PluginInvocationScope,
   JsonRpcResponse,
   JsonRpcRequest,
   JsonRpcNotification,
+  WorkerHostCallContext,
   HostToWorkerMethodName,
   HostToWorkerMethods,
   WorkerToHostMethodName,
@@ -103,21 +106,13 @@ export type WorkerStatus =
   | "crashed"
   | "backoff";
 
-export interface WorkerInvocationScope {
-  companyId?: string | null;
-}
-
-export interface WorkerToHostHandlerContext {
-  invocationScope?: WorkerInvocationScope | null;
-}
-
 /**
  * Worker-to-host method handler. The host registers these to service calls
  * that the plugin worker makes back to the host (e.g. state.get, events.emit).
  */
 export type WorkerToHostHandler<M extends WorkerToHostMethodName> = (
   params: WorkerToHostMethods[M][0],
-  context?: WorkerToHostHandlerContext,
+  context?: WorkerHostCallContext,
 ) => Promise<WorkerToHostMethods[M][1]>;
 
 /**
@@ -211,6 +206,11 @@ interface PendingRequest {
   sentAt: number;
   /** Active host-owned invocation id attached to this host→worker call. */
   invocationId?: string;
+}
+
+interface ActiveInvocation {
+  scope: PluginInvocationScope;
+  timer?: ReturnType<typeof setTimeout>;
 }
 
 // ---------------------------------------------------------------------------
@@ -391,7 +391,7 @@ export function createPluginWorkerHandle(
   // Pending RPC requests awaiting a response
   const pendingRequests = new Map<string | number, PendingRequest>();
   let nextRequestId = 1;
-  const activeInvocationScopes = new Map<string, WorkerInvocationScope>();
+  const activeInvocations = new Map<string, ActiveInvocation>();
 
   // Optional methods reported by the worker during initialization
   let supportedMethods: string[] = [];
@@ -435,38 +435,6 @@ export function createPluginWorkerHandle(
     }
     const serialized = serializeMessage(message as any);
     childProcess.stdin.write(serialized);
-  }
-
-  function stringOrNull(value: unknown): string | null {
-    return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-  }
-
-  function invocationScopeForCall(
-    method: HostToWorkerMethodName,
-    params: unknown,
-  ): WorkerInvocationScope | null {
-    if (method !== "performAction" || !params || typeof params !== "object") return null;
-    const actorContext = (params as { actorContext?: { companyId?: unknown } | null }).actorContext;
-    const companyId = stringOrNull(actorContext?.companyId);
-    return companyId ? { companyId } : null;
-  }
-
-  function invocationContextForWorkerRequest(request: JsonRpcRequest): WorkerToHostHandlerContext | undefined {
-    const invocationId = stringOrNull(request.paperclipInvocationId);
-    if (invocationId) {
-      const invocationScope = activeInvocationScopes.get(invocationId);
-      if (!invocationScope) {
-        throw new Error("Worker host request referenced an unknown or expired invocation scope");
-      }
-      return { invocationScope };
-    }
-    if (activeInvocationScopes.size === 1) {
-      return { invocationScope: [...activeInvocationScopes.values()][0] };
-    }
-    if (activeInvocationScopes.size > 1) {
-      throw new Error("Worker host request omitted invocation scope while multiple scoped invocations are active");
-    }
-    return undefined;
   }
 
   function errorCodeForWorkerHostError(err: unknown): number {
@@ -528,13 +496,83 @@ export function createPluginWorkerHandle(
     pending.resolve(response);
   }
 
+  function readNonEmptyString(value: unknown): string | null {
+    return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+  }
+
+  function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+  }
+
+  function deriveInvocationScope(
+    method: HostToWorkerMethodName | string,
+    params: unknown,
+  ): PluginInvocationScope | null {
+    if (!isRecord(params)) return null;
+
+    const directCompanyId = readNonEmptyString(params.companyId);
+    if (directCompanyId) return { companyId: directCompanyId };
+
+    if (method === "performAction" && isRecord(params.actorContext)) {
+      const companyId = readNonEmptyString(params.actorContext.companyId);
+      return companyId ? { companyId } : null;
+    }
+
+    if (method === "executeTool" && isRecord(params.runContext)) {
+      const companyId = readNonEmptyString(params.runContext.companyId);
+      return companyId ? { companyId } : null;
+    }
+
+    if (method === "onEvent" && isRecord(params.event)) {
+      const companyId = readNonEmptyString(params.event.companyId);
+      return companyId ? { companyId } : null;
+    }
+
+    return null;
+  }
+
+  function registerInvocation(scope: PluginInvocationScope, ttlMs?: number): PluginInvocationContext {
+    const invocation: PluginInvocationContext = {
+      id: randomUUID(),
+      scope,
+    };
+    const entry: ActiveInvocation = { scope };
+    if (ttlMs !== undefined) {
+      entry.timer = setTimeout(() => {
+        activeInvocations.delete(invocation.id);
+      }, ttlMs);
+      if (entry.timer.unref) entry.timer.unref();
+    }
+    activeInvocations.set(invocation.id, entry);
+    return invocation;
+  }
+
+  function clearInvocation(invocation: PluginInvocationContext | null): void {
+    if (!invocation) return;
+    const entry = activeInvocations.get(invocation.id);
+    if (entry?.timer) clearTimeout(entry.timer);
+    activeInvocations.delete(invocation.id);
+  }
+
+  function contextForWorkerMessage(message: JsonRpcRequest | JsonRpcNotification): WorkerHostCallContext {
+    const invocationId = readNonEmptyString(
+      (message as { paperclipInvocationId?: unknown }).paperclipInvocationId,
+    );
+    if (!invocationId) {
+      return activeInvocations.size > 0 ? { invalidInvocationScope: true } : {};
+    }
+    const entry = activeInvocations.get(invocationId);
+    if (!entry) return { invalidInvocationScope: true };
+    return { invocationScope: entry.scope };
+  }
+
   /**
    * Handle a JSON-RPC request from the worker (worker→host call).
    */
   async function handleWorkerRequest(request: JsonRpcRequest): Promise<void> {
     const method = request.method as WorkerToHostMethodName;
     const handler = options.hostHandlers[method] as
-      | ((params: unknown, context?: WorkerToHostHandlerContext) => Promise<unknown>)
+      | ((params: unknown, context?: WorkerHostCallContext) => Promise<unknown>)
       | undefined;
 
     if (!handler) {
@@ -554,7 +592,7 @@ export function createPluginWorkerHandle(
     }
 
     try {
-      const result = await handler(request.params, invocationContextForWorkerRequest(request));
+      const result = await handler(request.params, contextForWorkerMessage(request));
       sendMessage({
         jsonrpc: JSONRPC_VERSION,
         id: request.id,
@@ -625,12 +663,28 @@ export function createPluginWorkerHandle(
       notification.method === "streams.close"
     ) {
       const params = (notification.params ?? {}) as Record<string, unknown>;
+      const companyId = String(params.companyId ?? "");
+      const context = contextForWorkerMessage(notification);
+      if (context.invalidInvocationScope) {
+        log.warn(
+          { method: notification.method, companyId },
+          "dropping plugin stream notification with invalid invocation scope",
+        );
+        return;
+      }
+      const allowedCompanyId = context.invocationScope?.companyId;
+      if (allowedCompanyId && companyId !== allowedCompanyId) {
+        log.warn(
+          { method: notification.method, companyId, allowedCompanyId },
+          "dropping plugin stream notification outside invocation company scope",
+        );
+        return;
+      }
 
       // Track open channels so we can emit synthetic close on crash
       if (notification.method === "streams.open") {
         const ch = String(params.channel ?? "");
-        const co = String(params.companyId ?? "");
-        if (ch) openStreamChannels.set(ch, co);
+        if (ch) openStreamChannels.set(ch, companyId);
       } else if (notification.method === "streams.close") {
         openStreamChannels.delete(String(params.channel ?? ""));
       }
@@ -804,7 +858,6 @@ export function createPluginWorkerHandle(
   function rejectAllPending(error: Error): void {
     for (const [id, pending] of pendingRequests) {
       clearTimeout(pending.timer);
-      if (pending.invocationId) activeInvocationScopes.delete(pending.invocationId);
       pending.resolve(
         createErrorResponse(
           pending.id,
@@ -814,7 +867,10 @@ export function createPluginWorkerHandle(
       );
     }
     pendingRequests.clear();
-    activeInvocationScopes.clear();
+    for (const invocation of activeInvocations.values()) {
+      if (invocation.timer) clearTimeout(invocation.timer);
+    }
+    activeInvocations.clear();
   }
 
   // -----------------------------------------------------------------------
@@ -1075,9 +1131,8 @@ export function createPluginWorkerHandle(
 
       const id = nextRequestId++;
       const timeout = Math.min(timeoutMs ?? rpcTimeoutMs, MAX_RPC_TIMEOUT_MS);
-      const invocationScope = invocationScopeForCall(method, params);
-      const invocation = invocationScope ? { id: randomUUID(), scope: invocationScope } : null;
-      if (invocation) activeInvocationScopes.set(invocation.id, invocation.scope);
+      const invocationScope = deriveInvocationScope(method, params);
+      const invocation = invocationScope ? registerInvocation(invocationScope) : null;
 
       // Guard against double-settlement. When a process exits all pending
       // requests are rejected via rejectAllPending(), but the timeout timer
@@ -1090,7 +1145,7 @@ export function createPluginWorkerHandle(
         settled = true;
         clearTimeout(timer);
         pendingRequests.delete(id);
-        if (invocation) activeInvocationScopes.delete(invocation.id);
+        clearInvocation(invocation);
         fn(value);
       };
 
@@ -1124,12 +1179,15 @@ export function createPluginWorkerHandle(
       pendingRequests.set(id, pending);
 
       try {
-        const request = createRequest(method, params, id);
-        sendMessage(invocation ? { ...request, paperclipInvocation: invocation } : request);
+        const request = {
+          ...createRequest(method, params, id),
+          ...(invocation ? { paperclipInvocation: invocation } : {}),
+        };
+        sendMessage(request);
       } catch (err) {
         clearTimeout(timer);
         pendingRequests.delete(id);
-        if (invocation) activeInvocationScopes.delete(invocation.id);
+        clearInvocation(invocation);
         reject(
           new Error(
             `Failed to send "${method}" to worker: ${
@@ -1196,13 +1254,17 @@ export function createPluginWorkerHandle(
 
     notify(method: string, params: unknown) {
       if (status !== "running") return;
+      const invocationScope = deriveInvocationScope(method, params);
+      const invocation = invocationScope ? registerInvocation(invocationScope, MAX_RPC_TIMEOUT_MS) : null;
       try {
         sendMessage({
           jsonrpc: JSONRPC_VERSION,
           method,
           params,
+          ...(invocation ? { paperclipInvocation: invocation } : {}),
         });
       } catch {
+        clearInvocation(invocation);
         log.warn({ method }, "failed to send notification to worker");
       }
     },

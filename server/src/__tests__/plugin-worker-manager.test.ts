@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { PaperclipPluginManifestV1 } from "@paperclipai/shared";
 import {
   createHostClientHandlers,
-  type HostServices,
   JsonRpcCallError,
   PLUGIN_RPC_ERROR_CODES,
+  type HostServices,
   type HostToWorkerMethods,
 } from "@paperclipai/plugin-sdk";
 import {
@@ -17,8 +17,11 @@ import {
 
 const FIXTURES_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
 const DELAYED_WORKER_ENTRYPOINT = path.join(FIXTURES_DIR, "plugin-worker-delayed.cjs");
+const INVOCATION_SCOPE_WORKER_ENTRYPOINT = path.join(
+  FIXTURES_DIR,
+  "plugin-worker-invocation-scope.cjs",
+);
 const TERMINATED_WORKER_ENTRYPOINT = path.join(FIXTURES_DIR, "plugin-worker-terminated.cjs");
-const INVOCATION_SCOPE_WORKER_ENTRYPOINT = path.join(FIXTURES_DIR, "plugin-worker-invocation-scope.cjs");
 
 const TEST_MANIFEST: PaperclipPluginManifestV1 = {
   id: "test.plugin",
@@ -235,7 +238,44 @@ describe("plugin-worker-manager stderr failure context", () => {
     }
   });
 
-  it("applies the active performAction scope when a nested worker host call omits the invocation id", async () => {
+  it("passes echoed invocation scope to worker-to-host handlers", async () => {
+    const companiesGet = vi.fn(async () => ({ id: "company-1" }));
+    const handle = createPluginWorkerHandle("test.plugin", {
+      entrypointPath: INVOCATION_SCOPE_WORKER_ENTRYPOINT,
+      manifest: TEST_MANIFEST,
+      config: {},
+      instanceInfo: {
+        instanceId: "instance-1",
+        hostVersion: "1.0.0",
+      },
+      apiVersion: 1,
+      hostHandlers: {
+        "companies.get": companiesGet,
+      },
+    });
+
+    try {
+      await handle.start();
+
+      await expect(handle.call("getData", {
+        key: "probe",
+        companyId: "company-1",
+        params: {
+          mode: "echo",
+          requestedCompanyId: "company-1",
+        },
+      } as HostToWorkerMethods["getData"][0])).resolves.toEqual({ id: "company-1" });
+
+      expect(companiesGet).toHaveBeenCalledWith(
+        { companyId: "company-1" },
+        { invocationScope: { companyId: "company-1" } },
+      );
+    } finally {
+      await handle.stop().catch(() => undefined);
+    }
+  });
+
+  it("rejects performAction nested host calls that omit the invocation id", async () => {
     const handlers = createHostClientHandlers({
       pluginId: "test.plugin",
       capabilities: ["companies.read"],
@@ -276,7 +316,7 @@ describe("plugin-worker-manager stderr failure context", () => {
         renderEnvironment: null,
       })).rejects.toMatchObject({
         code: PLUGIN_RPC_ERROR_CODES.INVOCATION_SCOPE_DENIED,
-        message: expect.stringContaining("scoped to company \"company-a\""),
+        message: expect.stringContaining("unknown invocation scope"),
       });
     } finally {
       await handle.stop().catch(() => undefined);
@@ -285,6 +325,15 @@ describe("plugin-worker-manager stderr failure context", () => {
 
   it("rejects nested worker host calls that forge an unknown invocation id", async () => {
     const companiesGet = vi.fn(async (params: { companyId: string }) => ({ id: params.companyId }));
+    const handlers = createHostClientHandlers({
+      pluginId: "test.plugin",
+      capabilities: ["companies.read"],
+      services: {
+        companies: {
+          get: companiesGet,
+        },
+      } as unknown as HostServices,
+    });
     const handle = createPluginWorkerHandle("test.plugin", {
       entrypointPath: INVOCATION_SCOPE_WORKER_ENTRYPOINT,
       manifest: TEST_MANIFEST,
@@ -294,9 +343,7 @@ describe("plugin-worker-manager stderr failure context", () => {
         hostVersion: "1.0.0",
       },
       apiVersion: 1,
-      hostHandlers: {
-        "companies.get": companiesGet as never,
-      },
+      hostHandlers: handlers,
     });
 
     try {
@@ -317,8 +364,54 @@ describe("plugin-worker-manager stderr failure context", () => {
         },
         renderEnvironment: null,
       })).rejects.toMatchObject({
-        message: expect.stringContaining("unknown or expired invocation scope"),
+        code: PLUGIN_RPC_ERROR_CODES.INVOCATION_SCOPE_DENIED,
+        message: expect.stringContaining("unknown invocation scope"),
       });
+      expect(companiesGet).not.toHaveBeenCalled();
+    } finally {
+      await handle.stop().catch(() => undefined);
+    }
+  });
+
+  it("rejects missing or unknown invocation ids while a company invocation is active", async () => {
+    const companiesGet = vi.fn(async () => ({ id: "company-2" }));
+    const hostHandlers = createHostClientHandlers({
+      pluginId: "test.plugin",
+      capabilities: ["companies.read"],
+      services: {
+        companies: {
+          get: companiesGet,
+        },
+      } as unknown as HostServices,
+    });
+    const handle = createPluginWorkerHandle("test.plugin", {
+      entrypointPath: INVOCATION_SCOPE_WORKER_ENTRYPOINT,
+      manifest: TEST_MANIFEST,
+      config: {},
+      instanceInfo: {
+        instanceId: "instance-1",
+        hostVersion: "1.0.0",
+      },
+      apiVersion: 1,
+      hostHandlers,
+    });
+
+    try {
+      await handle.start();
+
+      for (const mode of ["omit", "unknown"]) {
+        await expect(handle.call("getData", {
+          key: "probe",
+          companyId: "company-1",
+          params: {
+            mode,
+            requestedCompanyId: "company-2",
+          },
+        } as HostToWorkerMethods["getData"][0])).rejects.toMatchObject({
+          code: PLUGIN_RPC_ERROR_CODES.INVOCATION_SCOPE_DENIED,
+        });
+      }
+
       expect(companiesGet).not.toHaveBeenCalled();
     } finally {
       await handle.stop().catch(() => undefined);
