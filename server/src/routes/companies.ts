@@ -37,6 +37,7 @@ export function companyRoutes(db: Db, storage?: StorageService) {
   const budgets = budgetService(db);
   const feedback = feedbackService(db);
   const importJobs = new Map<string, ImportJobRecord>();
+  const importJobTerminalRetentionMs = 5 * 60 * 1000;
 
   function parseBooleanQuery(value: unknown) {
     return value === true || value === "true" || value === "1";
@@ -181,6 +182,7 @@ export function companyRoutes(db: Db, storage?: StorageService) {
 
   router.get("/import/jobs/:jobId", async (req, res) => {
     assertCloudTenantCaller(req);
+    cleanupTerminalImportJobs(importJobs, importJobTerminalRetentionMs);
     const job = importJobs.get(req.params.jobId as string);
     if (!job || job.cloudTenantKey !== cloudTenantRequestKey(req)) {
       res.status(404).json({ error: "Import job not found" });
@@ -196,6 +198,7 @@ export function companyRoutes(db: Db, storage?: StorageService) {
     const boardUserId = req.actor.type === "board" ? req.actor.userId : null;
     if (req.header("x-paperclip-cloud-async-import") === "1") {
       assertCloudTenantCaller(req);
+      cleanupTerminalImportJobs(importJobs, importJobTerminalRetentionMs);
       const job = createImportJob(cloudTenantRequestKey(req));
       importJobs.set(job.id, job);
       const operation = async () => {
@@ -561,6 +564,7 @@ function importJobAcceptedResponse(job: ImportJobRecord) {
 }
 
 function importJobResponse(job: ImportJobRecord) {
+  const isTerminal = job.status === "succeeded" || job.status === "failed";
   const response: Record<string, unknown> = {
     job: {
       id: job.id,
@@ -571,7 +575,7 @@ function importJobResponse(job: ImportJobRecord) {
       ...(job.error ? { error: job.error } : {}),
       ...(job.result ? { result: job.result } : {}),
     },
-    retryAfterMs: 1000,
+    ...(isTerminal ? {} : { retryAfterMs: 1000 }),
   };
   if (job.error?.message) {
     response.error = job.error.message;
@@ -579,6 +583,16 @@ function importJobResponse(job: ImportJobRecord) {
     response.reason = job.error.message;
   }
   return response;
+}
+
+function cleanupTerminalImportJobs(importJobs: Map<string, ImportJobRecord>, terminalRetentionMs: number) {
+  const now = Date.now();
+  for (const [jobId, job] of importJobs) {
+    if (job.status === "running" || !job.completedAt) continue;
+    if (now - Date.parse(job.completedAt) > terminalRetentionMs) {
+      importJobs.delete(jobId);
+    }
+  }
 }
 
 function errorMessage(error: unknown) {

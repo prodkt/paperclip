@@ -507,6 +507,7 @@ describe.sequential("company portability routes", () => {
     expect(succeeded.status).toBe(200);
     expect(succeeded.body.job.status).toBe("succeeded");
     expect(succeeded.body.job.result.companyId).toBe(companyId);
+    expect(succeeded.body.retryAfterMs).toBeUndefined();
     expect(mockLogActivity).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       action: "company.imported",
       companyId,
@@ -516,6 +517,15 @@ describe.sequential("company portability routes", () => {
         companyAction: "updated",
       }),
     }));
+
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(Date.parse(succeeded.body.job.completedAt) + (5 * 60 * 1000) + 1);
+    try {
+      const expired = await request(app).get(accepted.body.statusUrl).set(cloudHeaders);
+      expect(expired.status).toBe(404);
+      expect(expired.body.error).toBe("Import job not found");
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it.sequential("reports trusted Cloud async import job failures with the tenant error message", async () => {
@@ -534,6 +544,7 @@ describe.sequential("company portability routes", () => {
     expect(failed.status).toBe(200);
     expect(failed.body.job.status).toBe("failed");
     expect(failed.body.job.error.message).toBe("tenant import exploded");
+    expect(failed.body.retryAfterMs).toBeUndefined();
     expect(failed.body.message).toBe("tenant import exploded");
     expect(mockLogActivity).not.toHaveBeenCalled();
   });
