@@ -1519,6 +1519,79 @@ describeEmbeddedPostgres("issueService.create workspace inheritance", () => {
     });
   });
 
+  it("rejects creating an issue with a project from another company", async () => {
+    const companyId = randomUUID();
+    const otherCompanyId = randomUUID();
+    const foreignProjectId = randomUUID();
+
+    await db.insert(companies).values([
+      {
+        id: companyId,
+        name: "Paperclip",
+        issuePrefix: `T${companyId.replace(/-/g, "").slice(0, 6).toUpperCase()}`,
+        requireBoardApprovalForNewAgents: false,
+      },
+      {
+        id: otherCompanyId,
+        name: "Other company",
+        issuePrefix: `T${otherCompanyId.replace(/-/g, "").slice(0, 6).toUpperCase()}`,
+        requireBoardApprovalForNewAgents: false,
+      },
+    ]);
+
+    await db.insert(projects).values({
+      id: foreignProjectId,
+      companyId: otherCompanyId,
+      name: "Foreign project",
+      status: "in_progress",
+    });
+
+    await expect(svc.create(companyId, {
+      projectId: foreignProjectId,
+      title: "Cross-company project link",
+      status: "todo",
+      priority: "medium",
+    })).rejects.toThrow("Project must belong to same company");
+  });
+
+  it("rejects updating an issue to point at another company's project", async () => {
+    const companyId = randomUUID();
+    const otherCompanyId = randomUUID();
+    const foreignProjectId = randomUUID();
+
+    await db.insert(companies).values([
+      {
+        id: companyId,
+        name: "Paperclip",
+        issuePrefix: `T${companyId.replace(/-/g, "").slice(0, 6).toUpperCase()}`,
+        requireBoardApprovalForNewAgents: false,
+      },
+      {
+        id: otherCompanyId,
+        name: "Other company",
+        issuePrefix: `T${otherCompanyId.replace(/-/g, "").slice(0, 6).toUpperCase()}`,
+        requireBoardApprovalForNewAgents: false,
+      },
+    ]);
+
+    await db.insert(projects).values({
+      id: foreignProjectId,
+      companyId: otherCompanyId,
+      name: "Foreign project",
+      status: "in_progress",
+    });
+
+    const issue = await svc.create(companyId, {
+      title: "Safe issue",
+      status: "todo",
+      priority: "medium",
+    });
+
+    await expect(svc.update(issue.id, {
+      projectId: foreignProjectId,
+    })).rejects.toThrow("Project must belong to same company");
+  });
+
   it("captures the assignee default environment when neither issue nor project specifies one", async () => {
     const companyId = randomUUID();
     const projectId = randomUUID();

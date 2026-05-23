@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="375" height="812" />
+
+  <!-- App top bar 48 -->
+  <line x1="0" y1="48" x2="375" y2="48" />
+  <g font-size="14" stroke="none">
+    <text x="16" y="30" fill="#000">≡</text>
+    <text x="48" y="30" fill="#666">content-training · #142</text>
+    <text x="343" y="30" fill="#000" text-anchor="end">⋯</text>
+  </g>
+
+  <!-- Workbench tab bar 40 -->
+  <line x1="0" y1="88" x2="375" y2="88" />
+  <g transform="translate(0,48)">
+    <rect x="0" y="0" width="187.5" height="40" fill="#e6e6e6" stroke="none" />
+    <text x="93.75" y="26" font-size="14" stroke="none" fill="#000" text-anchor="middle">Chat</text>
+    <text x="281.25" y="26" font-size="14" stroke="none" fill="#666" text-anchor="middle">Document</text>
+    <line x1="187.5" y1="0" x2="187.5" y2="40" />
+  </g>
+
+  <!-- Pinned item card -->
+  <g transform="translate(16,104)">
+    <rect width="343" height="48" stroke="#000" stroke-width="1.5" fill="#fff" stroke-dasharray="4 4" />
+    <text x="12" y="20" font-size="12" stroke="none" fill="#666">PINNED · state: New</text>
+    <text x="12" y="36" font-size="12" stroke="none" fill="#000">#142  Draft launch post</text>
+  </g>
+
+  <!-- chat history -->
+  <g transform="translate(16,168)">
+    <rect width="280" height="72" rx="8" stroke="none" fill="#e6e6e6" />
+    <text x="12" y="24" font-size="12" stroke="none" fill="#666">Triage Assistant · 30s</text>
+    <text x="12" y="42" font-size="12" stroke="none" fill="#000">Read item; current guidance:</text>
+    <text x="12" y="58" font-size="12" stroke="none" fill="#000">"keep launch posts under 150 words"</text>
+  </g>
+
+  <g transform="translate(79,256)">
+    <rect width="280" height="48" rx="8" stroke="#000" stroke-width="1.5" fill="#fff" />
+    <text x="12" y="20" font-size="12" stroke="none" fill="#666">you · 25s</text>
+    <text x="12" y="36" font-size="12" stroke="none" fill="#000">Tighten intro. Mention the new bench.</text>
+  </g>
+
+  <g transform="translate(16,320)">
+    <rect width="304" height="88" rx="8" stroke="none" fill="#e6e6e6" />
+    <text x="12" y="24" font-size="12" stroke="none" fill="#666">Triage Assistant · 12s</text>
+    <text x="12" y="42" font-size="12" stroke="none" fill="#000">Tightened intro and added bench callout.</text>
+    <g transform="translate(12,52)">
+      <rect width="280" height="28" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+      <text x="8" y="18" font-size="12" stroke="none" fill="#666">tool · update_item_content</text>
+    </g>
+  </g>
+
+  <!-- composer -->
+  <g transform="translate(16,592)">
+    <rect width="343" height="48" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="30" font-size="14" stroke="none" fill="#666">Ask the assistant…</text>
+    <g transform="translate(295,8)"><rect width="40" height="32" rx="4" fill="#000" /><text x="20" y="22" text-anchor="middle" font-size="14" stroke="none" fill="#fff">↑</text></g>
+  </g>
+
+  <!-- State strip + transitions (sticky bottom) -->
+  <line x1="0" y1="672" x2="375" y2="672" />
+  <g transform="translate(16,688)" stroke="none" font-size="12">
+    <text fill="#666">Item 3 of 12  ·  state:</text>
+    <g transform="translate(132,-12)"><rect width="56" height="22" rx="11" fill="#e6e6e6" /><text x="28" y="15" text-anchor="middle" font-size="12" fill="#000">New</text></g>
+  </g>
+  <g transform="translate(16,720)">
+    <rect width="160" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="80" y="26" font-size="14" stroke="none" fill="#000" text-anchor="middle">Reject</text>
+  </g>
+  <g transform="translate(184,720)">
+    <rect width="176" height="40" rx="4" fill="#000" stroke="#000" stroke-width="1.5" />
+    <text x="88" y="26" font-size="14" stroke="none" fill="#fff" text-anchor="middle">Approve</text>
+  </g>
+  <g transform="translate(16,776)" stroke="none" font-size="12" fill="#666">
+    <text>Both transitions require reflection.</text>
+  </g>
+
+  <!-- annotations -->
+  <g stroke="#d33" stroke-width="1.5" fill="none" stroke-dasharray="4 4">
+    <rect x="0" y="48" width="375" height="40" />
+    <rect x="0" y="672" width="375" height="140" />
+  </g>
+  <g font-size="12" stroke="none" fill="#d33" font-weight="bold">
+    <circle cx="14" cy="68" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="14" y="72" text-anchor="middle">A</text>
+    <circle cx="14" cy="688" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="14" y="692" text-anchor="middle">B</text>
+  </g>
+</svg>

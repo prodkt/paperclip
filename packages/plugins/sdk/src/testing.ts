@@ -1394,6 +1394,8 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
       async create(input) {
         requireCapability(manifest, capabilitySet, "issues.create");
         const now = new Date();
+        const actorAgentId = input.actor?.actorAgentId ?? null;
+        const actorUserId = input.actor?.actorUserId ?? null;
         const originKind = normalizePluginOriginKind(
           input.surfaceVisibility === "plugin_operation" && !input.originKind
             ? pluginOperationIssueOriginKind(manifest.id)
@@ -1417,8 +1419,8 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
           executionRunId: null,
           executionAgentNameKey: null,
           executionLockedAt: null,
-          createdByAgentId: null,
-          createdByUserId: null,
+          createdByAgentId: actorAgentId,
+          createdByUserId: actorUserId,
           issueNumber: null,
           identifier: null,
           originKind,
@@ -1519,13 +1521,18 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
           throw new Error(`Issue not found: ${issueId}`);
         }
         const now = new Date();
+        const authorType = options?.authorAgentId
+          ? "agent"
+          : options?.authorUserId
+            ? "user"
+            : "system";
         const comment: IssueComment = {
           id: randomUUID(),
           companyId: parentIssue.companyId,
           issueId,
-          authorType: options?.authorAgentId ? "agent" : "system",
+          authorType,
           authorAgentId: options?.authorAgentId ?? null,
-          authorUserId: null,
+          authorUserId: options?.authorUserId ?? null,
           body,
           presentation: null,
           metadata: null,
@@ -1562,7 +1569,7 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
           title: interaction.title ?? null,
           summary: interaction.summary ?? null,
           createdByAgentId: options?.authorAgentId ?? null,
-          createdByUserId: null,
+          createdByUserId: options?.authorUserId ?? null,
           payload: interaction.payload,
           result: null,
           createdAt: now,

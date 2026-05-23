@@ -622,7 +622,10 @@ describe.sequential("plugin tool and bridge authz", () => {
     expect(res.status).toBe(200);
     expect(call).toHaveBeenCalledWith(pluginId, "performAction", {
       key: "sync",
-      params: {},
+      params: {
+        actorType: "user",
+        actorUserId: "admin-1",
+      },
       renderEnvironment: null,
     });
   });

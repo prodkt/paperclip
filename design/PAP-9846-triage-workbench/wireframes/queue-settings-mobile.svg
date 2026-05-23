@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="375" height="812" />
+
+  <!-- Top bar -->
+  <line x1="0" y1="48" x2="375" y2="48" />
+  <g font-size="14" stroke="none">
+    <text x="16" y="30" fill="#000">‹  Settings</text>
+    <text x="359" y="30" text-anchor="end" fill="#666">Save</text>
+  </g>
+
+  <!-- Header -->
+  <g transform="translate(16,72)" stroke="none">
+    <text font-size="20" fill="#000">content-training</text>
+    <text font-size="12" fill="#666" y="20">queueKey: content-training</text>
+  </g>
+
+  <!-- Tab strip horizontal scroll -->
+  <line x1="0" y1="156" x2="375" y2="156" />
+  <g transform="translate(16,128)" font-size="14" stroke="none">
+    <text fill="#000">Overview</text><line x1="-4" y1="28" x2="64" y2="28" stroke="#000" stroke-width="3" />
+    <text x="92" fill="#666">Workflow</text>
+    <text x="192" fill="#666">Actions</text>
+    <text x="276" fill="#666">Guidance</text>
+  </g>
+
+  <!-- Form -->
+  <g transform="translate(16,180)" font-size="12" stroke="none" fill="#666"><text>DISPLAY NAME</text></g>
+  <g transform="translate(16,188)"><rect width="343" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="12" y="26" font-size="14" stroke="none" fill="#000">content-training</text></g>
+
+  <g transform="translate(16,252)" font-size="12" stroke="none" fill="#666"><text>DESCRIPTION</text></g>
+  <g transform="translate(16,260)"><rect width="343" height="72" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="12" y="26" font-size="14" stroke="none" fill="#000">Editorial review queue.</text></g>
+
+  <g transform="translate(16,356)" font-size="12" stroke="none" fill="#666"><text>DEFAULT ASSISTANT AGENT</text></g>
+  <g transform="translate(16,364)">
+    <rect width="343" height="48" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <circle cx="24" cy="24" r="12" fill="#e6e6e6" stroke="none" />
+    <text x="48" y="20" font-size="14" stroke="none" fill="#000">Triage Assistant</text>
+    <text x="48" y="36" font-size="12" stroke="none" fill="#666">managed</text>
+    <text x="331" y="28" text-anchor="end" font-size="14" stroke="none" fill="#000">▾</text>
+  </g>
+
+  <g transform="translate(16,436)" font-size="12" stroke="none" fill="#666"><text>DEFAULT PROJECT</text></g>
+  <g transform="translate(16,444)">
+    <rect width="343" height="48" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="20" font-size="14" stroke="none" fill="#000">Marketing</text>
+    <text x="12" y="36" font-size="12" stroke="none" fill="#666">for transition actions</text>
+    <text x="331" y="28" text-anchor="end" font-size="14" stroke="none" fill="#000">▾</text>
+  </g>
+
+  <g transform="translate(16,516)" font-size="12" stroke="none" fill="#666"><text>DEFAULT STATE</text></g>
+  <g transform="translate(16,524)"><rect width="160" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="12" y="26" font-size="14" stroke="none" fill="#000">new  ▾</text></g>
+
+  <g transform="translate(192,516)" font-size="12" stroke="none" fill="#666"><text>REFLECTION</text></g>
+  <g transform="translate(192,524)"><rect width="167" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="12" y="26" font-size="14" stroke="none" fill="#000">After each ▾</text></g>
+
+  <g transform="translate(16,596)" font-size="12" stroke="none" fill="#666"><text>INGEST FALLBACK</text></g>
+  <g transform="translate(16,604)">
+    <rect width="343" height="48" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="20" font-size="14" stroke="none" fill="#000">Auto-create queue</text>
+    <text x="12" y="36" font-size="12" stroke="none" fill="#666">on unknown queueKey</text>
+    <rect x="288" y="12" width="40" height="24" rx="12" fill="#000" />
+    <circle cx="316" cy="24" r="8" fill="#fff" />
+  </g>
+
+  <line x1="16" y1="684" x2="359" y2="684" />
+  <g transform="translate(16,712)" font-size="14" stroke="none" fill="#d33">
+    <text>Archive queue</text>
+    <text font-size="12" fill="#666" y="16">Hides from active list. Items keep their state.</text>
+  </g>
+</svg>

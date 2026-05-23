@@ -3011,6 +3011,22 @@ export function issueService(db: Db) {
     }
   }
 
+  async function assertProjectInCompany(
+    companyId: string,
+    projectId: string | null | undefined,
+    dbOrTx: DbReader = db,
+  ) {
+    if (!projectId) return;
+    const project = await dbOrTx
+      .select({ id: projects.id })
+      .from(projects)
+      .where(and(eq(projects.id, projectId), eq(projects.companyId, companyId)))
+      .then((rows) => rows[0] ?? null);
+    if (!project) {
+      throw unprocessable("Project must belong to same company");
+    }
+  }
+
   async function assertValidProjectWorkspace(
     companyId: string,
     projectId: string | null | undefined,
@@ -4034,6 +4050,9 @@ export function issueService(db: Db) {
       if (data.assigneeUserId) {
         await assertAssignableUser(companyId, data.assigneeUserId);
       }
+      if (issueData.projectId) {
+        await assertProjectInCompany(companyId, issueData.projectId);
+      }
       if (data.status === "in_progress" && !data.assigneeAgentId && !data.assigneeUserId) {
         throw unprocessable("in_progress issues require an assignee");
       }
@@ -4311,6 +4330,9 @@ export function issueService(db: Db) {
       }
       if (issueData.assigneeUserId) {
         await assertAssignableUser(existing.companyId, issueData.assigneeUserId);
+      }
+      if (issueData.projectId !== undefined) {
+        await assertProjectInCompany(existing.companyId, issueData.projectId, dbOrTx);
       }
       const nextProjectId = issueData.projectId !== undefined ? issueData.projectId : existing.projectId;
       const nextProjectWorkspaceId =
@@ -5368,6 +5390,7 @@ export function issueService(db: Db) {
       }> = [];
       const visited = new Set<string>([issueId]);
       const start = await db.select().from(issues).where(eq(issues.id, issueId)).then(r => r[0] ?? null);
+      const companyId = start?.companyId ?? null;
       let currentId = start?.parentId ?? null;
       while (currentId && !visited.has(currentId) && raw.length < 50) {
         visited.add(currentId);
@@ -5376,7 +5399,11 @@ export function issueService(db: Db) {
           status: issues.status, priority: issues.priority,
           assigneeAgentId: issues.assigneeAgentId, projectId: issues.projectId,
           goalId: issues.goalId, parentId: issues.parentId,
-        }).from(issues).where(eq(issues.id, currentId)).then(r => r[0] ?? null);
+        }).from(issues).where(
+          companyId
+            ? and(eq(issues.id, currentId), eq(issues.companyId, companyId))
+            : eq(issues.id, currentId),
+        ).then(r => r[0] ?? null);
         if (!parent) break;
         raw.push({
           id: parent.id, identifier: parent.identifier ?? null, title: parent.title, description: parent.description ?? null,
@@ -5430,7 +5457,14 @@ export function issueService(db: Db) {
         const workspaceRows = await db
           .select()
           .from(projectWorkspaces)
-          .where(inArray(projectWorkspaces.projectId, projectIds))
+          .where(
+            companyId
+              ? and(
+                  eq(projectWorkspaces.companyId, companyId),
+                  inArray(projectWorkspaces.projectId, projectIds),
+                )
+              : inArray(projectWorkspaces.projectId, projectIds),
+          )
           .orderBy(desc(projectWorkspaces.isPrimary), asc(projectWorkspaces.createdAt), asc(projectWorkspaces.id));
         const workspaceMap = new Map<string, Array<(typeof workspaceRows)[number]>>();
         for (const workspace of workspaceRows) {
@@ -5442,7 +5476,11 @@ export function issueService(db: Db) {
         const rows = await db.select({
           id: projects.id, name: projects.name, description: projects.description,
           status: projects.status, goalId: projects.goalId,
-        }).from(projects).where(inArray(projects.id, projectIds));
+        }).from(projects).where(
+          companyId
+            ? and(eq(projects.companyId, companyId), inArray(projects.id, projectIds))
+            : inArray(projects.id, projectIds),
+        );
         for (const r of rows) {
           const projectWorkspaceRows = workspaceMap.get(r.id) ?? [];
           const workspaces = projectWorkspaceRows.map((workspace) => ({
@@ -5473,7 +5511,11 @@ export function issueService(db: Db) {
         const rows = await db.select({
           id: goals.id, title: goals.title, description: goals.description,
           level: goals.level, status: goals.status,
-        }).from(goals).where(inArray(goals.id, goalIds));
+        }).from(goals).where(
+          companyId
+            ? and(eq(goals.companyId, companyId), inArray(goals.id, goalIds))
+            : inArray(goals.id, goalIds),
+        );
         for (const r of rows) goalMap.set(r.id, r);
       }
 

@@ -1791,14 +1791,20 @@ export function buildHostServices(
         const comment = (await issues.addComment(
           params.issueId,
           params.body,
-          { agentId: params.authorAgentId },
+          {
+            agentId: params.authorAgentId ?? undefined,
+            userId: params.authorUserId ?? undefined,
+          },
         )) as IssueComment;
         await logPluginActivity({
           companyId,
           action: "issue.comment.created",
           entityType: "issue",
           entityId: issue.id,
-          actor: { actorAgentId: params.authorAgentId ?? null },
+          actor: {
+            actorAgentId: params.authorAgentId ?? null,
+            actorUserId: params.authorUserId ?? null,
+          },
           details: {
             identifier: issue.identifier,
             commentId: comment.id,
@@ -1813,13 +1819,17 @@ export function buildHostServices(
         const issue = requireInCompany("Issue", await issues.getById(params.issueId), companyId);
         const interaction = await issueThreadInteractionService(db).create(issue, params.interaction as CreateIssueThreadInteraction, {
           agentId: params.authorAgentId ?? null,
+          userId: params.authorUserId ?? null,
         });
         await logPluginActivity({
           companyId,
           action: "issue.thread_interaction_created",
           entityType: "issue",
           entityId: issue.id,
-          actor: { actorAgentId: params.authorAgentId ?? null },
+          actor: {
+            actorAgentId: params.authorAgentId ?? null,
+            actorUserId: params.authorUserId ?? null,
+          },
           details: {
             identifier: issue.identifier,
             interactionId: interaction.id,

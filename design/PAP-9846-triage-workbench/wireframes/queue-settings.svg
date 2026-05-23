@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="1280" height="800" />
+
+  <!-- App top nav -->
+  <line x1="0" y1="56" x2="1280" y2="56" />
+  <text x="24" y="36" font-size="14" stroke="none" fill="#000">Paperclip</text>
+  <text x="120" y="36" font-size="14" stroke="none" fill="#666">/  Triage  /  content-training  /  Settings</text>
+
+  <!-- Route sidebar -->
+  <line x1="240" y1="56" x2="240" y2="800" />
+  <g transform="translate(16,80)" stroke="none" font-size="12" fill="#666"><text>QUEUE</text></g>
+  <g font-size="14" stroke="none" fill="#000">
+    <text x="16" y="120">Workbench</text>
+    <text x="16" y="144">Items</text>
+    <text x="16" y="168">Guidance</text>
+    <text x="16" y="192">Workflow</text>
+    <text x="16" y="216">Transition actions</text>
+    <rect x="8" y="232" width="216" height="32" stroke="none" fill="#e6e6e6" />
+    <text x="16" y="252">Settings</text>
+    <text x="16" y="284">Chat history</text>
+  </g>
+  <line x1="16" y1="312" x2="224" y2="312" />
+  <g transform="translate(16,336)" stroke="none" font-size="12" fill="#666"><text>OTHER QUEUES</text></g>
+  <g font-size="14" stroke="none" fill="#666">
+    <text x="16" y="380">inbox</text>
+    <text x="16" y="404">drafts</text>
+    <text x="16" y="428">financial-approvals</text>
+  </g>
+
+  <!-- Settings tabs -->
+  <g transform="translate(280,80)" stroke="none">
+    <text font-size="28" fill="#000">content-training</text>
+    <text font-size="14" fill="#666" y="32">queueKey: content-training · created 2026-04-12 · 35 items lifetime</text>
+  </g>
+
+  <!-- Tab strip -->
+  <g transform="translate(280,152)">
+    <line x1="0" y1="40" x2="960" y2="40" />
+    <g font-size="14" stroke="none" fill="#000">
+      <text x="0" y="26">Overview</text><line x1="-8" y1="40" x2="80" y2="40" stroke="#000" stroke-width="3" />
+      <text x="100" y="26" fill="#666">Workflow</text>
+      <text x="200" y="26" fill="#666">Transition actions</text>
+      <text x="368" y="26" fill="#666">Guidance</text>
+      <text x="464" y="26" fill="#666">Chat history</text>
+      <text x="568" y="26" fill="#666">Danger zone</text>
+    </g>
+  </g>
+
+  <!-- Form body -->
+  <g transform="translate(280,216)">
+    <text font-size="20" stroke="none" fill="#000">Identity</text>
+  </g>
+  <g transform="translate(280,240)" font-size="12" stroke="none" fill="#666"><text>DISPLAY NAME</text></g>
+  <g transform="translate(280,248)"><rect width="448" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="12" y="26" font-size="14" stroke="none" fill="#000">content-training</text></g>
+
+  <g transform="translate(744,240)" font-size="12" stroke="none" fill="#666"><text>QUEUE KEY  ·  immutable</text></g>
+  <g transform="translate(744,248)"><rect width="320" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" fill-opacity="0" /><text x="12" y="26" font-size="14" stroke="none" fill="#666">content-training</text></g>
+
+  <g transform="translate(280,312)" font-size="12" stroke="none" fill="#666"><text>DESCRIPTION</text></g>
+  <g transform="translate(280,320)"><rect width="784" height="64" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="12" y="26" font-size="14" stroke="none" fill="#000">Editorial review queue. Teach the assistant tone and structure.</text></g>
+
+  <line x1="280" y1="408" x2="1232" y2="408" />
+  <g transform="translate(280,432)">
+    <text font-size="20" stroke="none" fill="#000">Defaults</text>
+  </g>
+
+  <!-- Assistant agent -->
+  <g transform="translate(280,464)" font-size="12" stroke="none" fill="#666"><text>DEFAULT ASSISTANT AGENT</text></g>
+  <g transform="translate(280,472)">
+    <rect width="448" height="48" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <circle cx="24" cy="24" r="12" fill="#e6e6e6" stroke="none" />
+    <text x="48" y="20" font-size="14" stroke="none" fill="#000">Triage Assistant (managed)</text>
+    <text x="48" y="36" font-size="12" stroke="none" fill="#666">paperclipai.plugin-triage · default</text>
+    <text x="436" y="28" text-anchor="end" font-size="14" stroke="none" fill="#000">▾</text>
+  </g>
+
+  <!-- Default project -->
+  <g transform="translate(744,464)" font-size="12" stroke="none" fill="#666"><text>DEFAULT PROJECT  ·  for transition actions</text></g>
+  <g transform="translate(744,472)">
+    <rect width="320" height="48" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="20" font-size="14" stroke="none" fill="#000">Marketing</text>
+    <text x="12" y="36" font-size="12" stroke="none" fill="#666">Goal: Launch Q4 narrative</text>
+    <text x="308" y="28" text-anchor="end" font-size="14" stroke="none" fill="#000">▾</text>
+  </g>
+
+  <!-- Default state -->
+  <g transform="translate(280,544)" font-size="12" stroke="none" fill="#666"><text>DEFAULT STATE FOR NEW ITEMS</text></g>
+  <g transform="translate(280,552)">
+    <rect width="208" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="26" font-size="14" stroke="none" fill="#000">new  ▾</text>
+  </g>
+
+  <!-- Reflection toggle -->
+  <g transform="translate(512,544)" font-size="12" stroke="none" fill="#666"><text>REFLECTION POLICY</text></g>
+  <g transform="translate(512,552)">
+    <rect width="216" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="26" font-size="14" stroke="none" fill="#000">After each item ▾</text>
+  </g>
+
+  <!-- Strict ingest -->
+  <g transform="translate(744,544)" font-size="12" stroke="none" fill="#666"><text>INGEST FALLBACK</text></g>
+  <g transform="translate(744,552)">
+    <rect width="320" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="8" y="8" width="24" height="24" rx="12" fill="#e6e6e6" stroke="#000" stroke-width="1.5" />
+    <circle cx="26" cy="20" r="8" fill="#000" stroke="none" />
+    <text x="44" y="26" font-size="14" stroke="none" fill="#000">Auto-create queue on unknown key</text>
+  </g>
+
+  <!-- Status + footer -->
+  <line x1="280" y1="624" x2="1232" y2="624" />
+  <g transform="translate(280,648)">
+    <text font-size="14" stroke="none" fill="#000">Status</text>
+  </g>
+  <g transform="translate(280,664)">
+    <g><rect width="96" height="32" rx="16" fill="#e6e6e6" stroke="none" /><text x="48" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#000">Active</text></g>
+    <g transform="translate(112,0)"><rect width="96" height="32" rx="16" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="48" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#666">Archived</text></g>
+  </g>
+
+  <!-- Save bar -->
+  <line x1="240" y1="736" x2="1280" y2="736" />
+  <g transform="translate(280,752)">
+    <text font-size="12" stroke="none" fill="#666">Unsaved changes · last saved 4m ago</text>
+  </g>
+  <g transform="translate(992,744)">
+    <rect width="112" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="56" y="26" text-anchor="middle" font-size="14" stroke="none" fill="#000">Discard</text>
+  </g>
+  <g transform="translate(1120,744)">
+    <rect width="112" height="40" rx="4" fill="#000" stroke="#000" stroke-width="1.5" />
+    <text x="56" y="26" text-anchor="middle" font-size="14" stroke="none" fill="#fff">Save</text>
+  </g>
+
+  <!-- annotations -->
+  <g font-size="12" font-weight="bold" stroke="none" fill="#d33">
+    <circle cx="272" cy="280" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="272" y="284" text-anchor="middle">1</text>
+    <circle cx="736" cy="280" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="736" y="284" text-anchor="middle">2</text>
+    <circle cx="272" cy="496" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="272" y="500" text-anchor="middle">3</text>
+    <circle cx="736" cy="576" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="736" y="580" text-anchor="middle">4</text>
+  </g>
+</svg>

@@ -1412,31 +1412,31 @@ export interface PluginIssuesClient {
     issueId: string,
     body: string,
     companyId: string,
-    options?: { authorAgentId?: string },
+    options?: { authorAgentId?: string; authorUserId?: string },
   ): Promise<IssueComment>;
   createInteraction(
     issueId: string,
     interaction: CreateIssueThreadInteraction,
     companyId: string,
-    options?: { authorAgentId?: string },
+    options?: { authorAgentId?: string; authorUserId?: string },
   ): Promise<IssueThreadInteraction>;
   suggestTasks(
     issueId: string,
     interaction: Omit<Extract<CreateIssueThreadInteraction, { kind: "suggest_tasks" }>, "kind">,
     companyId: string,
-    options?: { authorAgentId?: string },
+    options?: { authorAgentId?: string; authorUserId?: string },
   ): Promise<SuggestTasksInteraction>;
   askUserQuestions(
     issueId: string,
     interaction: Omit<Extract<CreateIssueThreadInteraction, { kind: "ask_user_questions" }>, "kind">,
     companyId: string,
-    options?: { authorAgentId?: string },
+    options?: { authorAgentId?: string; authorUserId?: string },
   ): Promise<AskUserQuestionsInteraction>;
   requestConfirmation(
     issueId: string,
     interaction: Omit<Extract<CreateIssueThreadInteraction, { kind: "request_confirmation" }>, "kind">,
     companyId: string,
-    options?: { authorAgentId?: string },
+    options?: { authorAgentId?: string; authorUserId?: string },
   ): Promise<RequestConfirmationInteraction>;
   /** Read and write issue documents. Requires `issue.documents.read` / `issue.documents.write`. */
   documents: PluginIssueDocumentsClient;

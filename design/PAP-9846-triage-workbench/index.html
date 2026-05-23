@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PAP-9846 · Paperclip Triage workbench wireframes</title>
+<style>
+  :root {
+    --bg: #fafaf8;
+    --panel: #ffffff;
+    --ink: #111111;
+    --muted: #666666;
+    --line: #e5e5e0;
+    --accent: #d33;
+    --maxw: 1200px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 15px/1.55 -apple-system, system-ui, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+  .toc {
+    position: sticky; top: 0; align-self: start;
+    height: 100vh; overflow: auto;
+    padding: 24px 16px 24px 24px;
+    border-right: 1px solid var(--line);
+    background: var(--panel);
+    font-size: 13px;
+    z-index: 20;
+  }
+  .toc h1 { font-size: 14px; margin: 0 0 4px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .toc h2 { font-size: 12px; margin: 24px 0 6px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .toc a { display: block; text-decoration: none; padding: 6px 8px; margin-left: -8px; border-radius: 4px; color: var(--ink); }
+  .toc a:hover { background: var(--bg); }
+  .toc .num { display: inline-block; width: 22px; color: var(--muted); }
+  .toc .toc-summary { display: none; }
+  .toc .toc-body { display: block; }
+
+  main { padding: 48px 56px 96px; max-width: 1320px; min-width: 0; }
+
+  header.hero { max-width: var(--maxw); margin-bottom: 64px; }
+  header.hero .crumb { color: var(--muted); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+  header.hero h1 { font-size: 36px; line-height: 1.15; margin: 8px 0 16px; }
+  header.hero p { color: var(--muted); max-width: 760px; font-size: 16px; }
+  header.hero .pills { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
+  header.hero .pill { font-size: 12px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--muted); }
+
+  section { scroll-margin-top: 24px; max-width: var(--maxw); margin-bottom: 96px; }
+  section .lede { color: var(--muted); margin: 0 0 12px; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 700; }
+  section h2 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; }
+  section h2 .step-num { display: inline-block; width: 40px; color: var(--muted); }
+  section h3 { font-size: 16px; margin: 24px 0 8px; }
+  section .desc { color: var(--muted); margin: 0 0 24px; max-width: 760px; }
+
+  .grid {
+    display: grid; gap: 24px;
+    grid-template-columns: minmax(0, 1.4fr) 220px minmax(0, 0.9fr);
+    align-items: start;
+  }
+  @media (max-width: 1180px) {
+    .grid { grid-template-columns: minmax(0, 1fr) 200px; }
+    .grid > .notes-col { grid-column: 1 / -1; }
+  }
+  @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } .grid > .mobile-col { max-width: 280px; } }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .toc {
+      position: sticky; top: 0;
+      height: auto; max-height: 60vh;
+      padding: 12px 16px;
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+    .toc .toc-summary {
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; list-style: none; padding: 4px 0;
+    }
+    .toc .toc-summary::-webkit-details-marker { display: none; }
+    .toc .toc-summary .title { font-size: 13px; font-weight: 600; }
+    .toc .toc-summary .crumb { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .toc .toc-summary .chevron {
+      width: 10px; height: 10px;
+      border-right: 1.5px solid var(--ink);
+      border-bottom: 1.5px solid var(--ink);
+      transform: rotate(45deg);
+      transition: transform 120ms ease;
+      margin-right: 4px;
+    }
+    .toc[open] .toc-summary .chevron { transform: rotate(225deg) translate(-2px, -2px); }
+    .toc .toc-body { display: none; padding-top: 8px; border-top: 1px solid var(--line); margin-top: 8px; }
+    .toc[open] .toc-body { display: block; }
+    main { padding: 24px 20px 64px; }
+    header.hero { margin-bottom: 40px; }
+    header.hero h1 { font-size: 28px; }
+    header.hero p { font-size: 15px; }
+    section { margin-bottom: 64px; scroll-margin-top: 80px; }
+    section h2 { font-size: 24px; }
+    section h2 .step-num { width: 32px; }
+    .flow-section { padding: 20px; margin-bottom: 40px; scroll-margin-top: 80px; }
+  }
+
+  @media (max-width: 560px) {
+    main { padding: 16px 14px 56px; }
+    header.hero { margin-bottom: 32px; }
+    header.hero h1 { font-size: 24px; line-height: 1.2; }
+    header.hero p { font-size: 14px; }
+    section { margin-bottom: 48px; }
+    section h2 { font-size: 20px; line-height: 1.25; }
+    section h2 .step-num { width: 28px; }
+    section h3 { font-size: 15px; margin: 20px 0 6px; }
+    section .desc { font-size: 14px; }
+    .grid { gap: 16px; }
+    .flow-section { padding: 16px; border-radius: 8px; }
+    .wire .label { padding: 8px 10px; font-size: 11px; gap: 8px; }
+    body { font-size: 14px; }
+  }
+
+  .wire {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: zoom-in;
+    transition: transform 80ms ease, box-shadow 80ms ease;
+  }
+  .wire:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+  .wire .label {
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .wire img { display: block; width: 100%; height: auto; background: #fff; }
+  .wire.mobile-wire img { max-width: 220px; margin: 0 auto; }
+
+  .ref {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .ref .label { font-size: 12px; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: baseline; }
+
+  .notes ul { padding-left: 20px; margin: 8px 0; }
+  .notes li { margin-bottom: 6px; }
+  .notes code { background: #f0efea; border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; font-size: 12px; font-family: ui-monospace, SF Mono, Menlo, monospace; }
+  .notes .why {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--ink);
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin-top: 12px;
+    font-size: 14px;
+  }
+  .notes .reuse {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .notes .reuse b { color: var(--accent); }
+  .notes .reuse code { background: #fff; }
+
+  .flow-section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 32px; margin-bottom: 64px; max-width: var(--maxw); }
+  .flow-section h2 { margin-top: 0; }
+  .flow-section .wire { margin-top: 16px; }
+
+  .lightbox {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.86);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    cursor: zoom-out;
+    padding: 32px;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; background: #fff; box-shadow: 0 30px 80px rgba(0,0,0,0.4); border-radius: 4px; }
+  .lightbox .close { position: absolute; top: 16px; right: 24px; font-size: 28px; color: #fff; cursor: pointer; }
+  .lightbox .caption { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 13px; opacity: 0.9; }
+
+  @media (max-width: 560px) {
+    .lightbox { padding: 12px; overflow: auto; touch-action: pinch-zoom; }
+    .lightbox.open { display: block; }
+    .lightbox img { display: block; width: 100%; max-width: none; max-height: none; height: auto; margin: 40px auto 56px; box-shadow: none; }
+    .lightbox .close { position: fixed; top: 8px; right: 12px; font-size: 32px; }
+    .lightbox .caption { position: fixed; left: 50%; transform: translateX(-50%); font-size: 12px; bottom: 12px; text-align: center; background: rgba(0,0,0,0.7); border-radius: 4px; padding: 6px 12px; }
+  }
+
+  .footer { color: var(--muted); font-size: 12px; max-width: var(--maxw); border-top: 1px solid var(--line); padding-top: 24px; }
+  .reuse-key { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 0; }
+  .reuse-key .item { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; font-size: 13px; }
+  .reuse-key .item b { color: var(--accent); font-family: ui-monospace, SF Mono, Menlo, monospace; }
+  .reuse-key .item span { color: var(--muted); display: block; font-size: 12px; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <details class="toc">
+      <summary class="toc-summary">
+        <span>
+          <span class="crumb">PAP-9846 · Triage workbench</span><br>
+          <span class="title">Jump to a screen</span>
+        </span>
+        <span class="chevron" aria-hidden="true"></span>
+      </summary>
+      <nav class="toc-body" aria-label="Section navigation">
+        <h1>PAP-9846</h1>
+        <div style="font-size: 13px; color: var(--muted); margin-bottom: 16px;">Phase 1 · UX workbench design</div>
+
+        <h2>Map</h2>
+        <a href="#flow"><span class="num">⤳</span>Flow diagram</a>
+        <a href="#reuse"><span class="num">★</span>Component reuse key</a>
+
+        <h2>Screens</h2>
+        <a href="#queue-list"><span class="num">1</span>Queue list</a>
+        <a href="#item-list"><span class="num">2</span>Item list</a>
+        <a href="#item-workbench"><span class="num">3</span>Item workbench</a>
+        <a href="#reflection-diff"><span class="num">4</span>Reflection diff</a>
+        <a href="#guidance-editor"><span class="num">5</span>Guidance editor</a>
+        <a href="#workflow-editor"><span class="num">6</span>Workflow editor</a>
+        <a href="#transition-action"><span class="num">7</span>Transition action</a>
+        <a href="#queue-settings"><span class="num">8</span>Queue settings</a>
+
+        <h2>For reviewer</h2>
+        <a href="#open"><span class="num">?</span>Open questions</a>
+      </nav>
+    </details>
+
+    <main>
+      <header class="hero">
+        <div class="crumb">PAP-9846 · Wireframes · Phase 1</div>
+        <h1>Paperclip Triage — workbench wireframes</h1>
+        <p>Low-fi black-and-white wireframes for the eight surfaces in the approved triage plan. The centerpiece is a two-column item workbench: assistant chat on the center/left, item document and properties on the right. Direct edits and chat-assisted edits target the same item content. Reflection sits over the workbench whenever a transition requires it.</p>
+        <p>All component references in red callouts are real Paperclip primitives (file:line in the reuse key). Where the spec asks for something new — variable palette, diff renderer — it's flagged as a system change.</p>
+        <div class="pills">
+          <span class="pill">8 screens</span>
+          <span class="pill">Desktop + mobile</span>
+          <span class="pill">Lo-fi · monochrome</span>
+          <span class="pill">Click any wireframe to zoom</span>
+          <span class="pill">From PAP-9815 plan + PAP-9845 contract</span>
+        </div>
+      </header>
+
+      <!-- ========== Flow diagram ========== -->
+      <section id="flow" class="flow-section">
+        <div class="lede">Map</div>
+        <h2>Flow</h2>
+        <p class="desc">The main triage loop is the top row (solid arrows). Configuration paths are dashed. The item workbench is the only screen with a bold border — it's the centerpiece. Ingest API is the only entry point for items in v1; there are no source connectors.</p>
+        <div class="wire" data-zoom data-caption="Flow diagram">
+          <div class="label"><span>flow.svg</span><span>1280×720</span></div>
+          <img src="wireframes/flow.svg" alt="Triage workbench flow diagram" />
+        </div>
+      </section>
+
+      <!-- ========== Reuse key ========== -->
+      <section id="reuse" class="flow-section">
+        <div class="lede">Component reuse</div>
+        <h2>What we borrow from Paperclip core</h2>
+        <p class="desc">The plugin SDK and Paperclip core already ship most of what the workbench needs. New surfaces (chat composer pinned to an item, guidance diff renderer, transition-action variable palette) are explicit additions and are called out per-screen.</p>
+        <div class="reuse-key">
+          <div class="item"><b>MarkdownEditor</b><span>Item content + guidance docs — <code>packages/plugins/sdk/src/ui/components.ts:516</code></span></div>
+          <div class="item"><b>MarkdownBlock</b><span>Read-only guidance + chat tool output — <code>components.ts:509</code></span></div>
+          <div class="item"><b>AssigneePicker</b><span>Default assignee + action template field — <code>components.ts:586</code></span></div>
+          <div class="item"><b>ProjectPicker</b><span>Queue default project + action template field — <code>components.ts:591</code></span></div>
+          <div class="item"><b>IssuesList</b><span>Linked work issues column on item list — <code>components.ts:581</code></span></div>
+          <div class="item"><b>IssueChatThread</b><span>Lean assistant chat surface (hide tool-result toolbar, keep tool-call/result bubbles compact) — <code>ui/src/components/IssueChatThread.tsx:1</code></span></div>
+          <div class="item"><b>usePluginData / usePluginAction / usePluginStream</b><span>All queue/item/guidance reads + chat send — <code>packages/plugins/sdk/src/ui/hooks.ts:43</code></span></div>
+          <div class="item"><b>useHostNavigation</b><span>Open linked work issue in host without leaving plugin — <code>hooks.ts:139</code></span></div>
+          <div class="item"><b>LLM Wiki plugin shape</b><span>Sidebar entry + page route + route sidebar contributions — <code>packages/plugins/plugin-llm-wiki/src/manifest.ts:574</code> and <code>src/ui/app.tsx:1589 / 2405</code></span></div>
+          <div class="item"><b>shadcn primitives (Button, Card, Tabs, Dialog, Sheet, Badge, Avatar, DropdownMenu, Popover, ScrollArea)</b><span>All structural chrome — <code>ui/src/components/ui/</code></span></div>
+        </div>
+      </section>
+
+      <!-- ========== 1. Queue list ========== -->
+      <section id="queue-list">
+        <div class="lede">Step 1 · entry</div>
+        <h2><span class="step-num">1.</span>Queue list</h2>
+        <p class="desc">Plugin home. Route sidebar shows queues with state counts and plugin-level links (settings, reconcile, managed agent). Main area is a queue card grid: each card shows state counts as chips, the configured assistant agent, action summary, and an "open workbench" CTA. The "+ create" tile reminds the reader that an unknown queueKey from the ingest API auto-creates the queue with default workflow + guidance.md.</p>
+        <div class="grid">
+          <div class="wire" data-zoom data-caption="Queue list (desktop)">
+            <div class="label"><span>queue-list.svg</span><span>1280×800 · desktop</span></div>
+            <img src="wireframes/queue-list.svg" alt="Queue list desktop wireframe" />
+          </div>
+          <div class="wire mobile-wire mobile-col" data-zoom data-caption="Queue list (mobile)">
+            <div class="label"><span>mobile</span><span>375×812</span></div>
+            <img src="wireframes/queue-list-mobile.svg" alt="Queue list mobile wireframe" />
+          </div>
+          <div class="notes-col notes">
+            <h3>Annotations</h3>
+            <ul>
+              <li><b>1</b> — Route sidebar mirrors the LLM Wiki <code>routeSidebar</code> slot. Queues appear under <i>QUEUES</i> with state-count badges; plugin links sit under <i>PLUGIN</i>.</li>
+              <li><b>2</b> — State count chips are <code>Badge</code> primitives with the active state filled. Counts read live via <code>usePluginData("queues:listWithCounts")</code>.</li>
+              <li><b>3</b> — A dashed create-queue tile educates users that the ingest API creates queues by default — no need to come here first.</li>
+              <li><b>4</b> — Archived queues stay listed but de-emphasised; unarchive without navigation.</li>
+              <li><b>Mobile</b> — Cards collapse to a single vertical stack; chip row becomes one compact summary line. Bottom tab nav (Queues · Chats · Settings) replaces the sidebar.</li>
+            </ul>
+            <div class="reuse"><b>Component reuse:</b> <code>Card</code>, <code>Badge</code>, <code>Button</code>, <code>Input</code> from <code>ui/src/components/ui/</code>; route sidebar pattern from <code>plugin-llm-wiki</code>.</div>
+            <div class="why"><b>Why this shape:</b> the user's first question is "what is there to triage?". Counts by state are the single most actionable summary. We resist a kanban here — items inside one queue are the workbench's job, not the list's.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 2. Item list ========== -->
+      <section id="item-list">
+        <div class="lede">Step 2 · pick</div>
+        <h2><span class="step-num">2.</span>Item list</h2>
+        <p class="desc">Items in one queue, grouped by workflow state. The "Start triage (next New)" CTA opens the oldest New item directly in the workbench — keeping the loop friction-free. Each row surfaces title, opaque properties summary, itemKey, age, and any linked work issue.</p>
+        <div class="grid">
+          <div class="wire" data-zoom data-caption="Item list (desktop)">
+            <div class="label"><span>item-list.svg</span><span>1280×800 · desktop</span></div>
+            <img src="wireframes/item-list.svg" alt="Item list desktop wireframe" />
+          </div>
+          <div class="wire mobile-wire mobile-col" data-zoom data-caption="Item list (mobile)">
+            <div class="label"><span>mobile</span><span>375×812</span></div>
+            <img src="wireframes/item-list-mobile.svg" alt="Item list mobile wireframe" />
+          </div>
+          <div class="notes-col notes">
+            <h3>Annotations</h3>
+            <ul>
+              <li><b>1</b> — State tabs are driven by the queue workflow definition. Counts live-update from the worker.</li>
+              <li><b>2</b> — Row is a list-row primitive; clicking opens the item workbench. Properties shown as a free-form, opaque summary (sourceKind, priority, stats).</li>
+              <li><b>3</b> — Primary CTA always opens the next actionable item. Keeps the triage loop fast.</li>
+              <li><b>4</b> — Linked work issue, when present, links into Paperclip's regular issue view via <code>useHostNavigation</code>.</li>
+              <li><b>Mobile</b> — Rows become full-width cards; state tabs scroll horizontally. The "open #142 in workbench" CTA is sticky at the bottom.</li>
+            </ul>
+            <div class="reuse"><b>Component reuse:</b> shadcn <code>Tabs</code>, <code>Badge</code>, <code>Table</code>-style list row; <code>IssuesList</code> for the linked-work-issue column on the right.</div>
+            <div class="why"><b>Why a table on desktop, cards on mobile:</b> properties matter — a table puts itemKey, properties, and age in one scan line. On mobile, cards keep titles legible without horizontal scroll.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 3. Item workbench (CENTERPIECE) ========== -->
+      <section id="item-workbench">
+        <div class="lede">Step 3 · the centerpiece</div>
+        <h2><span class="step-num">3.</span>Item workbench — two columns, locked</h2>
+        <p class="desc">The approved two-column work area: assistant chat on the center/left, item document and properties on the right. Both columns target the same item content — edits made directly in the markdown editor and edits made through a chat tool call are equivalent. Allowed transitions sit in the workbench bar; the route sidebar holds queue/item nav so the two columns stay the mental model.</p>
+        <div class="grid">
+          <div class="wire" data-zoom data-caption="Item workbench (desktop)">
+            <div class="label"><span>item-workbench.svg</span><span>1280×800 · desktop</span></div>
+            <img src="wireframes/item-workbench.svg" alt="Item workbench desktop wireframe" />
+          </div>
+          <div class="wire mobile-wire mobile-col" data-zoom data-caption="Item workbench (mobile)">
+            <div class="label"><span>mobile</span><span>375×812</span></div>
+            <img src="wireframes/item-workbench-mobile.svg" alt="Item workbench mobile wireframe" />
+          </div>
+          <div class="notes-col notes">
+            <h3>Annotations</h3>
+            <ul>
+              <li><b>1 · chat column</b> — <code>IssueChatThread</code>, rendered against the queue's hidden chat issue, with assistant tool-call bubbles slimmed down (no comment toolbar, no reactions). Chat history dropdown + "new chat" pin to the column header.</li>
+              <li><b>2 · document column</b> — Title input + <code>MarkdownEditor</code> + <code>properties</code> editor + linked-work-issue card. This is the "edit directly" path.</li>
+              <li><b>3 · pinned item card</b> — Always visible in the chat. Pins the current item into assistant context (queue, item, state, allowed transitions, guidance files) — see composer footer for the full context strip.</li>
+              <li><b>4</b> — Title is editable inline.</li>
+              <li><b>5 · chat-assisted edit</b> — Same content, different path. The assistant's <code>update_item_content</code> tool call produces a small diff card inside the chat bubble; the right-column editor updates in place. Saves count for reflection just like manual edits.</li>
+              <li><b>6 · free-form properties</b> — Key/value editor. No schema enforcement in v1; the contract is explicit about that.</li>
+              <li><b>7 · composer</b> — Single-line composer with shift+enter for multi-line. Footer surfaces the full assistant context so the user trusts the agent's view of the world.</li>
+              <li><b>8 · linked work issue card</b> — Dashed when none exists, with a preview of what the configured transition action will do.</li>
+              <li><b>9 · transition controls</b> — Allowed transitions only, rendered as <code>Button</code>s in the workbench bar. Disabled with a tooltip when reflection is required and not yet resolved.</li>
+              <li><b>Mobile</b> — The two columns become a top tab switch (<i>Chat</i> / <i>Document</i>). State strip + transitions become a sticky bottom action bar. The pinned-item card stays visible above the chat. Sheet/drawer (<code>Sheet</code>) holds route navigation.</li>
+            </ul>
+            <div class="reuse"><b>Component reuse:</b> <code>IssueChatThread</code> (slim variant), <code>MarkdownEditor</code>, <code>Tabs</code>, <code>Button</code>, <code>Sheet</code> for mobile drawer, <code>Badge</code> for state pill, <code>ScrollArea</code> for both columns.</div>
+            <div class="why"><b>Why a fixed two-column split, not collapsible:</b> the mental model the plan locks in is "chat on the center/left, document on the right". Collapse the right column and we lose the "draft together, see the artifact live" experience the user described. Mobile is the one place we tab — there's no room — and we pay the cost there only.</div>
+            <div class="reuse"><b>System change requested:</b> a slim variant of <code>IssueChatThread</code> that suppresses comment toolbar / reactions and renders tool-call bubbles compactly. Proposed as a prop on the existing component, not a fork.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 4. Reflection diff ========== -->
+      <section id="reflection-diff">
+        <div class="lede">Step 4 · the learning loop</div>
+        <h2><span class="step-num">4.</span>Reflection diff</h2>
+        <p class="desc">Sits over the workbench when a transition requires reflection (default: <code>new.approve</code> and <code>new.reject</code>). The assistant compares the original item, edits, chat, and current guidance, then proposes a diff to one or more guidance documents. The user accepts, rejects, edits inline, or asks for a revision. Acceptance bumps the doc revision and unblocks the transition.</p>
+        <div class="grid">
+          <div class="wire" data-zoom data-caption="Reflection diff (desktop)">
+            <div class="label"><span>reflection-diff.svg</span><span>1280×800 · desktop</span></div>
+            <img src="wireframes/reflection-diff.svg" alt="Reflection diff desktop wireframe" />
+          </div>
+          <div class="wire mobile-wire mobile-col" data-zoom data-caption="Reflection diff (mobile)">
+            <div class="label"><span>mobile</span><span>375×812</span></div>
+            <img src="wireframes/reflection-diff-mobile.svg" alt="Reflection diff mobile wireframe" />
+          </div>
+          <div class="notes-col notes">
+            <h3>Annotations</h3>
+            <ul>
+              <li><b>1 · summary</b> — The assistant's one-line take on what changed. Citable.</li>
+              <li><b>2 · doc selector</b> — Folder-style list of guidance docs with change counts; "+ propose new file" supports growth beyond <code>guidance.md</code>.</li>
+              <li><b>3 · diff body</b> — Unified diff in markdown. Inline edit converts the panel into a <code>MarkdownEditor</code> over the proposed body.</li>
+              <li><b>4 · revise / reject / edit</b> — All three soft paths. Revise sends a chat turn ("revise because…"); reject keeps the proposal in history for audit.</li>
+              <li><b>5 · accept</b> — Creates a new guidance revision and unblocks the transition. Status note explains the linkage so the user understands why this is required.</li>
+              <li><b>Mobile</b> — Reflection becomes a full-screen sheet. Doc selector becomes scrollable tab chips. Actions sit in a sticky bottom bar with an "Edit ›" link to drop into the editor on a separate screen.</li>
+            </ul>
+            <div class="reuse"><b>Component reuse:</b> <code>Dialog</code> for the desktop overlay; <code>Sheet</code> for mobile; <code>MarkdownBlock</code> + custom diff renderer for the body.</div>
+            <div class="reuse"><b>System change requested:</b> a small markdown-diff renderer (added/removed line markers, hunk grouping) — does not exist in core today. Lives inside the plugin until two callers want it.</div>
+            <div class="why"><b>Why blocking-by-default for reflection-required transitions:</b> the contract makes <code>requiresReflection</code> a hard gate. Surfacing this as an overlay (not a separate screen) keeps the user in their item's context.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 5. Guidance editor ========== -->
+      <section id="guidance-editor">
+        <div class="lede">Step 5 · queue memory</div>
+        <h2><span class="step-num">5.</span>Guidance editor</h2>
+        <p class="desc">Queue guidance lives as a folder of plugin documents, not one oversized blob. Every queue starts with <code>guidance.md</code>; more files (style.md, examples.md, rubric.md) can be added as the queue's voice matures. Pending reflection proposals surface in the file tree so the user can see "this doc has open work" without jumping through the chat.</p>
+        <div class="grid">
+          <div class="wire" data-zoom data-caption="Guidance editor (desktop)">
+            <div class="label"><span>guidance-editor.svg</span><span>1280×800 · desktop</span></div>
+            <img src="wireframes/guidance-editor.svg" alt="Guidance editor desktop wireframe" />
+          </div>
+          <div class="wire mobile-wire mobile-col" data-zoom data-caption="Guidance editor (mobile)">
+            <div class="label"><span>mobile</span><span>375×812</span></div>
+            <img src="wireframes/guidance-editor-mobile.svg" alt="Guidance editor mobile wireframe" />
+          </div>
+          <div class="notes-col notes">
+            <h3>Annotations</h3>
+            <ul>
+              <li><b>1 · file tree</b> — Documents listed with revision tag and one-line purpose. Active doc highlighted. "+ new document" is permissive (path-like keys per the plan).</li>
+              <li><b>2 · editor</b> — Same <code>MarkdownEditor</code> the workbench uses. History link opens the revision drawer.</li>
+              <li><b>3 · header</b> — Last update attribution, revision count, save shortcut.</li>
+              <li><b>4 · revision history strip</b> — Recent revisions inline. Each entry is clickable and notes whether the revision came from an accepted reflection (with item link) or a manual edit.</li>
+              <li><b>Mobile</b> — File list becomes horizontal scroll chips. Pending-proposal banner appears at the top of the active doc. Add-doc + save are sticky at the bottom.</li>
+            </ul>
+            <div class="reuse"><b>Component reuse:</b> <code>MarkdownEditor</code>, <code>Tabs</code> (mobile chips), <code>Sheet</code> for revision history drawer, <code>Badge</code> for proposal counts.</div>
+            <div class="why"><b>Why a folder, not one file:</b> the user explicitly called out that "agents.md" patterns outgrow single files. Putting <code>style.md</code>/<code>examples.md</code>/<code>rubric.md</code> on the same screen normalises the practice early so reflection proposals can target the right doc without the user thinking about it.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 6. Workflow editor ========== -->
+      <section id="workflow-editor">
+        <div class="lede">Step 6 · queue rules</div>
+        <h2><span class="step-num">6.</span>Workflow editor</h2>
+        <p class="desc">Per the contract, v1 ships a small internal validator — no state-machine library, no drag-and-drop builder. The editor is two tables (states, transitions) plus a read-only graph preview rendered from the records. This keeps invariants honest (terminal states have no outgoing transitions, every transition references real states) without leaking visual-editor complexity.</p>
+        <div class="grid">
+          <div class="wire" data-zoom data-caption="Workflow editor (desktop)">
+            <div class="label"><span>workflow-editor.svg</span><span>1280×800 · desktop</span></div>
+            <img src="wireframes/workflow-editor.svg" alt="Workflow editor desktop wireframe" />
+          </div>
+          <div class="wire mobile-wire mobile-col" data-zoom data-caption="Workflow editor (mobile)">
+            <div class="label"><span>mobile</span><span>375×812</span></div>
+            <img src="wireframes/workflow-editor-mobile.svg" alt="Workflow editor mobile wireframe" />
+          </div>
+          <div class="notes-col notes">
+            <h3>Annotations</h3>
+            <ul>
+              <li><b>1 · preview</b> — Auto-generated from the records below. Terminal state has the thicker border (used as a consistent terminal marker across all screens).</li>
+              <li><b>2 · states table</b> — All fields from the contract: <code>stateKey</code>, label, terminal, visibility, sort order.</li>
+              <li><b>3 · transitions table</b> — From/to, label, reflection required, attached action template. Inline row actions edit per-row; bulk add via "+ Add transition".</li>
+              <li><b>4 · action template chip</b> — Tappable pill that opens the transition action editor (next screen) with the right transition pre-selected.</li>
+              <li><b>Mobile</b> — Preview collapses to an accordion. States and transitions become stacked cards. Add buttons sit below the list — no FAB.</li>
+            </ul>
+            <div class="reuse"><b>Component reuse:</b> shadcn <code>Table</code>, <code>Badge</code>, <code>Button</code>, <code>Collapsible</code> for the mobile preview.</div>
+            <div class="why"><b>Why no drag-and-drop builder:</b> the contract explicitly chose a small internal validator over a state-machine library, and the plan flags YAML editors / visual builders as later work. A table with a generated preview is the smallest thing that makes invariants visible without inviting users to build state spaghetti.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 7. Transition action template ========== -->
+      <section id="transition-action">
+        <div class="lede">Step 7 · hand off to Paperclip</div>
+        <h2><span class="step-num">7.</span>Transition action template</h2>
+        <p class="desc">v1's only allowed action: <code>create_or_update_issue</code>. The template is a constrained form — string interpolation only, fields locked to the contract's allowlist (<code>title</code>, <code>description</code>, <code>comment</code>, <code>projectId</code>, <code>goalId</code>, <code>assigneeAgentId/UserId</code>, <code>priority</code>, <code>status</code>). The variable palette + live preview against a real item make the template legible without inviting users to drop in arbitrary expressions.</p>
+        <div class="grid">
+          <div class="wire" data-zoom data-caption="Transition action template (desktop)">
+            <div class="label"><span>transition-action.svg</span><span>1280×800 · desktop</span></div>
+            <img src="wireframes/transition-action.svg" alt="Transition action template desktop wireframe" />
+          </div>
+          <div class="wire mobile-wire mobile-col" data-zoom data-caption="Transition action template (mobile)">
+            <div class="label"><span>mobile</span><span>375×812</span></div>
+            <img src="wireframes/transition-action-mobile.svg" alt="Transition action template mobile wireframe" />
+          </div>
+          <div class="notes-col notes">
+            <h3>Annotations</h3>
+            <ul>
+              <li><b>1 · action type chip</b> — Locked to <code>create_or_update_issue</code> in v1. Surfaced as a chip so the constraint is visible, not hidden in a disabled dropdown.</li>
+              <li><b>2 · mode segmented control</b> — Three contract-locked modes; the body description below explains the selected mode in plain language.</li>
+              <li><b>3 · transitions side rail</b> — All transitions for this queue. Each shows whether it has an action so the user can tour them.</li>
+              <li><b>4 · variable palette</b> — Click-to-insert tokens from the four contract variable roots (<code>queue.*</code>, <code>item.*</code>, <code>transition.*</code>, <code>actor.*</code>). No JavaScript, no helpers — the palette is the entire surface area.</li>
+              <li><b>5 · live preview</b> — Renders the template against the most recent New item so the user can spot a missing variable or weird formatting before saving. Templating errors fail closed before any side effect runs.</li>
+              <li><b>Status restriction</b> — The status dropdown only contains <code>backlog</code> / <code>todo</code> / <code>in_review</code>, matching the contract's allowlist. Disabled options aren't shown.</li>
+              <li><b>Mobile</b> — Side rail moves into a dropdown above the form. Variable palette becomes a popover triggered by "Insert variable…". Preview lives in a compact card at the bottom.</li>
+            </ul>
+            <div class="reuse"><b>Component reuse:</b> <code>Input</code>, <code>Textarea</code>, <code>Select</code>, <code>Popover</code>, <code>Tabs</code>, <code>ProjectPicker</code>, <code>AssigneePicker</code>.</div>
+            <div class="reuse"><b>System change requested:</b> a small string-interpolation preview helper (renders <code>{{var}}</code> against a context object, flags missing keys). Lives in the plugin; trivial to lift if a second caller appears.</div>
+            <div class="why"><b>Why a constrained form, not a code editor:</b> the contract explicitly bans dynamic evaluation. A form (not a YAML pane) keeps users inside the allowlist and lets the preview catch typos before runtime audit rows surface them as failures.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 8. Queue settings ========== -->
+      <section id="queue-settings">
+        <div class="lede">Step 8 · queue identity</div>
+        <h2><span class="step-num">8.</span>Queue settings</h2>
+        <p class="desc">Per-queue identity, defaults, and lifecycle. <code>queueKey</code> is immutable (it's the ingest API contract). Defaults wire the assistant agent and the project transition actions use. The strict-ingest toggle controls the contract's <code>requireExistingQueue</code> behaviour for this queue. Other concerns (workflow, transition actions, guidance, chat history, danger zone) are tab destinations to keep this screen scannable.</p>
+        <div class="grid">
+          <div class="wire" data-zoom data-caption="Queue settings (desktop)">
+            <div class="label"><span>queue-settings.svg</span><span>1280×800 · desktop</span></div>
+            <img src="wireframes/queue-settings.svg" alt="Queue settings desktop wireframe" />
+          </div>
+          <div class="wire mobile-wire mobile-col" data-zoom data-caption="Queue settings (mobile)">
+            <div class="label"><span>mobile</span><span>375×812</span></div>
+            <img src="wireframes/queue-settings-mobile.svg" alt="Queue settings mobile wireframe" />
+          </div>
+          <div class="notes-col notes">
+            <h3>Annotations</h3>
+            <ul>
+              <li><b>1 · immutable queueKey</b> — Shown disabled with explicit "immutable" caption. Avoids the trap of breaking the external ingest API contract by renaming.</li>
+              <li><b>2 · default assistant agent</b> — Picker. Default is the managed <code>Triage Assistant</code>; teams can swap in a specialised agent per queue (per the plan's "executive assistant learning agent" framing).</li>
+              <li><b>3 · default state</b> — Constrained to the queue's workflow states.</li>
+              <li><b>4 · ingest fallback toggle</b> — Maps directly to <code>requireExistingQueue</code> in the ingest API. "Auto-create queue on unknown key" reads better to a human than the API field name.</li>
+              <li><b>Sticky save bar</b> — Discard / Save with unsaved-changes indicator. Save bar pattern echoes the rest of the Paperclip UI to feel native, not plugin-y.</li>
+              <li><b>Mobile</b> — Same fields, single column. Tabs scroll horizontally. Danger zone is its own card below the main form.</li>
+            </ul>
+            <div class="reuse"><b>Component reuse:</b> <code>Tabs</code>, <code>Input</code>, <code>Textarea</code>, <code>Select</code>, <code>Switch</code>, <code>AssigneePicker</code>, <code>ProjectPicker</code>, the standard Paperclip sticky-save-bar pattern.</div>
+            <div class="why"><b>Why settings sit alongside workflow / actions tabs (not buried in a separate page):</b> creating a new queue is a configuration burst — the user will likely set defaults, define states, and attach an action in one sitting. Tabs keep all of it within one URL.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Open questions ========== -->
+      <section id="open">
+        <div class="lede">For reviewer</div>
+        <h2>Open questions for CTO/product</h2>
+        <div class="notes">
+          <ul>
+            <li><b>Q1 · Chat history surface</b> — Should the queue's chat history live inside the route sidebar (compact list, click to re-pin items) or inside a dedicated "Chat history" tab on the queue settings? Wireframes lean toward a "Chat history" tab plus a "+ new chat" / "history ▾" pair in the chat column header. Confirm.</li>
+            <li><b>Q2 · Reflection scope</b> — On a transition like <code>new.approve</code>, the assistant may want to propose changes across multiple guidance docs (e.g. <code>guidance.md</code> + <code>examples.md</code>). The reflection screen supports that today via the file selector. Should we ship that in v1 or restrict v1 to single-doc proposals for simplicity?</li>
+            <li><b>Q3 · "Edit before accept"</b> — Goes from the diff view into a full <code>MarkdownEditor</code> over the proposed body. Open: do we preserve the unaccepted diff badge once edited, or treat the edited version as a fresh manual edit (no longer "from the assistant")? Wireframes currently imply the latter.</li>
+            <li><b>Q4 · Mobile two-column posture</b> — Mobile tabs <i>Chat</i> / <i>Document</i> instead of stacking. Stacking would preserve the "see both at once" intent but force scrolling. Confirm tabbing on phones is acceptable given that the desktop two-column is the locked invariant.</li>
+            <li><b>Q5 · Transition action preview "sample item"</b> — Wireframes show the preview pinned to the most recent New item. Alternative: let the user pick which item to preview against. Adds power; complicates first-use. Confirm we ship the default-only version in v1.</li>
+            <li><b>Q6 · Status restriction labelling</b> — The contract bans <code>in_progress</code>/<code>done</code>/<code>blocked</code>/<code>cancelled</code> as template statuses. Show them disabled (educational) or omit them (cleaner)? Wireframes currently omit.</li>
+          </ul>
+          <p style="margin-top: 24px;">Questions are also posted as a <code>request_confirmation</code> interaction on <a href="https://paperclip.app/PAP/issues/PAP-9846">PAP-9846</a> so acceptance can wake the right agent.</p>
+        </div>
+      </section>
+
+      <div class="footer">
+        Lo-fi wireframes follow the in-tree <code>wireframe</code> skill house style — black on white, 1.5pt strokes, 8px grid, type sizes 12/14/20/28. Red dashed annotations are the call-out layer only and not part of the proposed UI. All component references are real file:line paths from this repo; system changes are explicitly flagged per-screen. Sourced from <a href="https://paperclip.app/PAP/issues/PAP-9815">PAP-9815</a> plan and <a href="https://paperclip.app/PAP/issues/PAP-9845#document-contract">PAP-9845 contract</a>.
+      </div>
+    </main>
+  </div>
+
+  <div class="lightbox" id="lb" aria-hidden="true">
+    <span class="close" id="lbClose">×</span>
+    <img id="lbImg" alt="" />
+    <div class="caption" id="lbCap"></div>
+  </div>
+
+<script>
+  const lb = document.getElementById('lb');
+  const lbImg = document.getElementById('lbImg');
+  const lbCap = document.getElementById('lbCap');
+  const lbClose = document.getElementById('lbClose');
+
+  document.querySelectorAll('[data-zoom]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const target = el.tagName === 'IMG' ? el : el.querySelector('img');
+      if (!target) return;
+      lbImg.src = target.src;
+      lbImg.alt = target.alt;
+      lbCap.textContent = el.dataset.caption || target.alt || '';
+      lb.classList.add('open');
+    });
+  });
+
+  function close() { lb.classList.remove('open'); }
+  lb.addEventListener('click', close);
+  lbClose.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+  const toc = document.querySelector('details.toc');
+  if (toc) {
+    const mq = window.matchMedia('(max-width: 900px)');
+    const apply = () => { toc.open = !mq.matches; };
+    apply();
+    mq.addEventListener('change', apply);
+    toc.querySelectorAll('.toc-body a').forEach((a) => {
+      a.addEventListener('click', () => { if (mq.matches) toc.open = false; });
+    });
+  }
+</script>
+</body>
+</html>

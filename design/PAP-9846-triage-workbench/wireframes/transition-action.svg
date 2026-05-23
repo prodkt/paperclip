@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="1280" height="800" />
+
+  <line x1="0" y1="56" x2="1280" y2="56" />
+  <text x="24" y="36" font-size="14" stroke="none" fill="#000">Paperclip</text>
+  <text x="120" y="36" font-size="14" stroke="none" fill="#666">/  Triage  /  content-training  /  Transition actions  /  new.approve</text>
+
+  <!-- Route sidebar -->
+  <line x1="240" y1="56" x2="240" y2="800" />
+  <g transform="translate(16,80)" stroke="none" font-size="12" fill="#666"><text>QUEUE</text></g>
+  <g font-size="14" stroke="none" fill="#000">
+    <text x="16" y="120">Workbench</text>
+    <text x="16" y="144">Items</text>
+    <text x="16" y="168">Guidance</text>
+    <text x="16" y="192">Workflow</text>
+    <rect x="8" y="208" width="216" height="32" stroke="none" fill="#e6e6e6" />
+    <text x="16" y="228">Transition actions</text>
+    <text x="16" y="260">Settings</text>
+  </g>
+  <g transform="translate(16,288)" stroke="none" font-size="12" fill="#666"><text>TRANSITIONS</text></g>
+  <g transform="translate(16,312)" font-size="14" stroke="none" fill="#000">
+    <rect x="-8" y="-16" width="216" height="32" stroke="none" fill="#e6e6e6" />
+    <text fill="#000">new.approve</text>
+    <text x="200" text-anchor="end" font-size="12" fill="#666">1 action</text>
+  </g>
+  <g transform="translate(16,344)" font-size="14" stroke="none">
+    <text fill="#666">new.reject</text>
+    <text x="200" text-anchor="end" font-size="12" fill="#666">—</text>
+  </g>
+  <g transform="translate(16,376)" font-size="14" stroke="none">
+    <text fill="#666">approved.finish</text>
+    <text x="200" text-anchor="end" font-size="12" fill="#666">—</text>
+  </g>
+  <g transform="translate(16,408)" font-size="14" stroke="none">
+    <text fill="#666">rejected.finish</text>
+    <text x="200" text-anchor="end" font-size="12" fill="#666">—</text>
+  </g>
+
+  <!-- Header -->
+  <g transform="translate(280,80)" stroke="none">
+    <text font-size="28" fill="#000">Transition action  ·  new.approve</text>
+    <text font-size="14" fill="#666" y="32">Runs after the user accepts reflection and clicks Approve. Allowed: create or update one Paperclip issue.</text>
+  </g>
+
+  <!-- Action type chip -->
+  <g transform="translate(280,160)">
+    <rect width="320" height="40" rx="20" fill="#e6e6e6" stroke="none" />
+    <text x="160" y="26" text-anchor="middle" font-size="14" stroke="none" fill="#000">type: create_or_update_issue</text>
+  </g>
+  <g transform="translate(616,160)">
+    <text font-size="12" stroke="none" fill="#666">v1 only allows this action type.</text>
+  </g>
+
+  <!-- Mode segmented control -->
+  <g transform="translate(280,224)">
+    <text font-size="12" stroke="none" fill="#666">MODE</text>
+  </g>
+  <g transform="translate(280,240)">
+    <rect width="480" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="0" y="0" width="160" height="40" fill="#e6e6e6" stroke="none" />
+    <line x1="160" y1="0" x2="160" y2="40" />
+    <line x1="320" y1="0" x2="320" y2="40" />
+    <g font-size="14" stroke="none">
+      <text x="80" y="26" text-anchor="middle" fill="#000">create_if_missing</text>
+      <text x="240" y="26" text-anchor="middle" fill="#666">update_existing</text>
+      <text x="400" y="26" text-anchor="middle" fill="#666">create_or_update</text>
+    </g>
+  </g>
+  <g transform="translate(280,288)">
+    <text font-size="12" stroke="none" fill="#666">Create a work issue only if the item has none. Otherwise the action is a no-op (audited).</text>
+  </g>
+
+  <!-- Two-column template form (left) / preview (right) -->
+  <!-- Left: form -->
+  <g transform="translate(280,328)" stroke="none">
+    <text font-size="14" fill="#000">Template fields</text>
+  </g>
+
+  <g transform="translate(280,352)">
+    <!-- title -->
+    <text font-size="12" stroke="none" fill="#666">TITLE  *required when creating</text>
+    <rect y="8" width="464" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="34" font-size="14" stroke="none" fill="#000">{{item.title}}</text>
+  </g>
+
+  <g transform="translate(280,424)">
+    <text font-size="12" stroke="none" fill="#666">DESCRIPTION</text>
+    <rect y="8" width="464" height="80" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="32" font-size="14" stroke="none" fill="#000">{{item.content}}</text>
+    <text x="12" y="52" font-size="14" stroke="none" fill="#666"></text>
+    <text x="12" y="72" font-size="14" stroke="none" fill="#000">Metadata: {{item.propertiesJson}}</text>
+  </g>
+
+  <g transform="translate(280,536)">
+    <text font-size="12" stroke="none" fill="#666">COMMENT  ·  appended after field updates</text>
+    <rect y="8" width="464" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="34" font-size="14" stroke="none" fill="#000">Triage item moved to {{transition.toStateKey}}.</text>
+  </g>
+
+  <g transform="translate(280,608)">
+    <text font-size="12" stroke="none" fill="#666">PROJECT</text>
+    <rect y="8" width="224" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="34" font-size="14" stroke="none" fill="#000">{{queue.defaultProjectId}} ▾</text>
+  </g>
+  <g transform="translate(520,608)">
+    <text font-size="12" stroke="none" fill="#666">GOAL</text>
+    <rect y="8" width="224" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="34" font-size="14" stroke="none" fill="#666">— inherit from project</text>
+  </g>
+
+  <g transform="translate(280,680)">
+    <text font-size="12" stroke="none" fill="#666">ASSIGNEE  ·  agent or user</text>
+    <rect y="8" width="224" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <circle cx="22" cy="28" r="10" fill="#e6e6e6" stroke="none" />
+    <text x="44" y="32" font-size="14" stroke="none" fill="#000">{{queue.defaultAssigneeAgentId}}</text>
+  </g>
+  <g transform="translate(520,680)">
+    <text font-size="12" stroke="none" fill="#666">PRIORITY  ·  STATUS</text>
+    <rect y="8" width="108" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="34" font-size="14" stroke="none" fill="#000">medium ▾</text>
+    <rect x="116" y="8" width="108" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="128" y="34" font-size="14" stroke="none" fill="#000">todo ▾</text>
+  </g>
+
+  <!-- Right: preview + variable palette -->
+  <g transform="translate(776,328)" stroke="none">
+    <text font-size="14" fill="#000">Variables</text>
+  </g>
+  <g transform="translate(776,352)">
+    <rect width="480" height="160" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+    <g font-size="12" stroke="none" fill="#666">
+      <text x="12" y="20">CLICK TO INSERT</text>
+    </g>
+    <g font-size="12" stroke="none" fill="#000">
+      <text x="12" y="44">{{queue.id}}</text>
+      <text x="160" y="44">{{queue.queueKey}}</text>
+      <text x="304" y="44">{{queue.displayName}}</text>
+      <text x="12" y="64">{{queue.defaultProjectId}}</text>
+      <text x="180" y="64">{{queue.defaultAssigneeAgentId}}</text>
+      <text x="12" y="92">{{item.id}}</text>
+      <text x="100" y="92">{{item.title}}</text>
+      <text x="200" y="92">{{item.content}}</text>
+      <text x="304" y="92">{{item.contentFormat}}</text>
+      <text x="12" y="112">{{item.itemKey}}</text>
+      <text x="120" y="112">{{item.stateKey}}</text>
+      <text x="232" y="112">{{item.propertiesJson}}</text>
+      <text x="12" y="140">{{transition.transitionKey}}</text>
+      <text x="180" y="140">{{transition.fromStateKey}}</text>
+      <text x="12" y="156">{{transition.toStateKey}}</text>
+      <text x="172" y="156">{{actor.type}} {{actor.agentId}} {{actor.userId}}</text>
+    </g>
+  </g>
+
+  <g transform="translate(776,536)" stroke="none">
+    <text font-size="14" fill="#000">Preview · sample item #142</text>
+    <text font-size="12" fill="#666" y="16">Renders with values from this queue + the most recent New item.</text>
+  </g>
+  <g transform="translate(776,576)">
+    <rect width="480" height="184" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <g font-size="12" stroke="none">
+      <text x="12" y="24" fill="#666">TITLE</text>
+      <text x="12" y="44" fill="#000">Draft launch post</text>
+      <text x="12" y="68" fill="#666">DESCRIPTION</text>
+      <text x="12" y="88" fill="#000"># Draft launch post</text>
+      <text x="12" y="104" fill="#000">Our new bench cut p95 latency by half...</text>
+      <text x="12" y="128" fill="#666">COMMENT</text>
+      <text x="12" y="148" fill="#000">Triage item moved to approved.</text>
+      <text x="12" y="168" fill="#666">PROJECT Marketing · ASSIGNEE Triage Assistant · PRIORITY medium · STATUS todo</text>
+    </g>
+  </g>
+
+  <!-- Footer save -->
+  <line x1="240" y1="768" x2="1280" y2="768" />
+  <g transform="translate(280,776)" stroke="none" font-size="12" fill="#666">
+    <text>Unsaved · audited as transition_action on every Approve</text>
+  </g>
+  <g transform="translate(1008,772)">
+    <rect width="112" height="32" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="56" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#000">Discard</text>
+  </g>
+  <g transform="translate(1136,772)">
+    <rect width="128" height="32" rx="4" fill="#000" stroke="#000" stroke-width="1.5" />
+    <text x="64" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#fff">Save action</text>
+  </g>
+
+  <!-- annotations -->
+  <g font-size="12" font-weight="bold" stroke="none" fill="#d33">
+    <circle cx="272" cy="184" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="272" y="188" text-anchor="middle">1</text>
+    <circle cx="272" cy="264" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="272" y="268" text-anchor="middle">2</text>
+    <circle cx="272" cy="380" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="272" y="384" text-anchor="middle">3</text>
+    <circle cx="768" cy="376" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="768" y="380" text-anchor="middle">4</text>
+    <circle cx="768" cy="600" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="768" y="604" text-anchor="middle">5</text>
+  </g>
+</svg>

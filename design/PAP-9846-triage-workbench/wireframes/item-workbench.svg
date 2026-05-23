@@ -1,0 +1,206 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="1280" height="800" />
+
+  <!-- App top nav (56) -->
+  <line x1="0" y1="56" x2="1280" y2="56" />
+  <text x="24" y="36" font-size="14" stroke="none" fill="#000">Paperclip</text>
+  <text x="120" y="36" font-size="14" stroke="none" fill="#666">/  Triage  /  content-training  /  Item #142  ·  "Draft launch post"</text>
+  <g transform="translate(1184,16)"><rect width="72" height="24" rx="12" fill="#e6e6e6" /><text x="36" y="16" font-size="12" stroke="none" fill="#000" text-anchor="middle">Settings</text></g>
+
+  <!-- Plugin route sidebar (240 wide) -->
+  <line x1="240" y1="56" x2="240" y2="800" />
+  <g transform="translate(16,80)" stroke="none">
+    <text font-size="12" fill="#666">QUEUES</text>
+  </g>
+  <g transform="translate(16,104)" font-size="14">
+    <rect x="-8" y="-16" width="216" height="32" stroke="none" fill="#e6e6e6" />
+    <text stroke="none" fill="#000">content-training</text>
+    <text x="200" stroke="none" fill="#666" text-anchor="end">12</text>
+  </g>
+  <g transform="translate(16,136)" font-size="14"><text stroke="none" fill="#000">inbox</text><text x="200" stroke="none" fill="#666" text-anchor="end">3</text></g>
+  <g transform="translate(16,160)" font-size="14"><text stroke="none" fill="#000">drafts</text><text x="200" stroke="none" fill="#666" text-anchor="end">7</text></g>
+  <g transform="translate(16,184)" font-size="14"><text stroke="none" fill="#000">financial-approvals</text><text x="200" stroke="none" fill="#666" text-anchor="end">2</text></g>
+  <g transform="translate(16,208)" font-size="14"><text stroke="none" fill="#000">+ New queue</text></g>
+
+  <line x1="16" y1="232" x2="224" y2="232" stroke="#000" />
+
+  <g transform="translate(16,256)" stroke="none">
+    <text font-size="12" fill="#666">ITEMS · NEW (12)</text>
+  </g>
+  <g transform="translate(16,280)" font-size="14">
+    <rect x="-8" y="-16" width="216" height="32" stroke="none" fill="#e6e6e6" />
+    <text stroke="none" fill="#000">#142  Draft launch post</text>
+  </g>
+  <g transform="translate(16,312)" font-size="14"><text stroke="none" fill="#000">#141  v2 pricing intro</text></g>
+  <g transform="translate(16,336)" font-size="14"><text stroke="none" fill="#000">#140  Team page rewrite</text></g>
+  <g transform="translate(16,360)" font-size="14"><text stroke="none" fill="#000">#139  Q3 announce</text></g>
+  <g transform="translate(16,384)" font-size="14"><text stroke="none" fill="#000">#138  Beta notes</text></g>
+  <g transform="translate(16,408)" font-size="14"><text stroke="none" fill="#000">#137  Press blurb</text></g>
+  <g transform="translate(16,440)" font-size="12"><text stroke="none" fill="#666">+ 6 more</text></g>
+
+  <line x1="16" y1="480" x2="224" y2="480" stroke="#000" />
+  <g transform="translate(16,504)" stroke="none">
+    <text font-size="12" fill="#666">QUEUE</text>
+    <text y="24" font-size="14" fill="#000">Workflow</text>
+    <text y="48" font-size="14" fill="#000">Guidance</text>
+    <text y="72" font-size="14" fill="#000">Transition actions</text>
+    <text y="96" font-size="14" fill="#000">Settings</text>
+  </g>
+
+  <!-- Workbench bar (56) -->
+  <line x1="240" y1="112" x2="1280" y2="112" />
+  <g transform="translate(264,80)" font-size="14" stroke="none">
+    <text fill="#666">Item 3 of 12</text>
+    <g transform="translate(96,-16)"><rect width="32" height="32" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="16" y="20" text-anchor="middle" fill="#000">‹</text></g>
+    <g transform="translate(136,-16)"><rect width="32" height="32" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="16" y="20" text-anchor="middle" fill="#000">›</text></g>
+    <g transform="translate(184,-16)"><rect width="80" height="32" rx="16" fill="#e6e6e6" stroke="#000" stroke-width="1.5" /><text x="40" y="20" text-anchor="middle" fill="#000">New</text></g>
+  </g>
+  <g transform="translate(816,80)" font-size="14" stroke="none">
+    <text fill="#666">Allowed transitions →</text>
+    <g transform="translate(160,-20)"><rect width="120" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="60" y="25" text-anchor="middle" fill="#000">Reject</text></g>
+    <g transform="translate(296,-20)"><rect width="144" height="40" rx="4" fill="#000" stroke="#000" stroke-width="1.5" /><text x="72" y="25" text-anchor="middle" fill="#fff">Approve</text></g>
+  </g>
+
+  <!-- Divider between chat (520) and editor (520) -->
+  <line x1="760" y1="112" x2="760" y2="800" />
+
+  <!-- CHAT COLUMN (center/left) 240..760 width 520 -->
+  <g transform="translate(264,136)" stroke="none" font-size="12" fill="#666">
+    <text>ASSISTANT CHAT  ·  Triage Assistant</text>
+    <text x="496" text-anchor="end">+ New chat   History ▾</text>
+  </g>
+
+  <!-- Pinned-item card -->
+  <g transform="translate(264,160)">
+    <rect width="496" height="40" stroke="#000" stroke-width="1.5" fill="#fff" stroke-dasharray="4 4" />
+    <text x="16" y="18" font-size="12" stroke="none" fill="#666">PINNED ITEM</text>
+    <text x="16" y="32" font-size="12" stroke="none" fill="#000">#142  Draft launch post  ·  markdown  ·  state: New</text>
+  </g>
+
+  <!-- Assistant bubble 1 -->
+  <g transform="translate(264,216)">
+    <rect width="320" height="80" rx="8" fill="#e6e6e6" stroke="none" />
+    <text x="16" y="24" font-size="12" stroke="none" fill="#666">Triage Assistant · just now</text>
+    <text x="16" y="44" font-size="14" stroke="none" fill="#000">Read item · current guidance:</text>
+    <text x="16" y="62" font-size="14" stroke="none" fill="#000">"keep launch posts under 150 words".</text>
+    <text x="16" y="74" font-size="12" stroke="none" fill="#666">tool: read_guidance(path=guidance.md)</text>
+  </g>
+
+  <!-- User bubble -->
+  <g transform="translate(424,312)">
+    <rect width="336" height="48" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="16" y="20" font-size="12" stroke="none" fill="#666">you · 30s ago</text>
+    <text x="16" y="38" font-size="14" stroke="none" fill="#000">Tighten the intro. Mention the new bench.</text>
+  </g>
+
+  <!-- Assistant bubble 2 — edit action -->
+  <g transform="translate(264,376)">
+    <rect width="408" height="96" rx="8" fill="#e6e6e6" stroke="none" />
+    <text x="16" y="24" font-size="12" stroke="none" fill="#666">Triage Assistant · 12s ago</text>
+    <text x="16" y="44" font-size="14" stroke="none" fill="#000">Tightened the intro and added the bench callout.</text>
+    <g transform="translate(16,56)">
+      <rect width="376" height="32" stroke="#000" stroke-width="1.5" fill="#fff" stroke-dasharray="4 4" />
+      <text x="12" y="20" font-size="12" stroke="none" fill="#666">tool: update_item_content() · 1 patch · diff applied →</text>
+    </g>
+  </g>
+
+  <!-- User bubble 2 -->
+  <g transform="translate(440,488)">
+    <rect width="320" height="48" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="16" y="20" font-size="12" stroke="none" fill="#666">you · just now</text>
+    <text x="16" y="38" font-size="14" stroke="none" fill="#000">Good. I'll polish the closing myself.</text>
+  </g>
+
+  <!-- Composer -->
+  <g transform="translate(264,720)">
+    <rect width="496" height="64" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="16" y="32" font-size="14" stroke="none" fill="#666">Ask the assistant about #142…</text>
+    <g transform="translate(440,16)"><rect width="40" height="32" rx="4" fill="#000" stroke="#000" stroke-width="1.5" /><text x="20" y="22" text-anchor="middle" font-size="14" stroke="none" fill="#fff">↑</text></g>
+    <text x="16" y="56" font-size="12" stroke="none" fill="#666">Ctx: queue, item, state, allowed transitions, guidance files, work issue</text>
+  </g>
+
+  <!-- EDITOR COLUMN (right) 760..1280 width 520 -->
+  <g transform="translate(784,136)" stroke="none" font-size="12" fill="#666">
+    <text>ITEM DOCUMENT  ·  edit directly</text>
+    <text x="472" text-anchor="end">⌘S saved · 12s</text>
+  </g>
+
+  <!-- title input -->
+  <g transform="translate(784,160)">
+    <rect width="472" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="26" font-size="14" stroke="none" fill="#000">Draft launch post</text>
+  </g>
+
+  <!-- markdown editor -->
+  <g transform="translate(784,216)">
+    <rect width="472" height="320" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <!-- toolbar -->
+    <line x1="0" y1="32" x2="472" y2="32" />
+    <g font-size="12" stroke="none" fill="#666">
+      <text x="12" y="20">B</text><text x="32" y="20">I</text><text x="52" y="20">‹/›</text><text x="84" y="20">H1</text><text x="116" y="20">H2</text><text x="148" y="20">List</text><text x="192" y="20">Link</text>
+      <text x="460" y="20" text-anchor="end">Markdown</text>
+    </g>
+    <!-- body -->
+    <g font-size="14" stroke="none" fill="#000">
+      <text x="12" y="56"># Draft launch post</text>
+      <text x="12" y="82" fill="#666"># (intro — tightened by assistant)</text>
+      <text x="12" y="108">Our new bench cut p95 latency by half.</text>
+      <text x="12" y="134">Here's what changed and what's next.</text>
+      <text x="12" y="160">## What's new</text>
+      <text x="12" y="186">- Stream-first scheduling</text>
+      <text x="12" y="212">- Per-queue guidance</text>
+      <text x="12" y="238">- Reflection loop after every item</text>
+      <text x="12" y="280" fill="#666">## Closing  (you are editing this paragraph)</text>
+      <text x="12" y="304" fill="#666">|</text>
+    </g>
+  </g>
+
+  <!-- Properties panel -->
+  <g transform="translate(784,552)" stroke="none" font-size="12" fill="#666">
+    <text>PROPERTIES  ·  free-form JSON</text>
+  </g>
+  <g transform="translate(784,568)">
+    <rect width="472" height="96" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <g font-size="14" stroke="none">
+      <text x="12" y="24" fill="#666">upstreamId</text><text x="160" y="24" fill="#000">ext-9210-blog</text>
+      <text x="12" y="48" fill="#666">sourceKind</text><text x="160" y="48" fill="#000">opaque-blog</text>
+      <text x="12" y="72" fill="#666">priority</text><text x="160" y="72" fill="#000">medium</text>
+      <text x="460" y="88" text-anchor="end" font-size="12" fill="#666">+ add key</text>
+    </g>
+  </g>
+
+  <!-- Linked work issue -->
+  <g transform="translate(784,680)" stroke="none" font-size="12" fill="#666">
+    <text>LINKED WORK ISSUE</text>
+  </g>
+  <g transform="translate(784,696)">
+    <rect width="472" height="56" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+    <text x="16" y="24" font-size="14" stroke="none" fill="#666">none yet — created on Approve via</text>
+    <text x="16" y="40" font-size="12" stroke="none" fill="#000">create_or_update_issue · create_if_missing · project: Marketing</text>
+    <g transform="translate(360,12)"><rect width="96" height="32" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="48" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#000">Open template</text></g>
+  </g>
+
+  <!-- ANNOTATIONS (red dashed) -->
+  <g stroke="#d33" stroke-width="1.5" fill="none" stroke-dasharray="4 4">
+    <rect x="240" y="56" width="520" height="744" />
+    <rect x="760" y="56" width="520" height="744" />
+  </g>
+  <g font-size="12" fill="#d33" stroke="none" font-weight="bold">
+    <text x="500" y="72" text-anchor="middle">CHAT — center/left</text>
+    <text x="1020" y="72" text-anchor="middle">DOCUMENT/ITEM — right</text>
+  </g>
+
+  <!-- numbered callouts -->
+  <g font-size="12" font-weight="bold" stroke="none" fill="#d33">
+    <circle cx="248" cy="80" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="248" y="84" text-anchor="middle">1</text>
+    <circle cx="752" cy="80" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="752" y="84" text-anchor="middle">2</text>
+    <circle cx="248" cy="160" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="248" y="164" text-anchor="middle">3</text>
+    <circle cx="752" cy="160" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="752" y="164" text-anchor="middle">4</text>
+    <circle cx="752" cy="216" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="752" y="220" text-anchor="middle">5</text>
+    <circle cx="752" cy="568" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="752" y="572" text-anchor="middle">6</text>
+    <circle cx="248" cy="720" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="248" y="724" text-anchor="middle">7</text>
+    <circle cx="752" cy="696" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="752" y="700" text-anchor="middle">8</text>
+    <circle cx="900" cy="80" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="900" y="84" text-anchor="middle">9</text>
+  </g>
+</svg>

@@ -143,6 +143,26 @@ async function managedResourceHealth(
 }
 
 function actionActor(ctx: PluginContext, params: Record<string, unknown>) {
+  const actorUserId = typeof params.actorUserId === "string" ? params.actorUserId : null;
+  const actorAgentId = typeof params.actorAgentId === "string" ? params.actorAgentId : null;
+  const actorType = typeof params.actorType === "string" ? params.actorType : null;
+
+  if (actorType === "user" && actorUserId) {
+    return {
+      actorType,
+      actorId: actorUserId,
+      actorRunId: typeof params.actorRunId === "string" ? params.actorRunId : null,
+    };
+  }
+
+  if (actorType === "agent" && actorAgentId) {
+    return {
+      actorType,
+      actorId: actorAgentId,
+      actorRunId: typeof params.actorRunId === "string" ? params.actorRunId : null,
+    };
+  }
+
   return {
     actorType: "plugin-action",
     actorId: ctx.manifest.id,
@@ -154,6 +174,7 @@ async function ensureQueueChatIssue(
   ctx: PluginContext,
   service: ReturnType<typeof createTriageService>,
   params: Record<string, unknown>,
+  actor?: { actorType?: string | null; actorId?: string | null; actorRunId?: string | null },
 ) {
   const companyId = requireCompanyId(params);
   const ensured = await service.ensureQueueChat(params);
@@ -161,6 +182,11 @@ async function ensureQueueChatIssue(
   const existingIssue = hiddenIssueId ? await ctx.issues.get(hiddenIssueId, companyId) : null;
   if (!existingIssue) {
     const project = await ctx.projects.managed.reconcile(TRIAGE_PROJECT_KEY, companyId);
+    const issueActor = actor?.actorType === "user"
+      ? { actorUserId: actor.actorId ?? undefined, actorRunId: actor.actorRunId ?? undefined }
+      : actor?.actorType === "agent"
+        ? { actorAgentId: actor.actorId ?? undefined, actorRunId: actor.actorRunId ?? undefined }
+        : undefined;
     const issue = await ctx.issues.create({
       companyId,
       projectId: project.projectId ?? undefined,
@@ -175,6 +201,7 @@ async function ensureQueueChatIssue(
       surfaceVisibility: "plugin_operation",
       originKind: `plugin:${PLUGIN_ID}:operation:queue-chat`,
       originId: `queue-chat:${ensured.queue.id}`,
+      actor: issueActor,
     });
     hiddenIssueId = issue.id;
     ensured.chat = await service.updateQueueChat({
@@ -381,7 +408,7 @@ export function createTriagePlugin(options: {
 
     ctx.actions.register("ensure-queue-chat", async (params: Record<string, unknown>) => {
       await requireKnownCompany(ctx, requireCompanyId(params));
-      return ensureQueueChatIssue(ctx, getService(), params);
+      return ensureQueueChatIssue(ctx, getService(), params, actionActor(ctx, params));
     });
 
     ctx.actions.register("send-assistant-message", async (params: Record<string, unknown>) => {
@@ -393,7 +420,8 @@ export function createTriagePlugin(options: {
       }
 
       const context = await getService().getAssistantContext(params);
-      const chat = await ensureQueueChatIssue(ctx, getService(), params);
+      const actor = actionActor(ctx, params);
+      const chat = await ensureQueueChatIssue(ctx, getService(), params, actor);
       const agentResolution = await ctx.agents.managed.reconcile(TRIAGE_ASSISTANT_AGENT_KEY, companyId);
       if (!agentResolution.agentId) {
         throw new Error("Triage Assistant managed agent is missing");
@@ -427,11 +455,16 @@ export function createTriagePlugin(options: {
         },
       });
       if (chat.hiddenIssueId) {
+        const commentAuthor = actor.actorType === "user"
+          ? { authorUserId: actor.actorId ?? undefined }
+          : actor.actorType === "agent"
+            ? { authorAgentId: actor.actorId ?? undefined }
+            : undefined;
         await ctx.issues.createComment(
           chat.hiddenIssueId,
           [`User message for item \`${context.item.title}\`:`, "", message].join("\n"),
           companyId,
-          { authorAgentId: agentResolution.agentId },
+          commentAuthor,
         );
       }
       return {

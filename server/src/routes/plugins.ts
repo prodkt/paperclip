@@ -1332,13 +1332,19 @@ export function pluginRoutes(
 
     assertPluginBridgeScope(req, body?.companyId);
 
+    const params = { ...(body?.params ?? {}) };
+    if (typeof req.actor.userId === "string" && req.actor.userId.length > 0) {
+      params.actorType = "user";
+      params.actorUserId = req.actor.userId;
+    }
+
     try {
       const result = await bridgeDeps.workerManager.call(
         plugin.id,
         "performAction",
         {
           key,
-          params: body?.params ?? {},
+          params,
           renderEnvironment: body?.renderEnvironment ?? null,
         },
       );

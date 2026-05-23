@@ -832,16 +832,33 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
           return callHost("issues.listComments", { issueId, companyId });
         },
 
-        async createComment(issueId: string, body: string, companyId: string, options?: { authorAgentId?: string }) {
-          return callHost("issues.createComment", { issueId, body, companyId, authorAgentId: options?.authorAgentId });
+        async createComment(
+          issueId: string,
+          body: string,
+          companyId: string,
+          options?: { authorAgentId?: string; authorUserId?: string },
+        ) {
+          return callHost("issues.createComment", {
+            issueId,
+            body,
+            companyId,
+            authorAgentId: options?.authorAgentId,
+            authorUserId: options?.authorUserId,
+          });
         },
 
-        async createInteraction(issueId: string, interaction, companyId: string, options?: { authorAgentId?: string }) {
+        async createInteraction(
+          issueId: string,
+          interaction,
+          companyId: string,
+          options?: { authorAgentId?: string; authorUserId?: string },
+        ) {
           return callHost("issues.createInteraction", {
             issueId,
             companyId,
             interaction,
             authorAgentId: options?.authorAgentId,
+            authorUserId: options?.authorUserId,
           });
         },
 
@@ -849,7 +866,7 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
           issueId: string,
           interaction,
           companyId: string,
-          options?: { authorAgentId?: string },
+          options?: { authorAgentId?: string; authorUserId?: string },
         ): Promise<SuggestTasksInteraction> {
           return callHost("issues.createInteraction", {
             issueId,
@@ -859,6 +876,7 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
               kind: "suggest_tasks",
             },
             authorAgentId: options?.authorAgentId,
+            authorUserId: options?.authorUserId,
           }) as Promise<SuggestTasksInteraction>;
         },
 
@@ -866,7 +884,7 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
           issueId: string,
           interaction,
           companyId: string,
-          options?: { authorAgentId?: string },
+          options?: { authorAgentId?: string; authorUserId?: string },
         ): Promise<AskUserQuestionsInteraction> {
           return callHost("issues.createInteraction", {
             issueId,
@@ -876,6 +894,7 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
               kind: "ask_user_questions",
             },
             authorAgentId: options?.authorAgentId,
+            authorUserId: options?.authorUserId,
           }) as Promise<AskUserQuestionsInteraction>;
         },
 
@@ -883,7 +902,7 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
           issueId: string,
           interaction,
           companyId: string,
-          options?: { authorAgentId?: string },
+          options?: { authorAgentId?: string; authorUserId?: string },
         ): Promise<RequestConfirmationInteraction> {
           return callHost("issues.createInteraction", {
             issueId,
@@ -893,6 +912,7 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
               kind: "request_confirmation",
             },
             authorAgentId: options?.authorAgentId,
+            authorUserId: options?.authorUserId,
           }) as Promise<RequestConfirmationInteraction>;
         },
 

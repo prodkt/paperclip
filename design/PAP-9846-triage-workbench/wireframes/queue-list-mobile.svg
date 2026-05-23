@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="375" height="812" />
+
+  <!-- Top bar -->
+  <line x1="0" y1="48" x2="375" y2="48" />
+  <g font-size="14" stroke="none">
+    <text x="16" y="30" fill="#000">≡</text>
+    <text x="187.5" y="30" fill="#000" text-anchor="middle">Triage</text>
+    <text x="359" y="30" text-anchor="end" fill="#000">+</text>
+  </g>
+
+  <!-- Header -->
+  <g transform="translate(16,72)" stroke="none">
+    <text font-size="20" fill="#000">Queues</text>
+    <text font-size="12" fill="#666" y="20">5 active</text>
+  </g>
+
+  <!-- Search -->
+  <g transform="translate(16,128)">
+    <rect width="343" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="26" font-size="14" stroke="none" fill="#666">Search…</text>
+  </g>
+
+  <!-- Cards stacked -->
+  <g transform="translate(16,184)">
+    <rect width="343" height="128" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="28" font-size="14" stroke="none" fill="#000">content-training</text>
+    <text x="12" y="44" font-size="12" stroke="none" fill="#666">12 new · 4 approved · 2 rejected · 17 done</text>
+    <text x="12" y="68" font-size="12" stroke="none" fill="#666">Triage Assistant · updated 2m ago</text>
+    <g transform="translate(12,88)"><rect width="160" height="32" rx="4" fill="#000" /><text x="80" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#fff">Open workbench</text></g>
+    <g transform="translate(180,88)"><rect width="80" height="32" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="40" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#000">Settings</text></g>
+  </g>
+
+  <g transform="translate(16,328)">
+    <rect width="343" height="128" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="28" font-size="14" stroke="none" fill="#000">inbox</text>
+    <text x="12" y="44" font-size="12" stroke="none" fill="#666">3 new · 5 done</text>
+    <text x="12" y="68" font-size="12" stroke="none" fill="#666">Default catch-all queue · updated 1h ago</text>
+    <g transform="translate(12,88)"><rect width="160" height="32" rx="4" fill="#000" /><text x="80" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#fff">Open workbench</text></g>
+    <g transform="translate(180,88)"><rect width="80" height="32" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="40" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#000">Settings</text></g>
+  </g>
+
+  <g transform="translate(16,472)">
+    <rect width="343" height="128" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="28" font-size="14" stroke="none" fill="#000">financial-approvals</text>
+    <text x="12" y="44" font-size="12" stroke="none" fill="#666">2 new · 1 approved · 4 rejected · 33 done</text>
+    <text x="12" y="68" font-size="12" stroke="none" fill="#666">Finance Reviewer · creates work issue</text>
+    <g transform="translate(12,88)"><rect width="160" height="32" rx="4" fill="#000" /><text x="80" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#fff">Open workbench</text></g>
+    <g transform="translate(180,88)"><rect width="80" height="32" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="40" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#000">Settings</text></g>
+  </g>
+
+  <!-- Create queue CTA -->
+  <g transform="translate(16,624)">
+    <rect width="343" height="120" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+    <text x="12" y="28" font-size="14" stroke="none" fill="#666">+ Create a queue</text>
+    <text x="12" y="52" font-size="12" stroke="none" fill="#666">Or POST a new item to a queueKey to</text>
+    <text x="12" y="68" font-size="12" stroke="none" fill="#666">auto-create it with the default workflow.</text>
+    <g transform="translate(12,80)"><rect width="160" height="32" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="80" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#000">Ingest API help</text></g>
+  </g>
+
+  <!-- Bottom tab placeholder -->
+  <line x1="0" y1="764" x2="375" y2="764" />
+  <g transform="translate(0,772)" font-size="12" stroke="none" fill="#666">
+    <text x="62.5" y="24" text-anchor="middle" fill="#000">Queues</text>
+    <text x="187.5" y="24" text-anchor="middle">Chats</text>
+    <text x="312.5" y="24" text-anchor="middle">Settings</text>
+  </g>
+</svg>

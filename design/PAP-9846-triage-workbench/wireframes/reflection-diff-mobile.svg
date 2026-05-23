@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="375" height="812" />
+
+  <!-- Top sheet handle -->
+  <line x1="0" y1="48" x2="375" y2="48" />
+  <g font-size="14" stroke="none">
+    <text x="16" y="30" fill="#000">✕</text>
+    <text x="187.5" y="30" text-anchor="middle" fill="#000">Reflection</text>
+    <text x="359" y="30" text-anchor="end" fill="#666">Skip</text>
+  </g>
+
+  <g transform="translate(16,72)" stroke="none">
+    <text font-size="14" fill="#666">Before Approve</text>
+    <text font-size="20" fill="#000" y="22">guidance.md  ·  +8 / -2</text>
+  </g>
+
+  <!-- Doc tabs -->
+  <g transform="translate(16,136)" font-size="14" stroke="none">
+    <rect x="-4" y="-16" width="120" height="32" stroke="none" fill="#e6e6e6" rx="16" />
+    <text fill="#000">guidance.md</text>
+    <text x="132" fill="#666">style.md</text>
+    <text x="216" fill="#666">examples.md</text>
+  </g>
+
+  <!-- summary -->
+  <g transform="translate(16,168)">
+    <rect width="343" height="64" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+    <text x="12" y="20" font-size="12" stroke="none" fill="#666">SUMMARY</text>
+    <text x="12" y="38" font-size="12" stroke="none" fill="#000">"Tighten launch-post intros and call</text>
+    <text x="12" y="54" font-size="12" stroke="none" fill="#000">out user-visible benchmarks in headline."</text>
+  </g>
+
+  <!-- diff -->
+  <g transform="translate(16,248)">
+    <rect width="343" height="328" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <g font-size="12" stroke="none" font-family="ui-monospace, SF Mono, Menlo, monospace">
+      <text x="12" y="20" fill="#666">  ## Tone</text>
+      <text x="12" y="40" fill="#000">- Keep intros under 4 sentences.</text>
+      <line x1="8" y1="48" x2="335" y2="48" stroke="#e6e6e6" />
+      <text x="12" y="64" fill="#000">+ Keep intros under 3 sentences.</text>
+      <text x="12" y="84" fill="#000">+ Call out user-visible benchmarks</text>
+      <text x="12" y="100" fill="#000">  in the first paragraph.</text>
+      <text x="12" y="128" fill="#666">  ## Structure</text>
+      <text x="12" y="148" fill="#666">  - H2 sections for What's new...</text>
+      <text x="12" y="176" fill="#000">+ ## Headlines</text>
+      <text x="12" y="196" fill="#000">+ Include the strongest concrete</text>
+      <text x="12" y="212" fill="#000">  number when one exists.</text>
+      <text x="12" y="232" fill="#000">+ Prefer verbs over noun phrases.</text>
+    </g>
+  </g>
+
+  <!-- why -->
+  <g transform="translate(16,592)">
+    <rect width="343" height="80" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+    <text x="12" y="20" font-size="12" stroke="none" fill="#666">WHY · chat turns 4–6 · 1 doc edit</text>
+    <text x="12" y="40" font-size="12" stroke="none" fill="#000">You shortened intro from 5 → 3</text>
+    <text x="12" y="56" font-size="12" stroke="none" fill="#000">sentences and added "cut p95 latency"</text>
+    <text x="12" y="72" font-size="12" stroke="none" fill="#000">to the headline.</text>
+  </g>
+
+  <!-- actions sticky -->
+  <line x1="0" y1="696" x2="375" y2="696" />
+  <g transform="translate(16,712)">
+    <rect width="100" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="50" y="26" text-anchor="middle" font-size="12" stroke="none" fill="#000">Reject</text>
+  </g>
+  <g transform="translate(124,712)">
+    <rect width="100" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="50" y="26" text-anchor="middle" font-size="12" stroke="none" fill="#000">Revise</text>
+  </g>
+  <g transform="translate(232,712)">
+    <rect width="127" height="40" rx="4" fill="#000" stroke="#000" stroke-width="1.5" />
+    <text x="63.5" y="26" text-anchor="middle" font-size="12" stroke="none" fill="#fff">Accept · rev 8</text>
+  </g>
+  <g transform="translate(16,768)" font-size="12" stroke="none" fill="#666">
+    <text>Accept unblocks Approve.</text>
+    <text x="343" text-anchor="end" fill="#000">Edit ›</text>
+  </g>
+</svg>

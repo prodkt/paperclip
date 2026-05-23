@@ -1,0 +1,238 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="1280" height="720" />
+
+  <!-- Title -->
+  <g font-size="20" stroke="none" fill="#000">
+    <text x="40" y="48">Paperclip Triage · workbench flow</text>
+  </g>
+  <g font-size="12" stroke="none" fill="#666">
+    <text x="40" y="68">Solid = main triage loop · dashed = configuration paths</text>
+  </g>
+
+  <!-- Lane labels -->
+  <g font-size="12" stroke="none" fill="#666" font-weight="bold">
+    <text x="40" y="120">MAIN TRIAGE LOOP</text>
+    <text x="40" y="440">CONFIGURE</text>
+  </g>
+
+  <!-- ROW 1: queue-list -> item-list -> item-workbench -> reflection-diff -> back -->
+  <!-- queue-list -->
+  <g transform="translate(40,144)">
+    <rect width="200" height="136" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="100" y="24" text-anchor="middle" font-size="14" stroke="none" fill="#000">queue-list</text>
+    <line x1="0" y1="32" x2="200" y2="32" />
+    <!-- mini queue cards -->
+    <rect x="16" y="48" width="80" height="32" fill="#e6e6e6" stroke="none" />
+    <rect x="104" y="48" width="80" height="32" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="16" y="88" width="80" height="32" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="104" y="88" width="80" height="32" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+  </g>
+
+  <!-- item-list -->
+  <g transform="translate(296,144)">
+    <rect width="200" height="136" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="100" y="24" text-anchor="middle" font-size="14" stroke="none" fill="#000">item-list</text>
+    <line x1="0" y1="32" x2="200" y2="32" />
+    <!-- mini rows -->
+    <rect x="16" y="48" width="168" height="14" fill="#e6e6e6" stroke="none" />
+    <line x1="16" y1="70" x2="184" y2="70" />
+    <line x1="16" y1="86" x2="184" y2="86" />
+    <line x1="16" y1="102" x2="184" y2="102" />
+    <line x1="16" y1="118" x2="184" y2="118" />
+  </g>
+
+  <!-- item-workbench (centerpiece, bigger) -->
+  <g transform="translate(552,144)">
+    <rect width="280" height="200" rx="8" fill="#fff" stroke="#000" stroke-width="2" />
+    <text x="140" y="24" text-anchor="middle" font-size="14" stroke="none" fill="#000">item-workbench</text>
+    <text x="140" y="40" text-anchor="middle" font-size="12" stroke="none" fill="#666">two-column</text>
+    <line x1="0" y1="48" x2="280" y2="48" />
+    <!-- left chat, right doc -->
+    <line x1="140" y1="48" x2="140" y2="200" />
+    <g font-size="12" stroke="none" fill="#666">
+      <text x="70" y="68" text-anchor="middle">chat</text>
+      <text x="210" y="68" text-anchor="middle">document</text>
+    </g>
+    <rect x="16" y="80" width="112" height="20" rx="4" fill="#e6e6e6" stroke="none" />
+    <rect x="32" y="108" width="96" height="20" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="16" y="136" width="112" height="20" rx="4" fill="#e6e6e6" stroke="none" />
+    <rect x="152" y="80" width="112" height="14" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="152" y="100" width="112" height="60" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="152" y="168" width="112" height="20" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <!-- transitions bar -->
+    <rect x="16" y="168" width="56" height="20" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="80" y="168" width="48" height="20" fill="#000" />
+  </g>
+
+  <!-- reflection-diff overlay -->
+  <g transform="translate(888,144)">
+    <rect width="248" height="200" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="124" y="24" text-anchor="middle" font-size="14" stroke="none" fill="#000">reflection-diff</text>
+    <text x="124" y="40" text-anchor="middle" font-size="12" stroke="none" fill="#666">required before Approve</text>
+    <line x1="0" y1="48" x2="248" y2="48" />
+    <!-- diff body -->
+    <g font-size="10" stroke="none" font-family="ui-monospace, SF Mono, monospace">
+      <text x="16" y="68" fill="#666">  ## Tone</text>
+      <text x="16" y="84" fill="#000">- Keep intros &lt; 4 sentences</text>
+      <text x="16" y="100" fill="#000">+ Keep intros &lt; 3 sentences</text>
+      <text x="16" y="116" fill="#000">+ Call out benchmarks in headline</text>
+      <text x="16" y="132" fill="#666">  ## Structure</text>
+      <text x="16" y="148" fill="#000">+ ## Headlines</text>
+    </g>
+    <!-- actions -->
+    <rect x="16" y="164" width="48" height="20" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="72" y="164" width="48" height="20" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="184" y="164" width="48" height="20" fill="#000" />
+  </g>
+
+  <!-- "next item" loopback -->
+  <g transform="translate(1184,212)">
+    <rect width="72" height="64" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+    <text x="36" y="36" text-anchor="middle" font-size="12" stroke="none" fill="#666">next</text>
+    <text x="36" y="52" text-anchor="middle" font-size="12" stroke="none" fill="#666">item</text>
+  </g>
+
+  <!-- ARROWS (solid) -->
+  <g stroke="#000" stroke-width="1.5" fill="none">
+    <!-- queue-list -> item-list -->
+    <line x1="240" y1="212" x2="296" y2="212" marker-end="url(#arr)" />
+    <!-- item-list -> item-workbench -->
+    <line x1="496" y1="212" x2="552" y2="244" marker-end="url(#arr)" />
+    <!-- workbench -> reflection -->
+    <line x1="832" y1="244" x2="888" y2="244" marker-end="url(#arr)" />
+    <!-- reflection -> workbench (loop back: accept) -->
+    <path d="M 888 268 L 856 296 L 832 268" />
+    <!-- workbench -> next item (after transition) -->
+    <line x1="832" y1="220" x2="1184" y2="220" marker-end="url(#arr)" />
+    <!-- next item -> item-list (cycle) -->
+    <path d="M 1220 276 Q 1220 320 720 360 L 400 360 L 400 290" stroke-dasharray="0" marker-end="url(#arr)" />
+  </g>
+
+  <!-- arrow markers -->
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#000" />
+    </marker>
+    <marker id="arr-dash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#666" />
+    </marker>
+  </defs>
+
+  <!-- Labels on arrows -->
+  <g font-size="11" stroke="none" fill="#666">
+    <text x="268" y="206">open</text>
+    <text x="524" y="220">open item</text>
+    <text x="860" y="236">Approve</text>
+    <text x="850" y="312">accept</text>
+    <text x="990" y="212">finish</text>
+    <text x="600" y="376">next New →</text>
+  </g>
+
+  <!-- ============= CONFIGURATION ROW ============= -->
+
+  <!-- queue-settings -->
+  <g transform="translate(40,464)">
+    <rect width="200" height="120" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="100" y="24" text-anchor="middle" font-size="14" stroke="none" fill="#000">queue-settings</text>
+    <line x1="0" y1="32" x2="200" y2="32" />
+    <rect x="16" y="48" width="168" height="12" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="16" y="68" width="168" height="12" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="16" y="88" width="80" height="12" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="104" y="88" width="80" height="12" fill="#fff" stroke="#000" stroke-width="1.5" />
+  </g>
+
+  <!-- workflow-editor -->
+  <g transform="translate(296,464)">
+    <rect width="200" height="120" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="100" y="24" text-anchor="middle" font-size="14" stroke="none" fill="#000">workflow-editor</text>
+    <line x1="0" y1="32" x2="200" y2="32" />
+    <!-- mini graph -->
+    <rect x="16" y="56" width="40" height="20" rx="10" fill="#e6e6e6" stroke="#000" />
+    <rect x="80" y="44" width="40" height="20" rx="10" fill="#fff" stroke="#000" />
+    <rect x="80" y="76" width="40" height="20" rx="10" fill="#fff" stroke="#000" />
+    <rect x="144" y="60" width="40" height="20" rx="10" fill="#fff" stroke="#000" stroke-width="3" />
+    <g stroke="#000" stroke-width="1" fill="none">
+      <line x1="56" y1="66" x2="80" y2="54" />
+      <line x1="56" y1="66" x2="80" y2="86" />
+      <line x1="120" y1="54" x2="144" y2="66" />
+      <line x1="120" y1="86" x2="144" y2="74" />
+    </g>
+    <rect x="16" y="100" width="168" height="8" fill="#fff" stroke="#000" stroke-width="1" />
+  </g>
+
+  <!-- transition-action -->
+  <g transform="translate(552,464)">
+    <rect width="200" height="120" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="100" y="24" text-anchor="middle" font-size="14" stroke="none" fill="#000">transition-action</text>
+    <text x="100" y="40" text-anchor="middle" font-size="11" stroke="none" fill="#666">create_or_update_issue</text>
+    <line x1="0" y1="48" x2="200" y2="48" />
+    <rect x="16" y="60" width="168" height="12" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="16" y="80" width="80" height="12" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="104" y="80" width="80" height="12" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect x="16" y="100" width="100" height="12" fill="#fff" stroke="#000" stroke-width="1.5" />
+  </g>
+
+  <!-- guidance-editor -->
+  <g transform="translate(808,464)">
+    <rect width="200" height="120" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="100" y="24" text-anchor="middle" font-size="14" stroke="none" fill="#000">guidance-editor</text>
+    <line x1="0" y1="32" x2="200" y2="32" />
+    <!-- folder of docs (left) + body (right) -->
+    <line x1="60" y1="32" x2="60" y2="120" />
+    <g font-size="11" stroke="none" fill="#000">
+      <rect x="6" y="48" width="48" height="14" fill="#e6e6e6" stroke="none" />
+      <text x="8" y="60" fill="#000">guid.md</text>
+      <text x="8" y="80" fill="#666">style</text>
+      <text x="8" y="96" fill="#666">examples</text>
+    </g>
+    <rect x="68" y="48" width="120" height="6" fill="#fff" stroke="#000" stroke-width="1" />
+    <rect x="68" y="60" width="120" height="6" fill="#fff" stroke="#000" stroke-width="1" />
+    <rect x="68" y="72" width="100" height="6" fill="#fff" stroke="#000" stroke-width="1" />
+    <rect x="68" y="84" width="120" height="6" fill="#fff" stroke="#000" stroke-width="1" />
+    <rect x="68" y="96" width="80" height="6" fill="#fff" stroke="#000" stroke-width="1" />
+  </g>
+
+  <!-- Ingest API box -->
+  <g transform="translate(1064,464)">
+    <rect width="200" height="120" rx="8" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="6 4" />
+    <text x="100" y="24" text-anchor="middle" font-size="14" stroke="none" fill="#000">ingest API</text>
+    <text x="100" y="40" text-anchor="middle" font-size="11" stroke="none" fill="#666">external entry · no UI</text>
+    <line x1="0" y1="48" x2="200" y2="48" />
+    <g font-size="10" stroke="none" fill="#000" font-family="ui-monospace, SF Mono, monospace">
+      <text x="12" y="64">POST /api/plugins/</text>
+      <text x="12" y="78">paperclipai.plugin-triage/</text>
+      <text x="12" y="92">api/queues/:queueKey/items</text>
+    </g>
+    <text x="12" y="110" font-size="11" stroke="none" fill="#666">creates queue if missing</text>
+  </g>
+
+  <!-- Dashed arrows from queue-list (or settings) into configure row -->
+  <g stroke="#666" stroke-width="1" fill="none" stroke-dasharray="4 4">
+    <!-- queue-list -> queue-settings -->
+    <line x1="140" y1="280" x2="140" y2="464" marker-end="url(#arr-dash)" />
+    <!-- queue-settings -> workflow-editor -->
+    <line x1="240" y1="524" x2="296" y2="524" marker-end="url(#arr-dash)" />
+    <!-- workflow-editor -> transition-action -->
+    <line x1="496" y1="524" x2="552" y2="524" marker-end="url(#arr-dash)" />
+    <!-- queue-settings -> guidance-editor (separate path) -->
+    <path d="M 240 504 L 760 504 L 760 524 L 808 524" marker-end="url(#arr-dash)" />
+    <!-- ingest API -> queue-list (arrives from outside) -->
+    <path d="M 1164 464 Q 1164 380 700 220" marker-end="url(#arr-dash)" />
+  </g>
+
+  <!-- Configure-row arrow labels -->
+  <g font-size="11" stroke="none" fill="#666">
+    <text x="148" y="380">manage</text>
+    <text x="260" y="518">workflow tab</text>
+    <text x="516" y="518">attach action</text>
+    <text x="600" y="496">guidance tab</text>
+    <text x="900" y="380">items arrive →</text>
+  </g>
+
+  <!-- Bottom legend -->
+  <g transform="translate(40,620)" font-size="12" stroke="none" fill="#666">
+    <text>Two-column workbench is the centerpiece (bold border). Reflection sits over the workbench when a transition requires it.</text>
+    <text y="20">Ingest API is the only entry path for items in v1 — no source connectors.</text>
+  </g>
+</svg>

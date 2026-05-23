@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="1280" height="800" />
+
+  <line x1="0" y1="56" x2="1280" y2="56" />
+  <text x="24" y="36" font-size="14" stroke="none" fill="#000">Paperclip</text>
+  <text x="120" y="36" font-size="14" stroke="none" fill="#666">/  Triage  /  content-training  /  Guidance</text>
+
+  <!-- Route sidebar -->
+  <line x1="240" y1="56" x2="240" y2="800" />
+  <g transform="translate(16,80)" stroke="none" font-size="12" fill="#666"><text>QUEUE</text></g>
+  <g font-size="14" stroke="none" fill="#000">
+    <text x="16" y="120">Workbench</text>
+    <text x="16" y="144">Items</text>
+    <rect x="8" y="160" width="216" height="32" stroke="none" fill="#e6e6e6" />
+    <text x="16" y="180">Guidance</text>
+    <text x="16" y="212">Workflow</text>
+    <text x="16" y="236">Transition actions</text>
+    <text x="16" y="260">Settings</text>
+  </g>
+
+  <!-- Header -->
+  <g transform="translate(280,80)" stroke="none">
+    <text font-size="28" fill="#000">Guidance</text>
+    <text font-size="14" fill="#666" y="32">Folder of plugin documents. Assistant reads these for every item in this queue.</text>
+  </g>
+
+  <!-- File tree (272 wide) -->
+  <g transform="translate(280,160)">
+    <rect width="272" height="624" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="16" y="28" font-size="14" stroke="none" fill="#000">Documents</text>
+    <text x="256" y="28" text-anchor="end" font-size="14" stroke="none" fill="#000">+</text>
+    <line x1="0" y1="40" x2="272" y2="40" />
+    <g font-size="14" stroke="none">
+      <rect x="0" y="40" width="272" height="44" fill="#e6e6e6" stroke="none" />
+      <text x="16" y="62" fill="#000">guidance.md</text>
+      <text x="16" y="76" font-size="12" fill="#666">default · rev 7</text>
+
+      <line x1="0" y1="84" x2="272" y2="84" stroke="#e6e6e6" />
+      <text x="16" y="106" fill="#000">style.md</text>
+      <text x="16" y="120" font-size="12" fill="#666">tone + voice · rev 3</text>
+
+      <line x1="0" y1="128" x2="272" y2="128" stroke="#e6e6e6" />
+      <text x="16" y="150" fill="#000">examples.md</text>
+      <text x="16" y="164" font-size="12" fill="#666">good/bad pairs · rev 4</text>
+
+      <line x1="0" y1="172" x2="272" y2="172" stroke="#e6e6e6" />
+      <text x="16" y="194" fill="#000">rubric.md</text>
+      <text x="16" y="208" font-size="12" fill="#666">scoring · rev 2</text>
+
+      <line x1="0" y1="216" x2="272" y2="216" stroke="#e6e6e6" />
+      <text x="16" y="238" fill="#666">+ new document</text>
+    </g>
+
+    <!-- Pending proposals card -->
+    <line x1="0" y1="280" x2="272" y2="280" />
+    <g transform="translate(16,304)" stroke="none">
+      <text font-size="12" fill="#666">PENDING PROPOSALS</text>
+    </g>
+    <g transform="translate(16,328)">
+      <rect width="240" height="64" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+      <text x="12" y="20" font-size="12" stroke="none" fill="#666">from item #142 · 2m ago</text>
+      <text x="12" y="40" font-size="14" stroke="none" fill="#000">guidance.md +8 / -2</text>
+      <text x="12" y="56" font-size="12" stroke="none" fill="#000">Review →</text>
+    </g>
+  </g>
+
+  <!-- Editor (688 wide) -->
+  <g transform="translate(568,160)">
+    <text font-size="20" stroke="none" fill="#000">guidance.md</text>
+    <text font-size="12" stroke="none" fill="#666" y="16">7 revisions · last update by you · 1h ago</text>
+    <g transform="translate(520,-8)"><rect width="80" height="32" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" /><text x="40" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#000">History</text></g>
+    <g transform="translate(608,-8)"><rect width="80" height="32" rx="4" fill="#000" stroke="#000" stroke-width="1.5" /><text x="40" y="20" text-anchor="middle" font-size="12" stroke="none" fill="#fff">Save</text></g>
+  </g>
+
+  <!-- Editor body -->
+  <g transform="translate(568,200)">
+    <rect width="688" height="488" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <!-- toolbar -->
+    <line x1="0" y1="32" x2="688" y2="32" />
+    <g font-size="12" stroke="none" fill="#666">
+      <text x="12" y="20">B</text><text x="32" y="20">I</text><text x="52" y="20">‹/›</text><text x="84" y="20">H1</text><text x="116" y="20">H2</text><text x="148" y="20">List</text><text x="192" y="20">Link</text>
+      <text x="676" y="20" text-anchor="end">Markdown</text>
+    </g>
+    <g font-size="14" stroke="none" fill="#000">
+      <text x="12" y="56"># content-training · guidance</text>
+      <text x="12" y="84" fill="#666">Working memory for the Triage Assistant on this queue.</text>
+      <text x="12" y="124">## Tone</text>
+      <text x="12" y="148">- Plain language. No marketing jargon.</text>
+      <text x="12" y="172">- Keep intros under 4 sentences.</text>
+      <text x="12" y="200">## Structure</text>
+      <text x="12" y="224">- H2 sections for What's new, Why now, What's next.</text>
+      <text x="12" y="248">- Headlines must include a concrete verb.</text>
+      <text x="12" y="280">## Tags</text>
+      <text x="12" y="304">- See style.md for the canonical list.</text>
+      <text x="12" y="332">## Examples</text>
+      <text x="12" y="356">- See examples.md.</text>
+    </g>
+  </g>
+
+  <!-- Revision history strip -->
+  <g transform="translate(568,704)" stroke="none">
+    <text font-size="12" fill="#666">REVISION HISTORY</text>
+  </g>
+  <g transform="translate(568,720)">
+    <rect width="688" height="64" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <g font-size="12" stroke="none">
+      <text x="12" y="22" fill="#000">rev 7 · accepted from item #141 · 1h ago</text>
+      <text x="12" y="40" fill="#666">rev 6 · manual edit · yesterday</text>
+      <text x="12" y="56" fill="#666">rev 5 · accepted from item #138 · 2d ago</text>
+      <text x="676" y="32" text-anchor="end" fill="#000">View all ›</text>
+    </g>
+  </g>
+
+  <!-- annotations -->
+  <g font-size="12" font-weight="bold" stroke="none" fill="#d33">
+    <circle cx="272" cy="184" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="272" y="188" text-anchor="middle">1</text>
+    <circle cx="560" cy="368" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="560" y="372" text-anchor="middle">2</text>
+    <circle cx="560" cy="216" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="560" y="220" text-anchor="middle">3</text>
+    <circle cx="560" cy="720" r="10" stroke="#d33" fill="#fff" stroke-width="1.5" /><text x="560" y="724" text-anchor="middle">4</text>
+  </g>
+</svg>

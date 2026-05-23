@@ -1006,7 +1006,7 @@ export interface WorkerToHostMethods {
     result: IssueComment[],
   ];
   "issues.createComment": [
-    params: { issueId: string; body: string; companyId: string; authorAgentId?: string },
+    params: { issueId: string; body: string; companyId: string; authorAgentId?: string; authorUserId?: string },
     result: IssueComment,
   ];
   "issues.createInteraction": [
@@ -1015,6 +1015,7 @@ export interface WorkerToHostMethods {
       companyId: string;
       interaction: CreateIssueThreadInteraction;
       authorAgentId?: string | null;
+      authorUserId?: string | null;
     },
     result: IssueThreadInteraction,
   ];

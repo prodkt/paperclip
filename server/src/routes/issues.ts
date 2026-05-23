@@ -1579,7 +1579,9 @@ export function issueRoutes(
     projectId: string | null;
     goalId: string | null;
   }) {
-    const projectPromise = issue.projectId ? projectsSvc.getById(issue.projectId) : Promise.resolve(null);
+    const projectPromise = issue.projectId
+      ? projectsSvc.listByIds(issue.companyId, [issue.projectId]).then((rows) => rows[0] ?? null)
+      : Promise.resolve(null);
     const directGoalPromise = issue.goalId ? goalsSvc.getById(issue.goalId) : Promise.resolve(null);
     const [project, directGoal] = await Promise.all([projectPromise, directGoalPromise]);
 
@@ -4191,7 +4193,7 @@ export function issueRoutes(
     assertCompanyAccess(req, issue.companyId);
 
     if (issue.projectId) {
-      const project = await projectsSvc.getById(issue.projectId);
+      const project = await projectsSvc.listByIds(issue.companyId, [issue.projectId]).then((rows) => rows[0] ?? null);
       if (project?.pausedAt) {
         res.status(409).json({
           error:

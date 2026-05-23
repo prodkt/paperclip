@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="375" height="812" />
+
+  <line x1="0" y1="48" x2="375" y2="48" />
+  <g font-size="14" stroke="none">
+    <text x="16" y="30" fill="#000">‹  Guidance</text>
+    <text x="359" y="30" text-anchor="end" fill="#000">Save</text>
+  </g>
+
+  <g transform="translate(16,72)" stroke="none">
+    <text font-size="20" fill="#000">content-training</text>
+    <text font-size="12" fill="#666" y="20">4 docs · 1 pending proposal</text>
+  </g>
+
+  <!-- File tabs -->
+  <line x1="0" y1="144" x2="375" y2="144" />
+  <g transform="translate(16,116)" font-size="14" stroke="none">
+    <rect x="-4" y="-16" width="120" height="32" stroke="none" fill="#e6e6e6" rx="16" />
+    <text fill="#000">guidance.md</text>
+    <text x="124" fill="#666">style.md</text>
+    <text x="200" fill="#666">examples</text>
+    <text x="284" fill="#666">rubric</text>
+  </g>
+
+  <!-- Header line -->
+  <g transform="translate(16,168)" font-size="12" stroke="none" fill="#666">
+    <text>rev 7 · accepted from #141 · 1h ago</text>
+    <text x="343" text-anchor="end" fill="#000">History</text>
+  </g>
+
+  <!-- Pending proposal banner -->
+  <g transform="translate(16,200)">
+    <rect width="343" height="56" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+    <text x="12" y="22" font-size="14" stroke="none" fill="#000">Pending proposal: +8 / -2</text>
+    <text x="12" y="40" font-size="12" stroke="none" fill="#666">from item #142 · 2m ago</text>
+    <text x="331" y="34" text-anchor="end" font-size="14" stroke="none" fill="#000">Review</text>
+  </g>
+
+  <!-- Markdown editor -->
+  <g transform="translate(16,280)">
+    <rect width="343" height="424" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <line x1="0" y1="32" x2="343" y2="32" />
+    <g font-size="12" stroke="none" fill="#666">
+      <text x="12" y="20">B</text><text x="32" y="20">I</text><text x="52" y="20">H1</text><text x="80" y="20">H2</text><text x="108" y="20">List</text>
+      <text x="331" y="20" text-anchor="end">Markdown</text>
+    </g>
+    <g font-size="14" stroke="none" fill="#000">
+      <text x="12" y="56"># content-training · guidance</text>
+      <text x="12" y="76" font-size="12" fill="#666">Working memory for the Triage Assistant.</text>
+      <text x="12" y="108">## Tone</text>
+      <text x="12" y="132" font-size="12">- Plain language.</text>
+      <text x="12" y="152" font-size="12">- Keep intros under 4 sentences.</text>
+      <text x="12" y="184">## Structure</text>
+      <text x="12" y="208" font-size="12">- H2 sections for What's new, Why,</text>
+      <text x="12" y="224" font-size="12">  What's next.</text>
+      <text x="12" y="248" font-size="12">- Headlines must include a concrete verb.</text>
+      <text x="12" y="280">## Tags</text>
+      <text x="12" y="304" font-size="12">- See style.md.</text>
+      <text x="12" y="332">## Examples</text>
+      <text x="12" y="356" font-size="12">- See examples.md.</text>
+      <text x="12" y="396" font-size="12" fill="#666">| (tap to edit)</text>
+    </g>
+  </g>
+
+  <!-- Sticky bottom -->
+  <line x1="0" y1="728" x2="375" y2="728" />
+  <g transform="translate(16,744)">
+    <rect width="160" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="80" y="26" text-anchor="middle" font-size="14" stroke="none" fill="#000">+ Add document</text>
+  </g>
+  <g transform="translate(184,744)">
+    <rect width="175" height="40" rx="4" fill="#000" stroke="#000" stroke-width="1.5" />
+    <text x="87.5" y="26" text-anchor="middle" font-size="14" stroke="none" fill="#fff">Save rev 8</text>
+  </g>
+</svg>

@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812"
+     font-family="-apple-system, system-ui, sans-serif" fill="#fff" stroke="#000" stroke-width="1.5">
+  <rect x="0" y="0" width="375" height="812" />
+
+  <line x1="0" y1="48" x2="375" y2="48" />
+  <g font-size="14" stroke="none">
+    <text x="16" y="30" fill="#000">‹  new.approve</text>
+    <text x="359" y="30" text-anchor="end" fill="#000">Save</text>
+  </g>
+
+  <g transform="translate(16,72)" stroke="none">
+    <text font-size="14" fill="#666">Transition action</text>
+    <text font-size="20" fill="#000" y="22">create_or_update_issue</text>
+  </g>
+
+  <!-- Mode -->
+  <g transform="translate(16,136)">
+    <text font-size="12" stroke="none" fill="#666">MODE</text>
+    <rect y="8" width="343" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <rect y="8" width="124" height="40" fill="#e6e6e6" stroke="none" />
+    <line x1="124" y1="8" x2="124" y2="48" />
+    <line x1="248" y1="8" x2="248" y2="48" />
+    <g font-size="12" stroke="none">
+      <text x="62" y="34" text-anchor="middle" fill="#000">create_if_missing</text>
+      <text x="186" y="34" text-anchor="middle" fill="#666">update</text>
+      <text x="304" y="34" text-anchor="middle" fill="#666">both</text>
+    </g>
+  </g>
+
+  <!-- Title -->
+  <g transform="translate(16,208)">
+    <text font-size="12" stroke="none" fill="#666">TITLE</text>
+    <rect y="8" width="343" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="34" font-size="14" stroke="none" fill="#000">{{item.title}}</text>
+  </g>
+
+  <!-- Description -->
+  <g transform="translate(16,280)">
+    <text font-size="12" stroke="none" fill="#666">DESCRIPTION</text>
+    <rect y="8" width="343" height="88" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <g font-size="12" stroke="none" fill="#000">
+      <text x="12" y="28">{{item.content}}</text>
+      <text x="12" y="48">Metadata:</text>
+      <text x="12" y="64">{{item.propertiesJson}}</text>
+    </g>
+  </g>
+
+  <!-- Project / Goal -->
+  <g transform="translate(16,400)">
+    <text font-size="12" stroke="none" fill="#666">PROJECT</text>
+    <rect y="8" width="343" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="34" font-size="14" stroke="none" fill="#000">{{queue.defaultProjectId}} ▾</text>
+  </g>
+
+  <!-- Assignee + priority -->
+  <g transform="translate(16,472)">
+    <text font-size="12" stroke="none" fill="#666">ASSIGNEE</text>
+    <rect y="8" width="216" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <circle cx="22" cy="28" r="10" fill="#e6e6e6" stroke="none" />
+    <text x="44" y="34" font-size="12" stroke="none" fill="#000">{{queue.defaultAssigneeAgentId}}</text>
+  </g>
+  <g transform="translate(248,472)">
+    <text font-size="12" stroke="none" fill="#666">PRIORITY</text>
+    <rect y="8" width="111" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="34" font-size="14" stroke="none" fill="#000">medium ▾</text>
+  </g>
+
+  <!-- Status -->
+  <g transform="translate(16,544)">
+    <text font-size="12" stroke="none" fill="#666">STATUS</text>
+    <rect y="8" width="343" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="34" font-size="14" stroke="none" fill="#000">todo ▾</text>
+  </g>
+
+  <!-- Variables sheet trigger -->
+  <g transform="translate(16,616)">
+    <rect width="343" height="40" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" stroke-dasharray="4 4" />
+    <text x="12" y="26" font-size="14" stroke="none" fill="#000">Insert variable…</text>
+    <text x="331" y="26" text-anchor="end" font-size="14" stroke="none" fill="#666">▾</text>
+  </g>
+
+  <!-- Preview -->
+  <g transform="translate(16,672)">
+    <text font-size="12" stroke="none" fill="#666">PREVIEW · #142</text>
+  </g>
+  <g transform="translate(16,688)">
+    <rect width="343" height="72" rx="4" fill="#fff" stroke="#000" stroke-width="1.5" />
+    <text x="12" y="22" font-size="14" stroke="none" fill="#000">Draft launch post</text>
+    <text x="12" y="40" font-size="12" stroke="none" fill="#666">Marketing · Triage Assistant · medium · todo</text>
+    <text x="12" y="58" font-size="12" stroke="none" fill="#000">+ comment: Triage item moved to approved.</text>
+  </g>
+
+  <line x1="0" y1="776" x2="375" y2="776" />
+  <g transform="translate(16,788)" font-size="12" stroke="none" fill="#666">
+    <text>Audited per transition.</text>
+  </g>
+</svg>
