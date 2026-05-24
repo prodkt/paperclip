@@ -340,9 +340,11 @@ async function refreshIssueTree(
   ctx: PluginContext,
   store: ReturnType<typeof createBriefsStore>,
   rawInput: Record<string, unknown>,
+  request?: PluginBridgeRequestContext,
 ) {
   const companyId = stringParam(rawInput.companyId, "companyId");
   const userId = stringParam(rawInput.userId, "userId");
+  if (request) assertTrustedBridgeUserScope(userId, request);
   const rootIssueId = stringParam(rawInput.rootIssueId, "rootIssueId");
   const card = await saveBriefCard(
     ctx,
@@ -439,16 +441,17 @@ const plugin = definePlugin({
       };
     });
 
-    ctx.actions.register("save-deterministic-card", async (params) => {
+    ctx.actions.register("save-deterministic-card", async (params, request) => {
       const input = bridgeParams(params);
       const bundle = objectParam(input.bundle, "bundle") as BriefsSourceBundle;
+      assertTrustedBridgeUserScope(stringParam(bundle.userId, "bundle.userId"), request);
       const options = (input.options && typeof input.options === "object" ? input.options : {}) as DeterministicBriefOptions;
       const card = await saveBriefCard(ctx, store, bundle, options);
       return { card };
     });
 
-    ctx.actions.register("refresh-issue-tree", async (params) => {
-      return refreshIssueTree(ctx, store, bridgeParams(params));
+    ctx.actions.register("refresh-issue-tree", async (params, request) => {
+      return refreshIssueTree(ctx, store, bridgeParams(params), request);
     });
 
     ctx.actions.register("reconcile-managed-agent", async (params) => {

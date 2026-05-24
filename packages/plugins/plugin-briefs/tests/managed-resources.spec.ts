@@ -280,6 +280,14 @@ describe("Briefs managed resources", () => {
       routineKey: BRIEFS_MANAGED_ROUTINE_KEYS[0],
       variables: { userId: "victim-user" },
     }, context)).rejects.toThrow("Briefs user scope mismatch");
+    await expect(harness.performAction("save-deterministic-card", {
+      bundle: { userId: "victim-user" },
+    }, context)).rejects.toThrow("Briefs user scope mismatch");
+    await expect(harness.performAction("refresh-issue-tree", {
+      companyId,
+      userId: "victim-user",
+      rootIssueId: "issue-1",
+    }, context)).rejects.toThrow("Briefs user scope mismatch");
   });
 
 });
