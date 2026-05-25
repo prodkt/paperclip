@@ -79,6 +79,7 @@ describeEmbeddedPostgres("resource membership routes", () => {
     const projectId = randomUUID();
     const otherProjectId = randomUUID();
     const agentId = randomUUID();
+    const otherAgentId = randomUUID();
     await db.insert(companies).values([
       {
         id: companyId,
@@ -97,18 +98,31 @@ describeEmbeddedPostgres("resource membership routes", () => {
       { id: projectId, companyId, name: "Growth", status: "in_progress" },
       { id: otherProjectId, companyId: otherCompanyId, name: "Other", status: "in_progress" },
     ]);
-    await db.insert(agents).values({
-      id: agentId,
-      companyId,
-      name: "CodexCoder",
-      role: "engineer",
-      status: "active",
-      adapterType: "codex_local",
-      adapterConfig: {},
-      runtimeConfig: {},
-      permissions: {},
-    });
-    return { companyId, otherProjectId, projectId, agentId };
+    await db.insert(agents).values([
+      {
+        id: agentId,
+        companyId,
+        name: "CodexCoder",
+        role: "engineer",
+        status: "active",
+        adapterType: "codex_local",
+        adapterConfig: {},
+        runtimeConfig: {},
+        permissions: {},
+      },
+      {
+        id: otherAgentId,
+        companyId: otherCompanyId,
+        name: "OtherAgent",
+        role: "engineer",
+        status: "active",
+        adapterType: "codex_local",
+        adapterConfig: {},
+        runtimeConfig: {},
+        permissions: {},
+      },
+    ]);
+    return { companyId, otherAgentId, otherProjectId, projectId, agentId };
   }
 
   it("defaults missing membership rows to joined", async () => {
@@ -171,15 +185,20 @@ describeEmbeddedPostgres("resource membership routes", () => {
   });
 
   it("rejects cross-company target resources", async () => {
-    const { companyId, otherProjectId } = await seed();
+    const { companyId, otherAgentId, otherProjectId } = await seed();
     const app = createApp(db, boardActor(companyId));
 
-    const res = await request(app)
+    const projectRes = await request(app)
       .put(`/api/companies/${companyId}/resource-memberships/me/projects/${otherProjectId}`)
       .send({ state: "left" });
+    const agentRes = await request(app)
+      .put(`/api/companies/${companyId}/resource-memberships/me/agents/${otherAgentId}`)
+      .send({ state: "left" });
 
-    expect(res.status).toBe(403);
+    expect(projectRes.status).toBe(404);
+    expect(agentRes.status).toBe(404);
     await expect(db.select().from(projectMemberships)).resolves.toHaveLength(0);
+    await expect(db.select().from(agentMemberships)).resolves.toHaveLength(0);
   });
 
   it("denies direct service calls that try to mutate another user's membership", async () => {

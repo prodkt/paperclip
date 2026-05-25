@@ -181,12 +181,12 @@ export function resourceMembershipService(db: Db, options: ResourceMembershipSer
       actor: BoardActor;
     }): Promise<ResourceMembershipUpdateResult & { changed: boolean; policySource: string }> {
       const project = await db.query.projects.findFirst({
-        where: eq(projects.id, input.projectId),
+        where: and(
+          eq(projects.id, input.projectId),
+          eq(projects.companyId, input.companyId),
+        ),
       });
       if (!project) throw notFound("Project not found");
-      if (project.companyId !== input.companyId) {
-        throw forbidden("Project does not belong to this company");
-      }
       const decision = await assertMutationAllowed({
         actor: input.actor,
         companyId: input.companyId,
@@ -252,12 +252,12 @@ export function resourceMembershipService(db: Db, options: ResourceMembershipSer
       actor: BoardActor;
     }): Promise<ResourceMembershipUpdateResult & { changed: boolean; policySource: string }> {
       const agent = await db.query.agents.findFirst({
-        where: eq(agents.id, input.agentId),
+        where: and(
+          eq(agents.id, input.agentId),
+          eq(agents.companyId, input.companyId),
+        ),
       });
       if (!agent) throw notFound("Agent not found");
-      if (agent.companyId !== input.companyId) {
-        throw forbidden("Agent does not belong to this company");
-      }
       const decision = await assertMutationAllowed({
         actor: input.actor,
         companyId: input.companyId,

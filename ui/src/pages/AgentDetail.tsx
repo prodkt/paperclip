@@ -714,6 +714,9 @@ export function AgentDetail() {
   const resolvedAgentId = agent?.id ?? null;
   const membershipsQuery = useResourceMemberships(resolvedCompanyId);
   const membershipMutation = useResourceMembershipMutation(resolvedCompanyId);
+  const agentMembershipState = resolvedAgentId
+    ? resourceMembershipState(membershipsQuery.data, "agent", resolvedAgentId)
+    : "joined";
 
   const { data: runtimeState } = useQuery({
     queryKey: queryKeys.agents.runtimeState(resolvedAgentId ?? routeAgentRef),
@@ -993,6 +996,16 @@ export function AgentDetail() {
     return () => closePanel();
   }, [closePanel]);
 
+  useEffect(() => {
+    if (!resolvedAgentId || agentMembershipState !== "joined") return;
+    setDismissedLeftAgentIds((current) => {
+      if (!current.has(resolvedAgentId)) return current;
+      const next = new Set(current);
+      next.delete(resolvedAgentId);
+      return next;
+    });
+  }, [resolvedAgentId, agentMembershipState]);
+
   useBeforeUnload(
     useCallback((event) => {
       if (!configDirty) return;
@@ -1009,7 +1022,6 @@ export function AgentDetail() {
   }
   const isPendingApproval = agent.status === "pending_approval";
   const showConfigActionBar = (activeView === "configuration" || activeView === "instructions") && (configDirty || configSaving);
-  const agentMembershipState = resourceMembershipState(membershipsQuery.data, "agent", agent.id);
   const showLeftAgentNotice = agentMembershipState === "left" && !dismissedLeftAgentIds.has(agent.id);
   const agentMembershipPending =
     membershipMutation.isPending &&

@@ -320,6 +320,9 @@ export function ProjectDetail() {
   const resolvedCompanyId = project?.companyId ?? selectedCompanyId;
   const membershipsQuery = useResourceMemberships(resolvedCompanyId);
   const membershipMutation = useResourceMembershipMutation(resolvedCompanyId);
+  const projectMembershipState = project?.id
+    ? resourceMembershipState(membershipsQuery.data, "project", project.id)
+    : "joined";
   const experimentalSettingsQuery = useQuery({
     queryKey: queryKeys.instance.experimentalSettings,
     queryFn: () => instanceSettingsApi.getExperimental(),
@@ -486,6 +489,16 @@ export function ProjectDetail() {
   }, [closePanel]);
 
   useEffect(() => {
+    if (!project?.id || projectMembershipState !== "joined") return;
+    setDismissedLeftProjectIds((current) => {
+      if (!current.has(project.id)) return current;
+      const next = new Set(current);
+      next.delete(project.id);
+      return next;
+    });
+  }, [project?.id, projectMembershipState]);
+
+  useEffect(() => {
     return () => {
       Object.values(fieldSaveTimers.current).forEach((timer) => {
         if (timer) clearTimeout(timer);
@@ -616,7 +629,6 @@ export function ProjectDetail() {
   if (isLoading) return <PageSkeleton variant="detail" />;
   if (error) return <p className="text-sm text-destructive">{error.message}</p>;
   if (!project) return null;
-  const projectMembershipState = resourceMembershipState(membershipsQuery.data, "project", project.id);
   const showLeftProjectNotice =
     projectMembershipState === "left" && !dismissedLeftProjectIds.has(project.id);
   const projectMembershipPending =
