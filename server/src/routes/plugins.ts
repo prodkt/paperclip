@@ -153,8 +153,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 const EXPERIMENTAL_BUNDLED_PLUGIN_PACKAGE_NAMES = new Set([
   "@paperclipai/plugin-llm-wiki",
+  "@paperclipai/plugin-modal",
   "@paperclipai/plugin-workspace-diff",
 ]);
+let bundledPluginsCache: Promise<AvailableBundledPlugin[]> | null = null;
 
 function titleCasePluginName(packageName: string): string {
   const localName = packageName.split("/").pop() ?? packageName;
@@ -262,7 +264,7 @@ function isExperimentalBundledPlugin(packageRoot: string, packageName: string): 
   );
 }
 
-async function listBundledPlugins(): Promise<AvailableBundledPlugin[]> {
+async function discoverBundledPlugins(): Promise<AvailableBundledPlugin[]> {
   const pluginRoot = path.resolve(REPO_ROOT, "packages/plugins");
   const bundledPlugins: AvailableBundledPlugin[] = [];
   for (const packageJsonPath of await findPackageJsonFiles(pluginRoot)) {
@@ -299,6 +301,14 @@ async function listBundledPlugins(): Promise<AvailableBundledPlugin[]> {
     if (left.tag !== right.tag) return left.tag === "first-party" ? -1 : 1;
     return left.displayName.localeCompare(right.displayName);
   });
+}
+
+async function listBundledPlugins(): Promise<AvailableBundledPlugin[]> {
+  bundledPluginsCache ??= discoverBundledPlugins().catch((error: unknown) => {
+    bundledPluginsCache = null;
+    throw error;
+  });
+  return bundledPluginsCache;
 }
 
 /**
