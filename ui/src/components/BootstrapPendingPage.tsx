@@ -2,9 +2,8 @@ import type { ReactNode } from "react";
 import { Loader2, ShieldCheck, Terminal, TriangleAlert } from "lucide-react";
 import { Link } from "@/lib/router";
 import { Button } from "@/components/ui/button";
+import { BOOTSTRAP_FALLBACK_COMMAND } from "@/bootstrapSetup";
 import type { AuthSession } from "@paperclipai/shared";
-
-const FALLBACK_COMMAND = "pnpm paperclipai auth bootstrap-ceo";
 
 type BootstrapPendingPageProps = {
   claimAvailable: boolean;
@@ -28,7 +27,7 @@ function CliFallback({ hasActiveInvite = false }: { hasActiveInvite?: boolean })
           : "Run this command on the host that runs Paperclip to print a one-time first-admin invite URL:"}
       </p>
       <pre className="mt-3 overflow-x-auto rounded-md border border-border bg-muted/30 p-3 font-mono text-xs">
-{FALLBACK_COMMAND}
+{BOOTSTRAP_FALLBACK_COMMAND}
       </pre>
     </div>
   );
@@ -107,6 +106,11 @@ export function BootstrapPendingPage({
         <div className="mt-5 flex items-center gap-3">
           <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
           <span className="text-sm text-muted-foreground">Redirecting...</span>
+        </div>
+        <div className="mt-5">
+          <Button asChild variant="outline">
+            <a href="/">Continue to dashboard</a>
+          </Button>
         </div>
       </StateChrome>
     );

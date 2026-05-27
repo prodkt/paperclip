@@ -42,9 +42,6 @@ vi.mock("@/lib/router", () => ({
   useParams: () => ({}),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-
 async function flushReact() {
   await Promise.resolve();
   await new Promise((resolve) => window.setTimeout(resolve, 0));
@@ -56,6 +53,29 @@ async function waitForText(container: HTMLElement, text: string) {
     await flushReact();
   }
   expect(container.textContent).toContain(text);
+}
+
+function renderGate(container: HTMLElement) {
+  const root = createRoot(container);
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  flushSync(() => {
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <CloudAccessGate />
+      </QueryClientProvider>,
+    );
+  });
+
+  return root;
+}
+
+function unmountRoot(root: ReturnType<typeof createRoot>) {
+  flushSync(() => {
+    root.unmount();
+  });
 }
 
 describe("CloudAccessGate", () => {
@@ -92,26 +112,13 @@ describe("CloudAccessGate", () => {
       keyId: null,
     });
 
-    const root = createRoot(container);
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-
-    flushSync(() => {
-      root.render(
-        <QueryClientProvider client={queryClient}>
-          <CloudAccessGate />
-        </QueryClientProvider>,
-      );
-    });
+    const root = renderGate(container);
     await waitForText(container, "No company access");
 
     expect(container.textContent).toContain("No company access");
     expect(container.textContent).not.toContain("Outlet content");
 
-    flushSync(() => {
-      root.unmount();
-    });
+    unmountRoot(root);
   });
 
   it("allows authenticated users with company access through to the board", async () => {
@@ -128,26 +135,13 @@ describe("CloudAccessGate", () => {
       keyId: null,
     });
 
-    const root = createRoot(container);
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-
-    flushSync(() => {
-      root.render(
-        <QueryClientProvider client={queryClient}>
-          <CloudAccessGate />
-        </QueryClientProvider>,
-      );
-    });
+    const root = renderGate(container);
     await waitForText(container, "Outlet content");
 
     expect(container.textContent).toContain("Outlet content");
     expect(container.textContent).not.toContain("No company access");
 
-    flushSync(() => {
-      root.unmount();
-    });
+    unmountRoot(root);
   });
 
   it("shows browser sign-in setup for signed-out private bootstrap-pending instances", async () => {
@@ -160,18 +154,7 @@ describe("CloudAccessGate", () => {
     });
     mockAuthApi.getSession.mockResolvedValue(null);
 
-    const root = createRoot(container);
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-
-    flushSync(() => {
-      root.render(
-        <QueryClientProvider client={queryClient}>
-          <CloudAccessGate />
-        </QueryClientProvider>,
-      );
-    });
+    const root = renderGate(container);
     await waitForText(container, "Finish setting up this Paperclip");
 
     expect(container.textContent).toContain("Finish setting up this Paperclip");
@@ -179,9 +162,7 @@ describe("CloudAccessGate", () => {
     expect(container.textContent).toContain("pnpm paperclipai auth bootstrap-ceo");
     expect(mockAccessApi.getCurrentBoardAccess).not.toHaveBeenCalled();
 
-    flushSync(() => {
-      root.unmount();
-    });
+    unmountRoot(root);
   });
 
   it("shows the claim action for signed-in private bootstrap-pending instances", async () => {
@@ -198,18 +179,7 @@ describe("CloudAccessGate", () => {
     });
     mockAccessApi.claimBootstrapAdmin.mockResolvedValue({ claimed: true, userId: "user-1" });
 
-    const root = createRoot(container);
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-
-    flushSync(() => {
-      root.render(
-        <QueryClientProvider client={queryClient}>
-          <CloudAccessGate />
-        </QueryClientProvider>,
-      );
-    });
+    const root = renderGate(container);
     await waitForText(container, "Claim this instance");
 
     expect(container.textContent).toContain("Claim this instance");
@@ -227,10 +197,9 @@ describe("CloudAccessGate", () => {
 
     expect(mockAccessApi.claimBootstrapAdmin).toHaveBeenCalledTimes(1);
     expect(container.textContent).toContain("You're the instance admin");
+    expect(container.textContent).toContain("Continue to dashboard");
 
-    flushSync(() => {
-      root.unmount();
-    });
+    unmountRoot(root);
   });
 
   it("keeps public bootstrap-pending instances invite-only", async () => {
@@ -246,18 +215,7 @@ describe("CloudAccessGate", () => {
       user: { id: "user-1", email: "user@example.com", name: "User", image: null },
     });
 
-    const root = createRoot(container);
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-
-    flushSync(() => {
-      root.render(
-        <QueryClientProvider client={queryClient}>
-          <CloudAccessGate />
-        </QueryClientProvider>,
-      );
-    });
+    const root = renderGate(container);
     await waitForText(container, "This Paperclip is waiting on its first admin");
 
     expect(container.textContent).toContain("This Paperclip is waiting on its first admin");
@@ -266,8 +224,6 @@ describe("CloudAccessGate", () => {
     expect(container.textContent).not.toContain("Sign in / Create account");
     expect(mockAccessApi.claimBootstrapAdmin).not.toHaveBeenCalled();
 
-    flushSync(() => {
-      root.unmount();
-    });
+    unmountRoot(root);
   });
 });

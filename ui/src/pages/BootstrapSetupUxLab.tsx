@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import { Loader2, ShieldCheck, Terminal, TriangleAlert } from "lucide-react";
+import { BOOTSTRAP_FALLBACK_COMMAND } from "@/bootstrapSetup";
 import { Button } from "@/components/ui/button";
 
 type LabFixtureKey =
@@ -28,8 +29,6 @@ const FIXTURE_ORDER: LabFixtureKey[] = [
   "public-invite-only",
 ];
 
-const FALLBACK_COMMAND = "pnpm paperclipai auth bootstrap-ceo";
-
 function CliFallback({ hasActiveInvite }: { hasActiveInvite: boolean }) {
   return (
     <div className="mt-6 border-t border-border pt-5">
@@ -43,7 +42,7 @@ function CliFallback({ hasActiveInvite }: { hasActiveInvite: boolean }) {
           : "Run this command on the host that runs Paperclip to print a one‑time first‑admin invite URL:"}
       </p>
       <pre className="mt-3 overflow-x-auto rounded-md border border-border bg-muted/30 p-3 font-mono text-xs">
-{FALLBACK_COMMAND}
+{BOOTSTRAP_FALLBACK_COMMAND}
       </pre>
     </div>
   );
@@ -169,6 +168,11 @@ function ClaimSuccess() {
       <div className="mt-5 flex items-center gap-3">
         <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
         <span className="text-sm text-muted-foreground">Redirecting&hellip;</span>
+      </div>
+      <div className="mt-5">
+        <Button asChild variant="outline">
+          <a href="/">Continue to dashboard</a>
+        </Button>
       </div>
     </StateChrome>
   );
