@@ -2908,16 +2908,21 @@ export function companySkillService(db: Db) {
   }
 
   async function copySkillDirectory(sourceDir: string, targetDir: string) {
-    await fs.rm(targetDir, { recursive: true, force: true });
-    await fs.mkdir(targetDir, { recursive: true });
     const { files } = await collectSkillFileBytes(sourceDir);
-    for (const file of files) {
-      const targetPath = path.resolve(targetDir, file.path);
-      if (targetPath !== targetDir && !targetPath.startsWith(`${targetDir}${path.sep}`)) {
-        throw unprocessable(`Skill file path is invalid: ${file.path}`);
+    const replacement = await createDirectoryReplacement(targetDir);
+    try {
+      for (const file of files) {
+        const targetPath = path.resolve(replacement.stagingDir, file.path);
+        if (targetPath !== replacement.stagingDir && !targetPath.startsWith(`${replacement.stagingDir}${path.sep}`)) {
+          throw unprocessable(`Skill file path is invalid: ${file.path}`);
+        }
+        await fs.mkdir(path.dirname(targetPath), { recursive: true });
+        await fs.writeFile(targetPath, file.bytes);
       }
-      await fs.mkdir(path.dirname(targetPath), { recursive: true });
-      await fs.writeFile(targetPath, file.bytes);
+      await replacement.commit();
+    } catch (error) {
+      await replacement.cleanup();
+      throw error;
     }
   }
 

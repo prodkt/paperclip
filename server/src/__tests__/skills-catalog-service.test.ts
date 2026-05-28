@@ -94,4 +94,20 @@ describe("skills catalog service", () => {
       packageVersion: "0.3.2",
     });
   });
+
+  it("rejects catalog asset previews without decoding bytes as utf8", async () => {
+    const imageSkill = catalogSkill("with-image", "With Image");
+    imageSkill.files = [
+      ...imageSkill.files,
+      { path: "assets/logo.png", kind: "asset", sizeBytes: 4, sha256: "sha256:logo" },
+    ];
+    manifestJson = manifest([imageSkill]);
+    const service = await import("../services/skills-catalog.js");
+
+    await expect(service.readCatalogSkillFile(imageSkill.id, "assets/logo.png")).rejects.toMatchObject({
+      status: 415,
+      message: "Catalog asset previews are not supported.",
+    });
+    expect(mockReadFile).not.toHaveBeenCalled();
+  });
 });

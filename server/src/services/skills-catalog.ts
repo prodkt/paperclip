@@ -7,7 +7,7 @@ import type {
   CatalogSkillFileDetail,
   CatalogSkillListQuery,
 } from "@paperclipai/shared";
-import { conflict, notFound } from "../errors.js";
+import { HttpError, conflict, notFound } from "../errors.js";
 import { normalizePortablePath } from "./portable-path.js";
 
 interface CatalogManifestFile {
@@ -157,6 +157,10 @@ export async function readCatalogSkillFile(
   const skillRoot = path.resolve(packageRoot, skill.path);
   if (absolutePath !== skillRoot && !absolutePath.startsWith(`${skillRoot}${path.sep}`)) {
     throw notFound("Catalog skill file not found");
+  }
+
+  if (fileEntry.kind === "asset") {
+    throw new HttpError(415, "Catalog asset previews are not supported.");
   }
 
   const content = await fs.readFile(absolutePath, "utf8");
