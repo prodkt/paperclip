@@ -711,9 +711,12 @@ async function listIssueDependencyReadinessMap(
       // execution workspace hasn't recorded a successful workspace_finalize.
       // Treat the dependent as not-ready until sync-back lands (or the run
       // finalizes); a subsequent finalize wake will re-evaluate readiness.
+      // `allBlockersDone` is cleared too so that callers using it as a
+      // proxy for "this dependent can proceed" still see the gate.
       current.unresolvedBlockerIssueIds.push(row.blockerIssueId);
       current.unresolvedBlockerCount += 1;
       current.pendingFinalizeBlockerIssueIds.push(row.blockerIssueId);
+      current.allBlockersDone = false;
       current.isDependencyReady = false;
     }
     readinessMap.set(row.issueId, current);
