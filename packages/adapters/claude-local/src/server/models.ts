@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { AdapterModel } from "@paperclipai/adapter-utils";
 import { models as DIRECT_MODELS } from "../index.js";
 
@@ -26,7 +27,8 @@ function isBedrockEnv(): boolean {
 }
 
 function fingerprint(apiKey: string): string {
-  return `${apiKey.length}:${apiKey.slice(-6)}`;
+  const digest = createHash("sha256").update(apiKey).digest("base64url").slice(0, 16);
+  return `${apiKey.length}:${digest}`;
 }
 
 function dedupeModels(models: AdapterModel[]): AdapterModel[] {
@@ -88,7 +90,10 @@ async function fetchAnthropicModels(apiKey: string, baseUrl: string): Promise<Ad
       });
     }
     return dedupeModels(models);
-  } catch {
+  } catch (error) {
+    console.warn("[paperclip] Claude model discovery failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return [];
   } finally {
     clearTimeout(timeout);

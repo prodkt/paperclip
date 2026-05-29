@@ -106,6 +106,18 @@ describe("adapter model listing", () => {
     expect(refreshed.some((model) => model.id === "claude-opus-4-8-20260529")).toBe(true);
   });
 
+  it("falls back to static claude models when Anthropic model discovery fails", async () => {
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test";
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({}),
+    } as Response);
+
+    const models = await listAdapterModels("claude_local");
+    expect(models).toEqual(claudeFallbackModels);
+  });
+
   it("loads codex models dynamically and merges fallback options", async () => {
     process.env.OPENAI_API_KEY = "sk-test";
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
