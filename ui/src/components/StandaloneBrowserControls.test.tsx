@@ -41,11 +41,19 @@ function installMatchMedia(initialMatches: Record<string, boolean> = {}) {
         return entry.matches;
       },
       media: query,
-      addEventListener: (_type: "change", listener: Listener) => entry.listeners.add(listener),
-      removeEventListener: (_type: "change", listener: Listener) => entry.listeners.delete(listener),
-      addListener: (listener: Listener) => entry.listeners.add(listener),
-      removeListener: (listener: Listener) => entry.listeners.delete(listener),
-    } as MediaQueryList;
+      addEventListener: (_type: "change", listener: Listener) => {
+        entry.listeners.add(listener);
+      },
+      removeEventListener: (_type: "change", listener: Listener) => {
+        entry.listeners.delete(listener);
+      },
+      addListener: (listener: Listener) => {
+        entry.listeners.add(listener);
+      },
+      removeListener: (listener: Listener) => {
+        entry.listeners.delete(listener);
+      },
+    } as unknown as MediaQueryList;
   }
 
   Object.defineProperty(window, "matchMedia", {
@@ -78,7 +86,7 @@ describe("StandaloneBrowserControls", () => {
     if (originalMatchMedia) {
       Object.defineProperty(window, "matchMedia", { configurable: true, value: originalMatchMedia });
     } else {
-      delete (window as Window & { matchMedia?: Window["matchMedia"] }).matchMedia;
+      Object.defineProperty(window, "matchMedia", { configurable: true, value: undefined });
     }
     container.remove();
     document.body.innerHTML = "";
