@@ -63,5 +63,6 @@ export function isMarkdownAttachment(
   }
 
   const filename = (attachment.originalFilename ?? "").toLowerCase();
-  return filename.endsWith(".md") || filename.endsWith(".markdown");
+  if (!filename.endsWith(".md") && !filename.endsWith(".markdown")) return false;
+  return contentType === "text/plain" || GENERIC_ATTACHMENT_CONTENT_TYPES.has(contentType);
 }

@@ -153,6 +153,35 @@ describe("IssueAttachmentsSection", () => {
     });
   });
 
+  it("does not promote specific non-markdown content types by filename alone", async () => {
+    const attachment = makeAttachment({
+      id: "zip-markdown",
+      originalFilename: "report.md",
+      contentType: "application/zip",
+      contentPath: "/api/attachments/zip-markdown/content",
+      openPath: "/api/attachments/zip-markdown/content",
+      downloadPath: "/api/attachments/zip-markdown/content?download=1",
+    });
+
+    await act(async () => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <IssueAttachmentsSection
+            attachments={[attachment]}
+            onDelete={vi.fn()}
+            onImageClick={vi.fn()}
+          />
+        </QueryClientProvider>,
+      );
+    });
+    await flushReact();
+
+    expect(container.querySelector('[data-testid="markdown-body"]')).toBeNull();
+    expect(container.textContent).toContain("report.md");
+    expect(container.textContent).toContain("application/zip");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("renders video attachments through the same player used for artifact outputs", async () => {
     const attachment = makeAttachment({
       id: "video-attachment",
