@@ -52,8 +52,9 @@ describe("dev-runner watched snapshot", () => {
       },
     };
 
-    expect(() => collectWatchedSnapshot({ ...createSnapshotOptions(root), fileSystem })).not.toThrow();
-    expect(collectWatchedSnapshot(createSnapshotOptions(root)).has("server/index.ts")).toBe(false);
+    const snapshot = collectWatchedSnapshot({ ...createSnapshotOptions(root), fileSystem });
+
+    expect(snapshot.has("server/index.ts")).toBe(false);
   });
 
   it("skips directories that disappear before they can be read", () => {
@@ -74,15 +75,27 @@ describe("dev-runner watched snapshot", () => {
       statSync: fs.statSync,
     };
 
-    expect(() => collectWatchedSnapshot({ ...createSnapshotOptions(root), fileSystem })).not.toThrow();
-    expect(collectWatchedSnapshot(createSnapshotOptions(root)).has("server/routes/health.ts")).toBe(false);
+    const snapshot = collectWatchedSnapshot({ ...createSnapshotOptions(root), fileSystem });
+
+    expect(snapshot.has("server/routes/health.ts")).toBe(false);
   });
 
-  it("returns null for missing file signatures and reports deleted paths in diffs", () => {
+  it("returns null for missing file signatures and not-directory races", () => {
     const root = createTempRoot("paperclip-dev-runner-snapshot-diff-");
     const missingPath = path.join(root, "server", "deleted.ts");
+    const fileSystem = {
+      statSync() {
+        const error = new Error("not a directory") as NodeJS.ErrnoException;
+        error.code = "ENOTDIR";
+        throw error;
+      },
+    };
 
     expect(readSignature(missingPath)).toBeNull();
+    expect(readSignature(missingPath, fileSystem)).toBeNull();
+  });
+
+  it("reports deleted paths in diffs", () => {
     expect(diffSnapshots(new Map([["server/deleted.ts", "1:1"]]), new Map())).toEqual(["server/deleted.ts"]);
   });
 });

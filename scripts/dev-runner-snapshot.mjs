@@ -9,7 +9,12 @@ const defaultFileSystem = {
 };
 
 export function isMissingPathError(error) {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "ENOENT" || error.code === "ENOTDIR")
+  );
 }
 
 function toRelativePath(repoRoot, absolutePath) {
