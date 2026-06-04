@@ -462,7 +462,7 @@ function buildCatalogSkillSource(
   }
   const hostname = descriptor.hostname ?? "github.com";
   const url = `https://${hostname}/${descriptor.owner}/${descriptor.repo}/tree/${descriptor.ref}/${sourcePath ?? ""}`.replace(/\/$/, "");
-  if (errors.length > 0 && (!/^[0-9a-f]{40}$/i.test(descriptor.commit) || sourcePath === null)) return null;
+  if (!/^[0-9a-f]{40}$/i.test(descriptor.commit) || sourcePath === null) return null;
   return {
     type: "github",
     hostname,

@@ -3048,6 +3048,7 @@ export function companySkillService(db: Db) {
 
     let materializedDir: string | null = null;
     let originSnapshotLocator: string | null = null;
+    let candidateMaterializedDir: string | null = null;
     try {
       originSnapshotLocator = await materializeCatalogOriginSnapshot(companyId, catalogSkill, slug);
       const candidateAudit = await auditCatalogSkillSnapshot(companyId, catalogSkill, slug, originSnapshotLocator);
@@ -3057,9 +3058,12 @@ export function companySkillService(db: Db) {
           audit: candidateAudit,
         });
       }
-      materializedDir = await materializeCatalogManifestSkillFiles(companyId, catalogSkill, slug);
+      candidateMaterializedDir = await materializeCatalogManifestSkillFiles(companyId, catalogSkill, slug);
+      materializedDir = candidateMaterializedDir;
     } catch (error) {
-      if (materializedDir) await fs.rm(materializedDir, { recursive: true, force: true }).catch(() => undefined);
+      if (candidateMaterializedDir) {
+        await fs.rm(candidateMaterializedDir, { recursive: true, force: true }).catch(() => undefined);
+      }
       if (originSnapshotLocator) await fs.rm(originSnapshotLocator, { recursive: true, force: true }).catch(() => undefined);
       throw error;
     }
