@@ -915,6 +915,28 @@ describe.sequential("plugin tool and bridge authz", () => {
 
   // ─── Agent JWT tool execution (cherry-picked from #5549) ─────────────────────
 
+  it("rejects board users with no company memberships from listing plugin tools", async () => {
+    const listToolsForAgent = vi.fn(() => []);
+    const { app } = await createApp(
+      boardActor({ companyIds: [], isInstanceAdmin: false, source: "session" }),
+      {},
+      {
+        toolDeps: {
+          toolDispatcher: {
+            listToolsForAgent,
+            getTool: vi.fn(),
+            executeTool: vi.fn(),
+          },
+        },
+      },
+    );
+
+    const res = await request(app).get("/api/plugins/tools");
+
+    expect(res.status).toBe(403);
+    expect(listToolsForAgent).not.toHaveBeenCalled();
+  });
+
   it("allows agent JWT to list available plugin tools", async () => {
     const listToolsForAgent = vi.fn(() => []);
     const { app } = await createApp(agentActor(), {}, {

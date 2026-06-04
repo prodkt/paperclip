@@ -32,9 +32,14 @@ export function assertBoardOrgAccess(req: Request) {
 }
 
 export function assertBoardOrAgent(req: Request) {
-  if (req.actor.type !== "board" && req.actor.type !== "agent") {
-    throw forbidden("Board or agent access required");
+  if (req.actor.type === "agent") {
+    return;
   }
+  if (req.actor.type === "board") {
+    assertBoardOrgAccess(req);
+    return;
+  }
+  throw forbidden("Board or agent access required");
 }
 
 export function assertInstanceAdmin(req: Request) {
