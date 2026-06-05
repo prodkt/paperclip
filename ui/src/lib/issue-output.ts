@@ -146,7 +146,7 @@ function isDocumentLikeOutputContentType(contentType: string): boolean {
   if (contentType.startsWith("text/")) return true;
   if (MARKDOWN_CONTENT_TYPES.has(contentType)) return true;
   if (DOCUMENT_LIKE_APPLICATION_TYPES.has(contentType)) return true;
-  if (contentType.endsWith("+json") || contentType.endsWith("+xml")) return true;
+  if (contentType.startsWith("application/") && (contentType.endsWith("+json") || contentType.endsWith("+xml"))) return true;
   return false;
 }
 

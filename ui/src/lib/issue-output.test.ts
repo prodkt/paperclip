@@ -117,6 +117,7 @@ describe("isOutputEligibleContentType", () => {
   it("keeps media, pdf, zip, and true generic binary outputs eligible", () => {
     expect(isOutputEligibleContentType("video/mp4; charset=binary")).toBe(true);
     expect(isOutputEligibleContentType("image/png")).toBe(true);
+    expect(isOutputEligibleContentType("image/svg+xml")).toBe(true);
     expect(isOutputEligibleContentType("application/pdf")).toBe(true);
     expect(isOutputEligibleContentType("application/vnd.example.bundle+zip")).toBe(true);
     expect(isOutputEligibleContentType("application/wasm")).toBe(true);
@@ -176,12 +177,13 @@ describe("getIssueOutputs", () => {
     const result = getIssueOutputs([
       makeWorkProduct({ id: "video", metadata: artifactMetadata("video/mp4", "demo.mp4") }),
       makeWorkProduct({ id: "image", metadata: artifactMetadata("image/png", "screenshot.png") }),
+      makeWorkProduct({ id: "svg", metadata: artifactMetadata("image/svg+xml", "diagram.svg") }),
       makeWorkProduct({ id: "pdf", metadata: artifactMetadata("application/pdf", "brief.pdf") }),
       makeWorkProduct({ id: "zip", metadata: artifactMetadata("application/zip; charset=binary", "bundle.zip") }),
       makeWorkProduct({ id: "wasm", metadata: artifactMetadata("application/wasm", "module.wasm") }),
       makeWorkProduct({ id: "binary", metadata: artifactMetadata("application/octet-stream", "build.bin") }),
     ]);
-    expect(result.items.map((item) => item.id)).toEqual(["video", "image", "pdf", "zip", "wasm", "binary"]);
+    expect(result.items.map((item) => item.id)).toEqual(["video", "image", "svg", "pdf", "zip", "wasm", "binary"]);
   });
 
   it("orders the explicit primary first, then most recent", () => {
