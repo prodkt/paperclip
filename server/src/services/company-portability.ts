@@ -71,6 +71,7 @@ import { projectService } from "./projects.js";
 import { routineService } from "./routines.js";
 import { secretService } from "./secrets.js";
 import { getConfiguredSecretProvider } from "../secrets/configured-provider.js";
+import { logger } from "../middleware/logger.js";
 import {
   PORTABLE_CATALOG_PROVENANCE_STRING_KEYS,
   readCatalogStringList,
@@ -2989,6 +2990,11 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
   const strictSecretsMode = process.env.PAPERCLIP_SECRETS_STRICT_MODE === "true";
   const defaultSecretProvider = getConfiguredSecretProvider();
 
+  type ImportSecretTracker = {
+    createdSecretIds: string[];
+    consumerPersisted: boolean;
+  };
+
   function assertKnownImportAdapterType(type: string | null | undefined): string {
     const adapterType = typeof type === "string" ? type.trim() : "";
     if (!adapterType) {
@@ -3052,6 +3058,7 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
     envInputs: CompanyPortabilityEnvInput[],
     secretValues: Record<string, string> | null | undefined,
     actorUserId: string | null | undefined,
+    secretTracker?: ImportSecretTracker,
   ) {
     if (envInputs.length === 0) return;
     const missingRequired = envInputs.filter((input) => {
@@ -3088,11 +3095,26 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
         },
         { userId: actorUserId ?? null, agentId: null },
       );
+      secretTracker?.createdSecretIds.push(secret.id);
       writeManifestEnvBinding(manifest, input, {
         type: "secret_ref",
         secretId: secret.id,
         version: "latest",
       });
+    }
+  }
+
+  async function cleanupUnconsumedImportSecrets(secretTracker: ImportSecretTracker) {
+    if (secretTracker.consumerPersisted || secretTracker.createdSecretIds.length === 0) return;
+    for (const secretId of [...new Set(secretTracker.createdSecretIds)]) {
+      try {
+        await secrets.remove(secretId);
+      } catch (err) {
+        logger.warn(
+          { err, secretId },
+          "failed to clean up unconsumed import secret after company import failure",
+        );
+      }
     }
   }
 
@@ -4262,6 +4284,24 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
     actorUserId: string | null | undefined,
     options?: ImportBehaviorOptions,
   ): Promise<CompanyPortabilityImportResult> {
+    const secretTracker: ImportSecretTracker = {
+      createdSecretIds: [],
+      consumerPersisted: false,
+    };
+    try {
+      return await importBundleInner(input, actorUserId, options, secretTracker);
+    } catch (err) {
+      await cleanupUnconsumedImportSecrets(secretTracker);
+      throw err;
+    }
+  }
+
+  async function importBundleInner(
+    input: CompanyPortabilityImport,
+    actorUserId: string | null | undefined,
+    options: ImportBehaviorOptions | undefined,
+    secretTracker: ImportSecretTracker,
+  ): Promise<CompanyPortabilityImportResult> {
     const mode = resolveImportMode(options);
     const plan = await buildPreview(input, options);
     if (plan.preview.errors.length > 0) {
@@ -4391,6 +4431,7 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
       importEnvInputs,
       input.secretValues,
       actorUserId,
+      secretTracker,
     );
 
     if (include.company) {
@@ -4565,6 +4606,7 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
             });
             continue;
           }
+          secretTracker.consumerPersisted = true;
           try {
             const materialized = await instructions.materializeManagedBundle(updated, bundleFiles, {
               clearLegacyPromptTemplate: true,
@@ -4597,6 +4639,7 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
           ...patch,
           status: createdStatus,
         });
+        secretTracker.consumerPersisted = true;
         await access.ensureMembership(targetCompany.id, "agent", created.id, "member", "active");
         await access.setPrincipalPermission(
           targetCompany.id,
@@ -4724,6 +4767,7 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
             });
             continue;
           }
+          secretTracker.consumerPersisted = true;
           projectId = updated.id;
           importedSlugToProjectId.set(planProject.slug, updated.id);
           existingProjectSlugToId.set(updated.urlKey, updated.id);
@@ -4736,6 +4780,7 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
           });
         } else {
           const created = await projects.create(targetCompany.id, projectPatch);
+          secretTracker.consumerPersisted = true;
           projectId = created.id;
           importedSlugToProjectId.set(planProject.slug, created.id);
           existingProjectSlugToId.set(created.urlKey, created.id);
