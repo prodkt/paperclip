@@ -385,6 +385,19 @@ describeEmbeddedPostgres("companyArtifactsService", () => {
       cursor: firstPage.nextCursor ?? undefined,
     });
     expect(secondPage.artifacts.map((artifact) => artifact.title)).toEqual(["Primary Cut", "notes.txt"]);
+
+    const pageAfterPrimaryWorkProduct = await companyArtifactsService(db, storage).list(companyId, { limit: 3 });
+    expect(pageAfterPrimaryWorkProduct.artifacts.map((artifact) => artifact.title)).toEqual([
+      "Review Notes",
+      "direct-video.mp4",
+      "Primary Cut",
+    ]);
+
+    const afterPrimaryCursor = await companyArtifactsService(db, storage).list(companyId, {
+      limit: 10,
+      cursor: pageAfterPrimaryWorkProduct.nextCursor ?? undefined,
+    });
+    expect(afterPrimaryCursor.artifacts.map((artifact) => artifact.title)).toEqual(["notes.txt"]);
   });
 
   it("deduplicates work product attachments beyond the work product fetch window", async () => {

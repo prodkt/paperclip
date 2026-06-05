@@ -227,23 +227,33 @@ export function companyArtifactsService(db: Db, storage?: StorageService) {
         const workProductAgent = alias(agents, "work_product_agent");
         const workProductArtifactId = sql<string>`concat('work_product:', ${issueWorkProducts.id})`;
         const workProductContentType = sql<string>`coalesce(${issueWorkProducts.metadata}->>'contentType', '')`;
-        const workProductConditions: SQL[] = [
+        const workProductBaseConditions: SQL[] = [
           eq(issueWorkProducts.companyId, companyId),
           eq(issueWorkProducts.type, "artifact"),
           eq(issueWorkProducts.provider, "paperclip"),
         ];
+        const workProductConditions: SQL[] = [...workProductBaseConditions];
         const workProductCursor = cursorCondition(sql<Date>`${issueWorkProducts.updatedAt}`, workProductArtifactId, cursor);
         const workProductKind = contentTypeKindCondition(workProductContentType, query.kind);
         if (workProductCursor) workProductConditions.push(workProductCursor);
-        if (workProductKind) workProductConditions.push(workProductKind);
-        if (query.projectId) workProductConditions.push(eq(issues.projectId, query.projectId));
+        if (workProductKind) {
+          workProductBaseConditions.push(workProductKind);
+          workProductConditions.push(workProductKind);
+        }
+        if (query.projectId) {
+          const projectCondition = eq(issues.projectId, query.projectId);
+          workProductBaseConditions.push(projectCondition);
+          workProductConditions.push(projectCondition);
+        }
         if (q) {
-          workProductConditions.push(sql`(
+          const searchCondition = sql`(
             ${issueWorkProducts.title} ILIKE ${q} ESCAPE '\\'
             OR coalesce(${issueWorkProducts.summary}, '') ILIKE ${q} ESCAPE '\\'
             OR coalesce(${issues.identifier}, '') ILIKE ${q} ESCAPE '\\'
             OR ${issues.title} ILIKE ${q} ESCAPE '\\'
-          )`);
+          )`;
+          workProductBaseConditions.push(searchCondition);
+          workProductConditions.push(searchCondition);
         }
 
         const workProductRows = await db
@@ -289,7 +299,7 @@ export function companyArtifactsService(db: Db, storage?: StorageService) {
           })
           .from(issueWorkProducts)
           .innerJoin(issues, eq(issueWorkProducts.issueId, issues.id))
-          .where(and(...workProductConditions, sql`${issueWorkProducts.metadata}->>'attachmentId' IS NOT NULL`));
+          .where(and(...workProductBaseConditions, sql`${issueWorkProducts.metadata}->>'attachmentId' IS NOT NULL`));
 
         for (const row of workProductAttachmentRows) {
           if (row.attachmentId) {
