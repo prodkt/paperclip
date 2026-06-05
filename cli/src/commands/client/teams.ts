@@ -373,6 +373,7 @@ const INSTALL_APPROVAL_FALLBACK_MESSAGES = [
   "missing permission: agents:create",
   "missing permission: can create agents",
 ];
+const SECRET_VALUE_REDACTION = "[redacted]";
 
 function shouldRequestInstallApproval(error: unknown, opts: TeamInstallOptions): error is ApiRequestError {
   if (!(opts.requestApprovalOnForbidden || isPaperclipTaskRun())) return false;
@@ -395,6 +396,8 @@ async function requestInstallApproval(
   if (!ctx.companyId) throw new Error("Company ID is required.");
   const trimmedRef = catalogRef.trim();
   const issueIds = resolveApprovalIssueIds(opts);
+  const approvalInstallOptions = omitInstallSecretValues(installOptions);
+  const returnedInstallOptions = redactInstallSecretValues(installOptions);
   const payload = {
     type: "request_board_approval",
     issueIds,
@@ -412,7 +415,7 @@ async function requestInstallApproval(
       installAttempt: {
         companyId: ctx.companyId,
         catalogRef: trimmedRef,
-        options: installOptions,
+        options: approvalInstallOptions,
         deniedReason: error.message,
       },
     },
@@ -427,9 +430,25 @@ async function requestInstallApproval(
     installAttempt: {
       companyId: ctx.companyId,
       catalogRef: trimmedRef,
-      options: installOptions,
+      options: returnedInstallOptions,
       deniedReason: error.message,
     },
+  };
+}
+
+function omitInstallSecretValues(options: CatalogTeamInstallOptions): CatalogTeamInstallOptions {
+  if (!options.secretValues) return options;
+  const { secretValues: _secretValues, ...safeOptions } = options;
+  return safeOptions;
+}
+
+function redactInstallSecretValues(options: CatalogTeamInstallOptions): CatalogTeamInstallOptions {
+  if (!options.secretValues) return options;
+  return {
+    ...options,
+    secretValues: Object.fromEntries(
+      Object.keys(options.secretValues).map((key) => [key, SECRET_VALUE_REDACTION]),
+    ),
   };
 }
 

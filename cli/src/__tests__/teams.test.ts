@@ -386,6 +386,8 @@ describe("teams CLI commands", () => {
       "manager-1",
       "--collision-strategy",
       "rename",
+      "--secret-value",
+      "agent:cto:OPENAI_API_KEY=sk-live-secret",
       "--company-id",
       "company-1",
       "--request-approval-on-forbidden",
@@ -406,6 +408,7 @@ describe("teams CLI commands", () => {
         body: JSON.stringify({
           targetManagerAgentId: "manager-1",
           collisionStrategy: "rename",
+          secretValues: { "agent:cto:OPENAI_API_KEY": "sk-live-secret" },
         }),
       }),
     );
@@ -443,8 +446,15 @@ describe("teams CLI commands", () => {
         companyId: "company-1",
         catalogRef: "product-engineering",
         deniedReason: "Missing permission: can create agents",
+        options: {
+          targetManagerAgentId: "manager-1",
+          collisionStrategy: "rename",
+          secretValues: { "agent:cto:OPENAI_API_KEY": "[redacted]" },
+        },
       },
     });
+    expect(JSON.stringify(approvalPayload)).not.toContain("sk-live-secret");
+    expect(String(logSpy.mock.calls[0]?.[0])).not.toContain("sk-live-secret");
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
