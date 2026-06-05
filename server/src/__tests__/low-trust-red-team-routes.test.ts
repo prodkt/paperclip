@@ -772,6 +772,41 @@ describeEmbeddedPostgres("low-trust red-team HTTP route regression suite", () =>
     }
   });
 
+  it("counts blocked inbox issues with the low-trust boundary applied in the database", async () => {
+    const fixture = await seedLowTrustFixture(db);
+    await db.insert(issues).values([
+      {
+        companyId: fixture.company.id,
+        projectId: fixture.projects.allowed.id,
+        parentId: fixture.issues.reviewRoot.id,
+        title: "Visible blocked vendor wait",
+        status: "blocked",
+        priority: "medium",
+        description: "external owner: Visible vendor\nexternal action: Finish visible review",
+      },
+      {
+        companyId: fixture.company.id,
+        projectId: fixture.projects.outOfScope.id,
+        title: "Hidden blocked vendor wait",
+        status: "blocked",
+        priority: "medium",
+        description: "external owner: Hidden vendor\nexternal action: Finish hidden review",
+      },
+    ]);
+
+    const boardCount = await request(createApp(db, boardActor(fixture)))
+      .get(`/api/companies/${fixture.company.id}/issues/count`)
+      .query({ attention: "blocked", q: "blocked vendor wait" });
+    expect(boardCount.status, JSON.stringify(boardCount.body)).toBe(200);
+    expect(boardCount.body.count).toBe(2);
+
+    const lowTrustCount = await request(createApp(db, agentActor(fixture)))
+      .get(`/api/companies/${fixture.company.id}/issues/count`)
+      .query({ attention: "blocked", q: "blocked vendor wait" });
+    expect(lowTrustCount.status, JSON.stringify(lowTrustCount.body)).toBe(200);
+    expect(lowTrustCount.body.count).toBe(1);
+  });
+
   it("redacts quarantined low-trust output from higher-trust wake and continuation contexts", async () => {
     const fixture = await seedLowTrustFixture(db);
     const lowTrustApp = createApp(db, agentActor(fixture));

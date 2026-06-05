@@ -7552,7 +7552,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
       db,
       companyId: agent.companyId,
       contextSnapshot: context,
-      continuationSummary: safeContinuationSummary,
+      continuationSummary,
       issueSummary: issueRef
         ? {
             id: issueRef.id,

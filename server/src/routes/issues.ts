@@ -2440,6 +2440,24 @@ export function issueRoutes(
     } as const;
 
     if (!(await actorCanReadCompanyScope(req, companyId))) {
+      const trustResolution = req.actor.type === "agent"
+        ? await resolveAgentTrustForIssue({
+            agentId: req.actor.agentId,
+            runId: req.actor.runId,
+          }, companyId, null)
+        : null;
+      if (trustResolution?.kind === "denied") {
+        throw forbidden(trustResolution.detail);
+      }
+      if (trustResolution?.kind === "low_trust_review") {
+        const count = await svc.count(companyId, {
+          ...blockedCountFilters,
+          lowTrustBoundary: trustResolution.boundary,
+        });
+        res.json({ count });
+        return;
+      }
+
       let offset = 0;
       let visibleCount = 0;
       while (true) {
