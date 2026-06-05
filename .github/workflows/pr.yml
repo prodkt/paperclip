@@ -308,15 +308,20 @@ jobs:
       # `--skip-verify` bypasses the initial verification gate. release.sh
       # also requires a clean working tree, so any in-place lockfile churn
       # from `pnpm install --frozen-lockfile` must be reverted first — unless
-      # the policy job uploaded a regenerated lockfile (manifest-only PRs),
-      # in which case we keep the artifact-restored copy so the workspace
-      # build sees a lockfile that matches the manifest.
+      # the policy job uploaded a regenerated lockfile (manifest-changing
+      # PRs), in which case we stage the artifact-restored copy into an
+      # ephemeral local commit so release.sh sees a clean tree and its
+      # workspace build sees a lockfile that matches the manifest.
       - name: Release canary dry run via release.sh internal build
         env:
           USED_ARTIFACT_LOCKFILE: ${{ needs.policy.outputs.lockfile_regenerated || '0' }}
         run: |
           git checkout -B master HEAD
-          if [ "$USED_ARTIFACT_LOCKFILE" != "1" ]; then
+          if [ "$USED_ARTIFACT_LOCKFILE" = "1" ]; then
+            git add pnpm-lock.yaml
+            git -c user.email=ci@paperclip.local -c user.name=CI \
+              commit --no-verify -m "ci(canary): stage regenerated lockfile"
+          else
             git checkout -- pnpm-lock.yaml
           fi
           ./scripts/release.sh canary --skip-verify --dry-run

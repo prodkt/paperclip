@@ -954,7 +954,7 @@ describe("IssueDetail", () => {
     expect(container.textContent).toContain("Issue detail smoke");
     expect(container.textContent).toContain("Chat thread");
     expect(
-      consoleErrorSpy.mock.calls.some((call) =>
+      consoleErrorSpy.mock.calls.some((call: unknown[]) =>
         String(call[0]).includes("React has detected a change in the order of Hooks"),
       ),
     ).toBe(false);
