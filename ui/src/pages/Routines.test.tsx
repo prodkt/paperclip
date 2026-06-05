@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { AnchorHTMLAttributes, ReactNode } from "react";
+import { act, type AnchorHTMLAttributes, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Issue, RoutineListItem } from "@paperclipai/shared";
@@ -236,10 +236,6 @@ vi.mock("../components/AgentIconPicker", () => ({
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-
-async function act(callback: () => void | Promise<void>) {
-  await callback();
-}
 
 function createRoutine(overrides: Partial<RoutineListItem>): RoutineListItem {
   return {

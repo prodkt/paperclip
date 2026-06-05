@@ -159,7 +159,18 @@ function shouldReturnAcceptedConfirmationToCreatorAgent(args: {
 }
 
 function shouldSupersedeRequestConfirmationOnUserComment(interaction: RequestConfirmationInteraction) {
-  return interaction.payload.supersedeOnUserComment !== false;
+  return interaction.payload.supersedeOnUserComment === true;
+}
+
+function normalizeCreateInteractionInput(input: CreateIssueThreadInteraction): CreateIssueThreadInteraction {
+  if (input.kind !== "request_confirmation") return input;
+  return {
+    ...input,
+    payload: {
+      ...input.payload,
+      supersedeOnUserComment: input.payload.supersedeOnUserComment ?? true,
+    },
+  };
 }
 
 function isCommentAtOrAfterInteraction(args: {
@@ -673,7 +684,7 @@ export function issueThreadInteractionService(db: Db) {
       input: CreateIssueThreadInteraction,
       actor: InteractionActor,
     ) => {
-      const data = createIssueThreadInteractionSchema.parse(input);
+      const data = normalizeCreateInteractionInput(createIssueThreadInteractionSchema.parse(input));
 
       if (data.idempotencyKey) {
         const existing = await getIdempotentInteraction({

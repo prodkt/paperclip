@@ -845,6 +845,12 @@ describeEmbeddedPostgres("issueThreadInteractionService", () => {
       userId: "local-board",
     });
 
+    expect(created).toMatchObject({
+      payload: {
+        supersedeOnUserComment: true,
+      },
+    });
+
     const expired = await interactionsSvc.expireRequestConfirmationsSupersededByComment({
       id: issueId,
       companyId,
@@ -884,6 +890,40 @@ describeEmbeddedPostgres("issueThreadInteractionService", () => {
       },
     }, {
       userId: "local-board",
+    });
+
+    const expired = await interactionsSvc.expireRequestConfirmationsSupersededByComment({
+      id: issueId,
+      companyId,
+    }, {
+      id: randomUUID(),
+      createdAt: new Date(Date.now() + 1_000),
+      authorUserId: "local-board",
+    }, {
+      userId: "local-board",
+    });
+
+    expect(expired).toHaveLength(0);
+    const rows = await db.select().from(issueThreadInteractions);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.status).toBe("pending");
+  });
+
+  it("keeps legacy request confirmations pending when comment supersede was not stored", async () => {
+    const { companyId, issueId } = await seedConfirmationIssue("Legacy confirmation without comment supersede flag");
+
+    await db.insert(issueThreadInteractions).values({
+      id: randomUUID(),
+      companyId,
+      issueId,
+      kind: "request_confirmation",
+      status: "pending",
+      continuationPolicy: { kind: "none" },
+      payload: {
+        version: 1,
+        prompt: "Proceed with the current draft?",
+      },
+      createdByUserId: "local-board",
     });
 
     const expired = await interactionsSvc.expireRequestConfirmationsSupersededByComment({
