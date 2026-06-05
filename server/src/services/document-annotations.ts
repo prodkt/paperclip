@@ -330,58 +330,66 @@ export function documentAnnotationService(db: Db) {
       issueId: string,
       issueCommentId: string,
       actor: ActorInput,
-    ) => db.transaction(async (tx) => {
-      const linkedComments: Array<Pick<DocumentAnnotationComment, "id" | "threadId">> = await tx
-        .select({
-          id: documentAnnotationComments.id,
-          threadId: documentAnnotationComments.threadId,
-        })
-        .from(documentAnnotationComments)
-        .where(and(
-          eq(documentAnnotationComments.issueId, issueId),
-          eq(documentAnnotationComments.issueCommentId, issueCommentId),
-        ));
-      if (linkedComments.length === 0) {
-        return { deletedCommentIds: [], resolvedThreadIds: [] };
-      }
-
-      const deletedCommentIds = linkedComments.map((comment) => comment.id);
-      const threadIds = [...new Set(linkedComments.map((comment) => comment.threadId))];
-      const now = new Date();
-
-      await tx
-        .delete(documentAnnotationComments)
-        .where(inArray(documentAnnotationComments.id, deletedCommentIds));
-
-      const remainingRows: Array<{ threadId: string; count: number }> = await tx
-        .select({
-          threadId: documentAnnotationComments.threadId,
-          count: sql<number>`count(*)::int`,
-        })
-        .from(documentAnnotationComments)
-        .where(inArray(documentAnnotationComments.threadId, threadIds))
-        .groupBy(documentAnnotationComments.threadId);
-      const remainingByThreadId = new Map(remainingRows.map((row) => [row.threadId, Number(row.count)]));
-      const emptyThreadIds = threadIds.filter((threadId) => (remainingByThreadId.get(threadId) ?? 0) === 0);
-
-      if (emptyThreadIds.length > 0) {
-        await tx
-          .update(documentAnnotationThreads)
-          .set({
-            status: "resolved",
-            resolvedByAgentId: actor.actorType === "agent" ? actor.agentId ?? null : null,
-            resolvedByUserId: actor.actorType === "user" ? actor.userId ?? null : null,
-            resolvedAt: now,
-            updatedAt: now,
+      dbOrTx: any = db,
+    ) => {
+      const runCleanup = async (tx: any) => {
+        const linkedComments: Array<Pick<DocumentAnnotationComment, "id" | "threadId">> = await tx
+          .select({
+            id: documentAnnotationComments.id,
+            threadId: documentAnnotationComments.threadId,
           })
+          .from(documentAnnotationComments)
           .where(and(
-            inArray(documentAnnotationThreads.id, emptyThreadIds),
-            eq(documentAnnotationThreads.status, "open"),
+            eq(documentAnnotationComments.issueId, issueId),
+            eq(documentAnnotationComments.issueCommentId, issueCommentId),
           ));
-      }
+        if (linkedComments.length === 0) {
+          return { deletedCommentIds: [], resolvedThreadIds: [] };
+        }
 
-      return { deletedCommentIds, resolvedThreadIds: emptyThreadIds };
-    }),
+        const deletedCommentIds = linkedComments.map((comment) => comment.id);
+        const threadIds = [...new Set(linkedComments.map((comment) => comment.threadId))];
+        const now = new Date();
+
+        await tx
+          .delete(documentAnnotationComments)
+          .where(inArray(documentAnnotationComments.id, deletedCommentIds));
+
+        const remainingRows: Array<{ threadId: string; count: number }> = await tx
+          .select({
+            threadId: documentAnnotationComments.threadId,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(documentAnnotationComments)
+          .where(inArray(documentAnnotationComments.threadId, threadIds))
+          .groupBy(documentAnnotationComments.threadId);
+        const remainingByThreadId = new Map(remainingRows.map((row) => [row.threadId, Number(row.count)]));
+        const emptyThreadIds = threadIds.filter((threadId) => (remainingByThreadId.get(threadId) ?? 0) === 0);
+
+        if (emptyThreadIds.length > 0) {
+          const resolvedRows: Array<{ id: string }> = await tx
+            .update(documentAnnotationThreads)
+            .set({
+              status: "resolved",
+              resolvedByAgentId: actor.actorType === "agent" ? actor.agentId ?? null : null,
+              resolvedByUserId: actor.actorType === "user" ? actor.userId ?? null : null,
+              resolvedAt: now,
+              updatedAt: now,
+            })
+            .where(and(
+              inArray(documentAnnotationThreads.id, emptyThreadIds),
+              eq(documentAnnotationThreads.status, "open"),
+            ))
+            .returning({ id: documentAnnotationThreads.id });
+
+          return { deletedCommentIds, resolvedThreadIds: resolvedRows.map((row) => row.id) };
+        }
+
+        return { deletedCommentIds, resolvedThreadIds: [] };
+      };
+
+      return dbOrTx === db ? db.transaction(runCleanup) : runCleanup(dbOrTx);
+    },
 
     updateThread: async (
       issueId: string,

@@ -270,4 +270,48 @@ describeEmbeddedPostgres("documentAnnotationService", () => {
 
     await expect(db.select().from(documentAnnotationComments)).resolves.toHaveLength(0);
   });
+
+  it("does not report already-resolved empty threads as newly resolved during linked comment cleanup", async () => {
+    const { companyId, issueId, document } = await createIssueWithDocument();
+    const [issueComment] = await db
+      .insert(issueComments)
+      .values({
+        companyId,
+        issueId,
+        authorType: "user",
+        authorUserId: "board-user",
+        body: "Delete this linked comment from a resolved thread",
+      })
+      .returning();
+
+    const thread = await annotations.createThread(
+      issueId,
+      "plan",
+      {
+        baseRevisionId: document.latestRevisionId!,
+        baseRevisionNumber: document.latestRevisionNumber,
+        selector: {
+          quote: { exact: "selected text", prefix: "Alpha ", suffix: " omega" },
+          position: { normalizedStart: 6, normalizedEnd: 19, markdownStart: 6, markdownEnd: 19 },
+        },
+        body: "Linked annotation body",
+        issueCommentId: issueComment.id,
+      },
+      { actorType: "user", actorId: "board-user", userId: "board-user" },
+    );
+
+    await db
+      .update(documentAnnotationThreads)
+      .set({ status: "resolved", resolvedByUserId: "board-user", resolvedAt: new Date("2026-06-05T03:05:00.000Z") })
+      .where(eq(documentAnnotationThreads.id, thread.id));
+
+    const cleanup = await annotations.cleanupForIssueCommentDeletion(
+      issueId,
+      issueComment.id,
+      { actorType: "user", actorId: "board-user", userId: "board-user" },
+    );
+
+    expect(cleanup.deletedCommentIds).toEqual([thread.comments[0]!.id]);
+    expect(cleanup.resolvedThreadIds).toEqual([]);
+  });
 });

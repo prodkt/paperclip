@@ -195,15 +195,19 @@ describe.sequential("issue comment cancel routes", () => {
     mockIssueService.assertCheckoutOwner.mockResolvedValue({ adoptedFromRunId: null });
     mockIssueService.getComment.mockResolvedValue(makeComment());
     mockIssueService.removeComment.mockResolvedValue(makeComment());
-    mockIssueService.tombstoneComment.mockResolvedValue(makeComment({
-      body: "",
-      metadata: null,
-      deletedAt: new Date("2026-04-11T15:05:00.000Z"),
-      deletedByType: "user",
-      deletedByAgentId: null,
-      deletedByUserId: "local-board",
-      deletedByRunId: null,
-    }));
+    mockIssueService.tombstoneComment.mockImplementation(async (_commentId, _actor, options) => {
+      const deleted = makeComment({
+        body: "",
+        metadata: null,
+        deletedAt: new Date("2026-04-11T15:05:00.000Z"),
+        deletedByType: "user",
+        deletedByAgentId: null,
+        deletedByUserId: "local-board",
+        deletedByRunId: null,
+      });
+      await options?.afterTombstone?.(deleted, "tx");
+      return deleted;
+    });
     mockAccessService.canUser.mockResolvedValue(false);
     mockAccessService.hasPermission.mockResolvedValue(false);
     mockFeedbackService.listIssueVotesForUser.mockResolvedValue([]);
@@ -337,13 +341,17 @@ describe.sequential("issue comment cancel routes", () => {
     expect(JSON.stringify(res.body)).not.toContain("Sensitive original comment body");
     expect(JSON.stringify(res.body)).not.toContain("Sensitive metadata copy");
     expect(mockIssueService.removeComment).not.toHaveBeenCalled();
-    expect(mockIssueService.tombstoneComment).toHaveBeenCalledWith("comment-1", {
-      actorType: "user",
-      agentId: null,
-      userId: "local-board",
-      runId: null,
-    });
-    expect(mockIssueReferenceService.syncComment).toHaveBeenCalledWith("comment-1");
+    expect(mockIssueService.tombstoneComment).toHaveBeenCalledWith(
+      "comment-1",
+      {
+        actorType: "user",
+        agentId: null,
+        userId: "local-board",
+        runId: null,
+      },
+      expect.objectContaining({ afterTombstone: expect.any(Function) }),
+    );
+    expect(mockIssueReferenceService.syncComment).toHaveBeenCalledWith("comment-1", "tx");
     expect(mockDocumentAnnotationService.cleanupForIssueCommentDeletion).toHaveBeenCalledWith(
       "11111111-1111-4111-8111-111111111111",
       "comment-1",
@@ -351,8 +359,9 @@ describe.sequential("issue comment cancel routes", () => {
         actorType: "user",
         userId: "local-board",
       }),
+      "tx",
     );
-    expect(mockIssueReferenceService.deleteCommentSource).toHaveBeenCalledWith("annotation-comment-1");
+    expect(mockIssueReferenceService.deleteCommentSource).toHaveBeenCalledWith("annotation-comment-1", "tx");
     const deletedActivity = mockLogActivity.mock.calls.find((call) => call[1]?.action === "issue.comment_deleted")?.[1];
     expect(deletedActivity).toEqual(expect.objectContaining({
       action: "issue.comment_deleted",

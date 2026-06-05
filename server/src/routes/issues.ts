@@ -5674,29 +5674,37 @@ export function issueRoutes(
       return;
     }
 
-    const deleted = await svc.tombstoneComment(commentId, {
-      actorType: actor.actorType,
-      agentId: actor.agentId,
-      userId: actor.actorType === "user" ? actor.actorId : null,
-      runId: actor.runId,
-    });
+    let annotationCleanup = { deletedCommentIds: [] as string[], resolvedThreadIds: [] as string[] };
+    const deleted = await svc.tombstoneComment(
+      commentId,
+      {
+        actorType: actor.actorType,
+        agentId: actor.agentId,
+        userId: actor.actorType === "user" ? actor.actorId : null,
+        runId: actor.runId,
+      },
+      {
+        afterTombstone: async (deletedComment, tx) => {
+          await issueReferencesSvc.syncComment(deletedComment.id, tx);
+          annotationCleanup = await documentAnnotationsSvc.cleanupForIssueCommentDeletion(issue.id, deletedComment.id, {
+            actorType: actor.actorType,
+            actorId: actor.actorId,
+            agentId: actor.agentId,
+            userId: actor.actorType === "user" ? actor.actorId : null,
+            runId: actor.runId,
+          }, tx);
+          await Promise.all(
+            annotationCleanup.deletedCommentIds.map((annotationCommentId) =>
+              issueReferencesSvc.deleteCommentSource(annotationCommentId, tx)
+            ),
+          );
+        },
+      },
+    );
     if (!deleted) {
       res.status(404).json({ error: "Comment not found" });
       return;
     }
-    await issueReferencesSvc.syncComment(deleted.id);
-    const annotationCleanup = await documentAnnotationsSvc.cleanupForIssueCommentDeletion(issue.id, deleted.id, {
-      actorType: actor.actorType,
-      actorId: actor.actorId,
-      agentId: actor.agentId,
-      userId: actor.actorType === "user" ? actor.actorId : null,
-      runId: actor.runId,
-    });
-    await Promise.all(
-      annotationCleanup.deletedCommentIds.map((annotationCommentId) =>
-        issueReferencesSvc.deleteCommentSource(annotationCommentId)
-      ),
-    );
 
     await logActivity(db, {
       companyId: issue.companyId,
