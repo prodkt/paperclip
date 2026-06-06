@@ -141,6 +141,7 @@ describeEmbeddedPostgres("companySkillService.list", () => {
       { path: "references/how-to-guide-template.md", kind: "reference" },
       { path: "scripts/bootstrap.sh", kind: "script" },
       { path: "assets/logo.svg", kind: "asset" },
+      { path: "SKILL.md", kind: "skill" },
     ]));
 
     const reference = await svc.readFile(companyId, imported.id, "references/how-to-guide-template.md");
