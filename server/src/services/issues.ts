@@ -5040,21 +5040,29 @@ export function issueService(db: Db) {
         issueData.executionWorkspaceSettings !== undefined
           ? parseIssueExecutionWorkspaceSettings(issueData.executionWorkspaceSettings)
           : parseIssueExecutionWorkspaceSettings(existing.executionWorkspaceSettings);
+      let validatedProjectWorkspace: { projectId: string } | null = null;
+      let validatedExecutionWorkspace: { projectId: string } | null = null;
       if (!nextProjectId && nextProjectWorkspaceId) {
         const workspace = await assertValidProjectWorkspace(existing.companyId, null, nextProjectWorkspaceId);
+        validatedProjectWorkspace = workspace;
         nextProjectId = workspace.projectId;
         patch.projectId = workspace.projectId;
       }
       if (!nextProjectId && nextExecutionWorkspaceId) {
         const workspace = await assertValidExecutionWorkspace(existing.companyId, null, nextExecutionWorkspaceId);
+        validatedExecutionWorkspace = workspace;
         nextProjectId = workspace.projectId;
         patch.projectId = workspace.projectId;
       }
       if (nextProjectWorkspaceId) {
-        await assertValidProjectWorkspace(existing.companyId, nextProjectId, nextProjectWorkspaceId);
+        if (!validatedProjectWorkspace) {
+          await assertValidProjectWorkspace(existing.companyId, nextProjectId, nextProjectWorkspaceId);
+        }
       }
       if (nextExecutionWorkspaceId) {
-        await assertValidExecutionWorkspace(existing.companyId, nextProjectId, nextExecutionWorkspaceId);
+        if (!validatedExecutionWorkspace) {
+          await assertValidExecutionWorkspace(existing.companyId, nextProjectId, nextExecutionWorkspaceId);
+        }
       }
 
       applyStatusSideEffects(issueData.status, patch);
