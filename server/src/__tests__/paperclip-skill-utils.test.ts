@@ -27,7 +27,10 @@ describe("paperclip skill utils", () => {
     await fs.mkdir(moduleDir, { recursive: true });
     await fs.mkdir(path.join(root, "skills", "paperclip"), { recursive: true });
     await fs.mkdir(path.join(root, "skills", "paperclip-create-agent"), { recursive: true });
+    await fs.mkdir(path.join(root, ".agents", "skills", "diagnose-why-work-stopped"), { recursive: true });
+    await fs.mkdir(path.join(root, ".agents", "skills", "paperclip-create-plugin"), { recursive: true });
     await fs.mkdir(path.join(root, ".agents", "skills", "release"), { recursive: true });
+    await fs.mkdir(path.join(root, ".agents", "skills", "terminal-bench-loop"), { recursive: true });
 
     const entries = await listPaperclipSkillEntries(moduleDir);
 
