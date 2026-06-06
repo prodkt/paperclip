@@ -213,6 +213,15 @@ describe("issue thread interaction schemas", () => {
       ...base,
       payload: {
         ...base.payload,
+        defaultSelectedOptionIds: ["item-1"],
+        minSelected: 2,
+      },
+    })).toThrow("defaultSelectedOptionIds must satisfy minSelected");
+
+    expect(() => createIssueThreadInteractionSchema.parse({
+      ...base,
+      payload: {
+        ...base.payload,
         minSelected: 2,
         maxSelected: 1,
       },

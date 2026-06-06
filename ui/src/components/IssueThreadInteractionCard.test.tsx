@@ -442,6 +442,11 @@ describe("IssueThreadInteractionCard", () => {
       .filter((box) => box.getAttribute("aria-checked") === "false");
     expect(stillUnchecked.length).toBeGreaterThan(0);
     expect(stillUnchecked.every((box) => box.hasAttribute("disabled"))).toBe(true);
+
+    const selectAllButton = Array.from(host.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Select all"),
+    );
+    expect(selectAllButton?.hasAttribute("disabled")).toBe(true);
   });
 
   it("summarizes large accepted selections by count and bounds the chips", () => {

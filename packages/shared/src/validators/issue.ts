@@ -795,6 +795,13 @@ export const requestCheckboxConfirmationPayloadSchema = z.object({
       path: ["minSelected"],
     });
   }
+  if (value.defaultSelectedOptionIds.length < value.minSelected) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "defaultSelectedOptionIds must satisfy minSelected",
+      path: ["defaultSelectedOptionIds"],
+    });
+  }
   if (maxSelected != null) {
     if (maxSelected < value.minSelected) {
       ctx.addIssue({

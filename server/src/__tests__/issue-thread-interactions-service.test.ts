@@ -820,6 +820,7 @@ describeEmbeddedPostgres("issueThreadInteractionService", () => {
           { id: "two", label: "Two" },
           { id: "three", label: "Three" },
         ],
+        defaultSelectedOptionIds: ["one"],
         minSelected: 1,
         maxSelected: 2,
       },

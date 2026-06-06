@@ -1611,7 +1611,7 @@ function RequestCheckboxConfirmationCard({
             <Button
               size="sm"
               variant="ghost"
-              disabled={working !== null || selectedCount === totalOptions}
+              disabled={working !== null || selectedCount === totalOptions || (maxSelected != null && selectedCount >= maxSelected)}
               onClick={handleSelectAll}
             >
               Select all
