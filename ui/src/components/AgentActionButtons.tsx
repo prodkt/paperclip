@@ -231,7 +231,7 @@ export function AgentActionButtons({
     },
     onError: (err) => {
       const message = err instanceof Error ? err.message : "Failed to duplicate agent";
-      reportError(message);
+      onActionError?.(message);
       pushToast({ title: "Could not duplicate agent", body: message, tone: "error" });
     },
   });
