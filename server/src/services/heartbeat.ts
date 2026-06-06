@@ -5977,30 +5977,32 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
       };
     }
 
-    const invokability = await getAgentInvokability(agent);
-    if (!invokability.invokable) {
-      const contextSnapshot = parseObject(run.contextSnapshot);
-      const issueId = readNonEmptyString(contextSnapshot.issueId);
-      await appendRunEvent(run, await nextRunEventSeq(run.id), {
-        eventType: "lifecycle",
-        stream: "system",
-        level: "warn",
-        message: "Scheduled retry suppressed because the agent is not invokable",
-        payload: {
-          retryReason,
-          scheduledRetryAttempt: nextAttempt,
-          maxAttempts,
-          reason: invokability.reason,
-          invalidOrgChain: invokability.invalidOrgChain,
-          ...invokability.details,
-        },
-      });
-      return {
-        outcome: "not_scheduled" as const,
-        reason: "Scheduled retry suppressed because the agent is not invokable",
-        errorCode: "agent_not_invokable" as const,
-        issueId,
-      };
+    if (retryReason !== MAX_TURN_CONTINUATION_RETRY_REASON) {
+      const invokability = await getAgentInvokability(agent);
+      if (!invokability.invokable) {
+        const contextSnapshot = parseObject(run.contextSnapshot);
+        const issueId = readNonEmptyString(contextSnapshot.issueId);
+        await appendRunEvent(run, await nextRunEventSeq(run.id), {
+          eventType: "lifecycle",
+          stream: "system",
+          level: "warn",
+          message: "Scheduled retry suppressed because the agent is not invokable",
+          payload: {
+            retryReason,
+            scheduledRetryAttempt: nextAttempt,
+            maxAttempts,
+            reason: invokability.reason,
+            invalidOrgChain: invokability.invalidOrgChain,
+            ...invokability.details,
+          },
+        });
+        return {
+          outcome: "not_scheduled" as const,
+          reason: "Scheduled retry suppressed because the agent is not invokable",
+          errorCode: "agent_not_invokable" as const,
+          issueId,
+        };
+      }
     }
 
     const schedule =
