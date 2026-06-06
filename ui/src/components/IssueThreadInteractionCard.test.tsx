@@ -480,6 +480,8 @@ describe("IssueThreadInteractionCard", () => {
       button.textContent?.includes("+34 more"),
     );
     expect(moreButton).toBeTruthy();
+    moreButton?.focus();
+    expect(document.activeElement).toBe(moreButton);
 
     act(() => {
       moreButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -487,11 +489,13 @@ describe("IssueThreadInteractionCard", () => {
 
     expect(host.textContent).not.toContain("+34 more");
     expect(countSelectedChips()).toBe(42);
+    expect(document.activeElement).toBe(moreButton);
 
     const showLessButton = Array.from(host.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("Show less"),
     );
     expect(showLessButton).toBeTruthy();
+    expect(showLessButton).toBe(moreButton);
 
     act(() => {
       showLessButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -499,6 +503,7 @@ describe("IssueThreadInteractionCard", () => {
 
     expect(countSelectedChips()).toBe(8);
     expect(host.textContent).toContain("+34 more");
+    expect(document.activeElement).toBe(moreButton);
   });
 
   it("stays compact and scrollable with around 100 options", () => {

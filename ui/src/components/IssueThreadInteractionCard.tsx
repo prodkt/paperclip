@@ -1347,7 +1347,8 @@ function RequestCheckboxConfirmationResolution({
     const visibleLabels = expanded
       ? selectedLabels
       : selectedLabels.slice(0, CHECKBOX_SUMMARY_LABEL_LIMIT);
-    const hiddenCount = selectedLabels.length - visibleLabels.length;
+    const hiddenCount = selectedLabels.length - CHECKBOX_SUMMARY_LABEL_LIMIT;
+    const hasHiddenLabels = hiddenCount > 0;
     const chipClassName =
       "inline-flex items-center rounded-sm border border-border/60 bg-transparent px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground";
 
@@ -1366,30 +1367,17 @@ function RequestCheckboxConfirmationResolution({
             {visibleLabels.map((label, index) => (
               <TaskField key={`${label}-${index}`} label="Selected" value={label} />
             ))}
-            {hiddenCount > 0 ? (
+            {hasHiddenLabels ? (
               <button
                 type="button"
-                onClick={() => setExpanded(true)}
+                onClick={() => setExpanded((current) => !current)}
                 className={cn(
                   chipClassName,
                   "cursor-pointer transition-colors hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 )}
-                aria-expanded={false}
+                aria-expanded={expanded}
               >
-                +{hiddenCount} more
-              </button>
-            ) : null}
-            {expanded && selectedLabels.length > CHECKBOX_SUMMARY_LABEL_LIMIT ? (
-              <button
-                type="button"
-                onClick={() => setExpanded(false)}
-                className={cn(
-                  chipClassName,
-                  "cursor-pointer transition-colors hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                )}
-                aria-expanded={true}
-              >
-                Show less
+                {expanded ? "Show less" : `+${hiddenCount} more`}
               </button>
             ) : null}
           </div>
