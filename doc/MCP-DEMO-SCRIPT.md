@@ -144,7 +144,7 @@ curl -i -X POST \
   -d '{ "tool": "delete_item", "parameters": { "id": "fake" } }'
 ```
 
-Expected: an HTTP `403` or `404` response with a JSON body shaped like:
+Expected: an HTTP `403` response with a JSON body shaped like:
 
 ```json
 {
