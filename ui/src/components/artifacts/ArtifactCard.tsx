@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useRef, useState } from "react";
+import { type SyntheticEvent, useEffect, useRef, useState } from "react";
 import { Download, ExternalLink, Paperclip, Play } from "lucide-react";
 import type { CompanyArtifact } from "@/api/artifacts";
 import { Link } from "@/lib/router";
@@ -54,6 +54,14 @@ function VideoPreview({ artifact }: { artifact: CompanyArtifact }) {
   const [errored, setErrored] = useState(false);
   const [frameReady, setFrameReady] = useState(false);
   const thumbnailSeekRequested = useRef(false);
+  const frameReadyFallbackTimer = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (frameReadyFallbackTimer.current !== null) {
+        window.clearTimeout(frameReadyFallbackTimer.current);
+      }
+    };
+  }, []);
   if (errored || !artifact.contentPath) {
     return (
       <PreviewFrame className="flex items-center justify-center bg-black/80">
@@ -64,7 +72,19 @@ function VideoPreview({ artifact }: { artifact: CompanyArtifact }) {
     );
   }
 
-  const markFrameReady = () => setFrameReady(true);
+  const markFrameReady = () => {
+    if (frameReadyFallbackTimer.current !== null) {
+      window.clearTimeout(frameReadyFallbackTimer.current);
+      frameReadyFallbackTimer.current = null;
+    }
+    setFrameReady(true);
+  };
+  const scheduleFrameReadyFallback = () => {
+    if (frameReadyFallbackTimer.current !== null) {
+      window.clearTimeout(frameReadyFallbackTimer.current);
+    }
+    frameReadyFallbackTimer.current = window.setTimeout(markFrameReady, 3000);
+  };
   const loadThumbnailFrame = (event: SyntheticEvent<HTMLVideoElement>) => {
     if (thumbnailSeekRequested.current) return;
     thumbnailSeekRequested.current = true;
@@ -74,6 +94,9 @@ function VideoPreview({ artifact }: { artifact: CompanyArtifact }) {
     try {
       if (Math.abs(video.currentTime - seekTarget) > 0.001) {
         video.currentTime = seekTarget;
+        scheduleFrameReadyFallback();
+      } else {
+        markFrameReady();
       }
     } catch {
       markFrameReady();

@@ -130,6 +130,44 @@ describe("ArtifactCard", () => {
     container.remove();
   });
 
+  it("reveals video previews if the browser does not report seek completion", () => {
+    vi.useFakeTimers();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    try {
+      flushSync(() => {
+        root.render(
+          <ArtifactCard
+            artifact={makeArtifact({ mediaKind: "video", contentType: "video/mp4", contentPath: "/files/clip.mp4" })}
+          />,
+        );
+      });
+
+      const video = container.querySelector("video") as HTMLVideoElement;
+      expect(video).not.toBeNull();
+      expect(video.dataset.frameReady).toBe("false");
+
+      flushSync(() => {
+        video.dispatchEvent(new Event("loadedmetadata", { bubbles: true }));
+      });
+
+      expect(video.currentTime).toBe(0.05);
+      expect(video.dataset.frameReady).toBe("false");
+
+      flushSync(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(video.dataset.frameReady).toBe("true");
+    } finally {
+      flushSync(() => root.unmount());
+      container.remove();
+      vi.useRealTimers();
+    }
+  });
+
   it("renders a falling-back video placeholder when no content path exists", () => {
     const markup = renderToStaticMarkup(
       <ArtifactCard artifact={makeArtifact({ mediaKind: "video", contentPath: null })} />,
