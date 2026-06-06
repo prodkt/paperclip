@@ -770,7 +770,6 @@ export function InviteLandingPage() {
                     <p
                       id={authErrorId}
                       role="alert"
-                      aria-live="polite"
                       className={`text-xs ${
                         authFeedback.tone === "info" ? "text-amber-300" : "text-red-400"
                       }`}

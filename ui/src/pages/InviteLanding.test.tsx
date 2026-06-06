@@ -320,7 +320,7 @@ describe("InviteLandingPage", () => {
 
     const alert = container.querySelector('[role="alert"]') as HTMLElement;
     expect(alert).not.toBeNull();
-    expect(alert.getAttribute("aria-live")).toBe("polite");
+    expect(alert.hasAttribute("aria-live")).toBe(false);
 
     const errorId = alert.id;
     expect(errorId.length).toBeGreaterThan(0);

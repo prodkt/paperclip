@@ -158,7 +158,7 @@ export function AuthPage() {
               />
             </div>
             {error && (
-              <p id={errorId} role="alert" aria-live="polite" className="text-xs text-destructive">
+              <p id={errorId} role="alert" className="text-xs text-destructive">
                 {error}
               </p>
             )}

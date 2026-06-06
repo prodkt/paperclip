@@ -188,7 +188,7 @@ describe("AuthPage", () => {
 
     const alert = container.querySelector('[role="alert"]') as HTMLElement;
     expect(alert).not.toBeNull();
-    expect(alert.getAttribute("aria-live")).toBe("polite");
+    expect(alert.hasAttribute("aria-live")).toBe(false);
     expect(alert.textContent).toContain("Invalid email or password");
 
     const errorId = alert.id;
