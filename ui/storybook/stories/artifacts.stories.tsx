@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { ArrowLeft, Check, Layers, Package, Search, X } from "lucide-react";
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
+import { ArtifactGroupCard } from "@/components/artifacts/ArtifactGroupCard";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,8 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { cn, formatDate } from "@/lib/utils";
-import type { CompanyArtifact } from "@/api/artifacts";
+import { cn } from "@/lib/utils";
+import type { CompanyArtifact, CompanyArtifactGroup } from "@/api/artifacts";
 import {
   ARTIFACT_GROUP_OPTIONS,
   ARTIFACT_KIND_FILTERS,
@@ -246,7 +248,7 @@ function ArtifactsToolbar({
   );
 }
 
-interface MockGroup {
+function makeGroup(input: {
   id: string;
   groupBy: Exclude<StoryArtifactGroupBy, "none">;
   issueIdentifier: string;
@@ -255,90 +257,31 @@ interface MockGroup {
   preview: CompanyArtifact;
   updatedAt: string;
   href: string;
+}): CompanyArtifactGroup {
+  const issueId = input.id.split(":")[1] ?? input.id;
+  return {
+    id: input.id,
+    groupBy: input.groupBy,
+    issue: { id: issueId, identifier: input.issueIdentifier, title: input.issueTitle },
+    title: input.issueTitle,
+    count: input.count,
+    mediaKinds: [input.preview.mediaKind],
+    previewArtifacts: [input.preview],
+    updatedAt: input.updatedAt,
+    href: input.href,
+  };
 }
 
-/**
- * Stack card mock for grouped views.
- *
- * Visual rules (matching ArtifactCard footprint):
- *  - Same border, radius (rounded-[8px]), border + bg-card surface, hover treatment.
- *  - Preview frame is the same `aspect-video` PreviewFrame as ArtifactCard.
- *  - Footer block has the same vertical rhythm.
- *  - When `count > 1`, render two stacked sibling layers behind the main card,
- *    offset by 4px / 8px on both axes, with reduced opacity. This produces a
- *    subtle "stack" without competing with the preview content.
- *  - Stack count badge sits in the top-right of the preview as a small pill.
- *  - The body line replaces the artifact title with the issue identifier and
- *    title; metadata line shows the artifact count and most-recent-edit time.
- */
-function ArtifactStackCard({ group }: { group: MockGroup }) {
-  const isStacked = group.count > 1;
-
+function ArtifactStackCard({ group }: { group: CompanyArtifactGroup }) {
   return (
-    <div className="relative">
-      {isStacked ? (
-        <>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 translate-x-[8px] translate-y-[8px] rounded-[8px] border border-border bg-muted/40 shadow-sm"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-[8px] border border-border bg-muted/70 shadow-sm"
-          />
-        </>
-      ) : null}
-
-      <a
-        href={group.href}
-        data-testid="artifact-stack-card"
-        data-stack-count={group.count}
-        className="group relative flex flex-col overflow-hidden rounded-[8px] border border-border bg-card transition-colors hover:border-foreground/20"
-      >
-        <div className="relative aspect-video w-full overflow-hidden bg-accent/20">
-          {group.preview.contentPath ? (
-            <img
-              src={group.preview.contentPath}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-accent/15 text-muted-foreground/40">
-              <Layers className="h-8 w-8" aria-hidden="true" />
-            </div>
-          )}
-          <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-0.5 text-[11px] font-medium text-foreground/90 shadow-sm backdrop-blur">
-            <Layers className="h-3 w-3" aria-hidden="true" />
-            {group.count}
-          </div>
-        </div>
-
-        <div className="flex flex-1 flex-col gap-1 p-3">
-          <div className="flex h-7 items-center gap-2">
-            <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-              {group.issueIdentifier}
-            </span>
-            <h3
-              className="min-w-0 flex-1 truncate text-sm font-medium leading-7 text-foreground/85"
-              title={group.issueTitle}
-            >
-              {group.issueTitle}
-            </h3>
-          </div>
-
-          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground/65">
-            <span>{group.count} artifacts</span>
-            <span className="text-muted-foreground/50">·</span>
-            <span>Updated {formatDate(group.updatedAt)}</span>
-          </div>
-        </div>
-      </a>
-    </div>
+    <MemoryRouter>
+      <ArtifactGroupCard group={group} to={group.href} />
+    </MemoryRouter>
   );
 }
 
-const TASK_GROUPS: MockGroup[] = [
-  {
+const TASK_GROUPS: CompanyArtifactGroup[] = [
+  makeGroup({
     id: "task:issue-1",
     groupBy: "task",
     issueIdentifier: "PAP-10306",
@@ -347,8 +290,8 @@ const TASK_GROUPS: MockGroup[] = [
     preview: makeArtifact({ mediaKind: "image", contentPath: SAMPLE_IMAGE }),
     updatedAt: new Date("2026-06-04T12:00:00Z").toISOString(),
     href: "/PAP/artifacts?groupBy=task&groupIssueId=issue-1",
-  },
-  {
+  }),
+  makeGroup({
     id: "task:issue-2",
     groupBy: "task",
     issueIdentifier: "PAP-10205",
@@ -357,8 +300,8 @@ const TASK_GROUPS: MockGroup[] = [
     preview: makeArtifact({ mediaKind: "video", contentPath: null }),
     updatedAt: new Date("2026-06-03T09:30:00Z").toISOString(),
     href: "/PAP/artifacts?groupBy=task&groupIssueId=issue-2",
-  },
-  {
+  }),
+  makeGroup({
     id: "task:issue-3",
     groupBy: "task",
     issueIdentifier: "PAP-10341",
@@ -367,8 +310,8 @@ const TASK_GROUPS: MockGroup[] = [
     preview: makeArtifact({ mediaKind: "document", contentPath: null }),
     updatedAt: new Date("2026-06-02T18:15:00Z").toISOString(),
     href: "/PAP/artifacts?groupBy=task&groupIssueId=issue-3",
-  },
-  {
+  }),
+  makeGroup({
     id: "task:issue-4",
     groupBy: "task",
     issueIdentifier: "PAP-10412",
@@ -377,8 +320,8 @@ const TASK_GROUPS: MockGroup[] = [
     preview: makeArtifact({ mediaKind: "image", contentPath: SAMPLE_IMAGE_AMBER }),
     updatedAt: new Date("2026-06-02T11:00:00Z").toISOString(),
     href: "/PAP/artifacts?groupBy=task&groupIssueId=issue-4",
-  },
-  {
+  }),
+  makeGroup({
     id: "task:issue-5",
     groupBy: "task",
     issueIdentifier: "PAP-10391",
@@ -387,8 +330,8 @@ const TASK_GROUPS: MockGroup[] = [
     preview: makeArtifact({ mediaKind: "image", contentPath: SAMPLE_IMAGE_TEAL }),
     updatedAt: new Date("2026-06-01T16:42:00Z").toISOString(),
     href: "/PAP/artifacts?groupBy=task&groupIssueId=issue-5",
-  },
-  {
+  }),
+  makeGroup({
     id: "task:issue-6",
     groupBy: "task",
     issueIdentifier: "PAP-10377",
@@ -397,11 +340,11 @@ const TASK_GROUPS: MockGroup[] = [
     preview: makeArtifact({ mediaKind: "text", previewText: "All empty states green except onboarding-step-3." }),
     updatedAt: new Date("2026-05-31T10:00:00Z").toISOString(),
     href: "/PAP/artifacts?groupBy=task&groupIssueId=issue-6",
-  },
+  }),
 ];
 
-const PARENT_TASK_GROUPS: MockGroup[] = [
-  {
+const PARENT_TASK_GROUPS: CompanyArtifactGroup[] = [
+  makeGroup({
     id: "parent_task:root-1",
     groupBy: "parent_task",
     issueIdentifier: "PAP-10300",
@@ -410,8 +353,8 @@ const PARENT_TASK_GROUPS: MockGroup[] = [
     preview: makeArtifact({ mediaKind: "image", contentPath: SAMPLE_IMAGE }),
     updatedAt: new Date("2026-06-04T12:00:00Z").toISOString(),
     href: "/PAP/artifacts?groupBy=parent_task&groupIssueId=root-1",
-  },
-  {
+  }),
+  makeGroup({
     id: "parent_task:root-2",
     groupBy: "parent_task",
     issueIdentifier: "PAP-10200",
@@ -420,8 +363,8 @@ const PARENT_TASK_GROUPS: MockGroup[] = [
     preview: makeArtifact({ mediaKind: "image", contentPath: SAMPLE_IMAGE_TEAL }),
     updatedAt: new Date("2026-06-03T14:25:00Z").toISOString(),
     href: "/PAP/artifacts?groupBy=parent_task&groupIssueId=root-2",
-  },
-  {
+  }),
+  makeGroup({
     id: "parent_task:root-3",
     groupBy: "parent_task",
     issueIdentifier: "PAP-10180",
@@ -430,7 +373,7 @@ const PARENT_TASK_GROUPS: MockGroup[] = [
     preview: makeArtifact({ mediaKind: "document", previewText: "Decision log" }),
     updatedAt: new Date("2026-05-30T08:11:00Z").toISOString(),
     href: "/PAP/artifacts?groupBy=parent_task&groupIssueId=root-3",
-  },
+  }),
 ];
 
 const SELECTED_GROUP_ARTIFACTS: CompanyArtifact[] = [
