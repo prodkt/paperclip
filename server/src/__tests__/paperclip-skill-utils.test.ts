@@ -61,6 +61,21 @@ describe("paperclip skill utils", () => {
     await expect(fs.access(path.resolve("scripts/paperclip-upload-artifact.sh"))).rejects.toThrow();
   });
 
+  it("keeps the create-issue-interaction-ui guide as a maintainer-only skill", async () => {
+    const skillPath = path.resolve(".agents/skills/create-issue-interaction-ui/SKILL.md");
+    const skillBody = await fs.readFile(skillPath, "utf8");
+    const normalizedSkillBody = skillBody.replace(/\s+/g, " ");
+
+    expect(skillBody).toContain("name: create-issue-interaction-ui");
+    expect(skillBody).toContain("Developer/maintainer skill");
+    expect(normalizedSkillBody).toContain("Do NOT install this on production Paperclip agents");
+    expect(skillBody).toContain("packages/shared/src/constants.ts");
+    expect(skillBody).toContain("server/src/services/issue-thread-interactions.ts");
+    expect(skillBody).toContain("ui/src/components/IssueThreadInteractionCard.tsx");
+    expect(skillBody).toContain("packages/plugins/sdk/src/testing.ts");
+    await expect(fs.access(path.resolve("skills/create-issue-interaction-ui/SKILL.md"))).rejects.toThrow();
+  });
+
   it("marks skills with required: false in SKILL.md frontmatter as optional", async () => {
     const root = await makeTempDir("paperclip-skill-optional-");
     cleanupDirs.add(root);
