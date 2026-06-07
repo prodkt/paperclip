@@ -2291,6 +2291,20 @@ function normalizeInteractionContinuationWakeContext(
   clearInteractionContinuationWakeContext(contextSnapshot);
 }
 
+function isAcceptedPlanContinuationWakeContext(
+  contextSnapshot: Record<string, unknown>,
+  issueWorkMode?: string | null,
+) {
+  return (
+    readNonEmptyString(contextSnapshot.workspaceRefreshReason) === "accepted_plan_confirmation" ||
+    (
+      issueWorkMode === "planning" &&
+      readNonEmptyString(contextSnapshot.interactionKind) === "request_confirmation" &&
+      readNonEmptyString(contextSnapshot.interactionStatus) === "accepted"
+    )
+  );
+}
+
 type AcceptedPlanWakeRoutingDecision = {
   otherActiveClaimIssueId: string;
   otherActiveClaimIdentifier: string | null;
@@ -2418,13 +2432,10 @@ export async function buildPaperclipWakePayload(input: {
           .then((rows) => rows[0] ?? null)
       : null);
   let acceptedPlanCommentWindowTruncated = false;
-  const acceptedPlanContinuationWake =
-    readNonEmptyString(input.contextSnapshot.workspaceRefreshReason) === "accepted_plan_confirmation" ||
-    (
-      issueSummary?.workMode === "planning" &&
-      readNonEmptyString(input.contextSnapshot.interactionKind) === "request_confirmation" &&
-      readNonEmptyString(input.contextSnapshot.interactionStatus) === "accepted"
-    );
+  const acceptedPlanContinuationWake = isAcceptedPlanContinuationWakeContext(
+    input.contextSnapshot,
+    issueSummary?.workMode,
+  );
   if (commentIds.length === 0 && acceptedPlanContinuationWake && issueSummary?.id) {
     const recentPlanCommentRows = await input.db
       .select({ id: issueComments.id })
@@ -2434,7 +2445,7 @@ export async function buildPaperclipWakePayload(input: {
         eq(issueComments.issueId, issueSummary.id),
         isNull(issueComments.deletedAt),
       ))
-      .orderBy(desc(issueComments.createdAt), desc(issueComments.id))
+      .orderBy(desc(issueComments.createdAt))
       .limit(MAX_INLINE_WAKE_COMMENTS + 1);
     acceptedPlanCommentWindowTruncated = recentPlanCommentRows.length > MAX_INLINE_WAKE_COMMENTS;
     commentIds = recentPlanCommentRows
@@ -7804,13 +7815,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
           companyId: agent.companyId,
           agentId: agent.id,
           issueId,
-          acceptedPlanContinuationWake:
-            readNonEmptyString(context.workspaceRefreshReason) === "accepted_plan_confirmation"
-            || (
-              issueContext.workMode === "planning"
-              && readNonEmptyString(context.interactionKind) === "request_confirmation"
-              && readNonEmptyString(context.interactionStatus) === "accepted"
-            ),
+          acceptedPlanContinuationWake: isAcceptedPlanContinuationWakeContext(context, issueContext.workMode),
           contextSnapshot: context,
         })
       : null;
@@ -7949,9 +7954,10 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
     } else {
       delete context[PAPERCLIP_WAKE_PAYLOAD_KEY];
     }
+    const acceptedPlanWakeRouting = parseObject(context.acceptedPlanWakeRouting);
     const acceptedPlanContinuationForTask =
-      readNonEmptyString(context.workspaceRefreshReason) === "accepted_plan_confirmation"
-      && !parseObject(context.acceptedPlanWakeRouting);
+      isAcceptedPlanContinuationWakeContext(context, issueRef?.workMode) &&
+      Object.keys(acceptedPlanWakeRouting).length === 0;
     const acceptedPlanCommentsForTask =
       acceptedPlanContinuationForTask && Array.isArray(paperclipWakePayload?.comments)
         ? paperclipWakePayload.comments.map((comment) => ({
