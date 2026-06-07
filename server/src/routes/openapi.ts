@@ -119,6 +119,15 @@ import {
   createDocumentAnnotationCommentSchema,
   createDocumentAnnotationThreadSchema,
   updateDocumentAnnotationThreadSchema,
+  // Document review
+  createDocumentReviewThreadSchema,
+  createDocumentReviewCommentSchema,
+  updateDocumentReviewThreadSchema,
+  createDocumentSuggestionSchema,
+  createDocumentSuggestionCommentSchema,
+  acceptDocumentSuggestionSchema,
+  rejectDocumentSuggestionSchema,
+  resolveDocumentSuggestionSchema,
   // Issue recovery and decomposition
   createAcceptedPlanDecompositionSchema,
   resolveIssueRecoveryActionSchema,
@@ -605,6 +614,10 @@ const CREATED_OPERATIONS = new Set([
   "POST /api/companies/{companyId}/labels",
   "POST /api/issues/{id}/documents/{key}/annotations",
   "POST /api/issues/{id}/documents/{key}/annotations/{threadId}/comments",
+  "POST /api/issues/{id}/documents/{key}/review-comments",
+  "POST /api/issues/{id}/documents/{key}/review-comments/{threadId}/comments",
+  "POST /api/issues/{id}/documents/{key}/suggestions",
+  "POST /api/issues/{id}/documents/{key}/suggestions/{suggestionId}/comments",
   "POST /api/issues/{id}/work-products",
   "POST /api/issues/{id}/low-trust/promotions",
   "POST /api/issues/{id}/approvals",
@@ -4371,6 +4384,81 @@ registerCurrentRoute({
   tags: ["issues"],
   summary: "Update a document annotation thread",
   body: updateDocumentAnnotationThreadSchema,
+});
+
+registerCurrentRoute({
+  method: "get",
+  path: "/api/issues/{id}/documents/{key}/review-index",
+  tags: ["issues"],
+  summary: "Get the document review index",
+});
+
+registerCurrentRoute({
+  method: "post",
+  path: "/api/issues/{id}/documents/{key}/review-comments",
+  tags: ["issues"],
+  summary: "Create a document review thread",
+  body: createDocumentReviewThreadSchema,
+  responses: { 201: r.ok(), 400: r.badRequest, 401: r.unauthorized, 404: r.notFound },
+});
+
+registerCurrentRoute({
+  method: "post",
+  path: "/api/issues/{id}/documents/{key}/review-comments/{threadId}/comments",
+  tags: ["issues"],
+  summary: "Add a document review comment",
+  body: createDocumentReviewCommentSchema,
+  responses: { 201: r.ok(), 400: r.badRequest, 401: r.unauthorized, 404: r.notFound },
+});
+
+registerCurrentRoute({
+  method: "patch",
+  path: "/api/issues/{id}/documents/{key}/review-comments/{threadId}",
+  tags: ["issues"],
+  summary: "Update a document review thread",
+  body: updateDocumentReviewThreadSchema,
+});
+
+registerCurrentRoute({
+  method: "post",
+  path: "/api/issues/{id}/documents/{key}/suggestions",
+  tags: ["issues"],
+  summary: "Create a document suggestion",
+  body: createDocumentSuggestionSchema,
+  responses: { 201: r.ok(), 400: r.badRequest, 401: r.unauthorized, 404: r.notFound },
+});
+
+registerCurrentRoute({
+  method: "post",
+  path: "/api/issues/{id}/documents/{key}/suggestions/{suggestionId}/comments",
+  tags: ["issues"],
+  summary: "Add a document suggestion comment",
+  body: createDocumentSuggestionCommentSchema,
+  responses: { 201: r.ok(), 400: r.badRequest, 401: r.unauthorized, 404: r.notFound },
+});
+
+registerCurrentRoute({
+  method: "post",
+  path: "/api/issues/{id}/documents/{key}/suggestions/{suggestionId}/reject",
+  tags: ["issues"],
+  summary: "Reject a document suggestion",
+  body: rejectDocumentSuggestionSchema,
+});
+
+registerCurrentRoute({
+  method: "post",
+  path: "/api/issues/{id}/documents/{key}/suggestions/{suggestionId}/resolve",
+  tags: ["issues"],
+  summary: "Resolve a document suggestion",
+  body: resolveDocumentSuggestionSchema,
+});
+
+registerCurrentRoute({
+  method: "post",
+  path: "/api/issues/{id}/documents/{key}/suggestions/{suggestionId}/accept",
+  tags: ["issues"],
+  summary: "Accept a document suggestion",
+  body: acceptDocumentSuggestionSchema,
 });
 
 registerCurrentRoute({
