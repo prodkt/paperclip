@@ -292,7 +292,7 @@ export function AgentActionButtons({
   const disabled = actionsDisabled || agentAction.isPending;
   const assignAndRunDisabled = disabled || isPendingApproval || workActionsDisabled;
   const pauseResumeDisabled = disabled || isPendingApproval || (isPaused && workActionsDisabled);
-  const clearErrorDisabled = disabled || isPendingApproval;
+  const clearErrorDisabled = disabled;
 
   return (
     <div className={className ?? "flex items-center gap-1 sm:gap-2 shrink-0"}>
