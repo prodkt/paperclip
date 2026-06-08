@@ -528,6 +528,7 @@ export function extractMentionedSkillIdsFromSources(
   for (const source of sources) {
     if (typeof source !== "string" || source.length === 0) continue;
     for (const skillId of extractSkillMentionIds(source)) {
+      if (!isUuidLike(skillId)) continue;
       mentionedIds.add(skillId);
     }
   }

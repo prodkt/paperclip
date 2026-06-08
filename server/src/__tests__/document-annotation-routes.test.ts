@@ -293,5 +293,6 @@ describe("document annotation routes", () => {
     expect(mockLogActivity).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       action: "issue.document_annotation_thread_resolved",
     }));
+    expect(mockHeartbeatService.wakeup).not.toHaveBeenCalled();
   });
 });
