@@ -697,7 +697,6 @@ async function listPendingFinalizeBlockerIssueIds(
 
   const latestByBlockerIssueId = new Map<string, { phase: string; status: string; startedAt: Date }>();
   const latestLegacyByWorkspaceId = new Map<string, { phase: string; status: string; startedAt: Date }>();
-  const workspacesWithRunAttributedOps = new Set<string>();
   for (const row of rows) {
     if (!row.executionWorkspaceId) continue;
     const blockerIds = blockerIdsByWorkspaceId.get(row.executionWorkspaceId);
@@ -716,7 +715,6 @@ async function listPendingFinalizeBlockerIssueIds(
       }
       continue;
     }
-    workspacesWithRunAttributedOps.add(row.executionWorkspaceId);
     for (const blockerIssueId of runIssueIds) {
       if (!blockerIds.has(blockerIssueId)) continue;
       const current = latestByBlockerIssueId.get(blockerIssueId);
@@ -733,9 +731,7 @@ async function listPendingFinalizeBlockerIssueIds(
   for (const target of targets) {
     const workspaceId = target.executionWorkspaceId;
     const latest = latestByBlockerIssueId.get(target.blockerIssueId) ??
-      (workspaceId && !workspacesWithRunAttributedOps.has(workspaceId)
-        ? latestLegacyByWorkspaceId.get(workspaceId)
-        : null);
+      (workspaceId ? latestLegacyByWorkspaceId.get(workspaceId) : null);
     if (!latest) continue; // no blocker-specific workspace ops recorded -> no finalize barrier
     if (latest.phase === "workspace_finalize" && latest.status === "succeeded") continue;
     pending.add(target.blockerIssueId);
