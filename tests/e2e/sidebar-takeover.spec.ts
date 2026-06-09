@@ -23,7 +23,7 @@ import { test, expect, request as pwRequest, type APIRequestContext } from "@pla
 
 const PORT = Number(process.env.PAPERCLIP_E2E_PORT ?? 3199);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const COMPANY_NAME = `E2E-SidebarTakeover-${Date.now()}`;
+const COMPANY_NAME_PREFIX = "E2E-SidebarTakeover";
 const COLLAPSED_STORAGE_KEY = "paperclip.sidebar.collapsed";
 
 // The sidebar header's "Open search" control only renders when the app sidebar
@@ -39,7 +39,7 @@ async function createCompany(board: APIRequestContext): Promise<{ id: string; pr
   expect(health.deploymentMode).toBe("local_trusted");
 
   const companyRes = await board.post(`${BASE_URL}/api/companies`, {
-    data: { name: COMPANY_NAME },
+    data: { name: `${COMPANY_NAME_PREFIX}-${Date.now()}` },
   });
   if (!companyRes.ok()) {
     throw new Error(`POST /api/companies → ${companyRes.status()}: ${await companyRes.text()}`);
