@@ -2157,10 +2157,11 @@ async function startLocalRuntimeService(input: {
     companyId: input.agent.companyId,
     reuseKey: input.reuseKey,
   });
-  const reusableStoppedPort =
-    asString(portConfig.type, "") === "auto" && stoppedReuseCandidate?.port
-      ? stoppedReuseCandidate.port
-      : null;
+  let reusableStoppedPort: number | null = null;
+  if (asString(portConfig.type, "") === "auto" && stoppedReuseCandidate?.port) {
+    const ownerPid = await readLocalServicePortOwner(stoppedReuseCandidate.port);
+    reusableStoppedPort = ownerPid ? null : stoppedReuseCandidate.port;
+  }
   const port =
     asString(portConfig.type, "") === "auto"
       ? (reusableStoppedPort ?? await allocatePort())

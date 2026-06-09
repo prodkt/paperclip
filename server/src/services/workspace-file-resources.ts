@@ -751,12 +751,14 @@ async function enumerateWorkspaceFiles(input: {
   mode: WorkspaceFileListMode;
   normalizedQuery: string | null;
   limit: number;
+  offset: number;
 }) {
   const dirs: Array<{ realPath: string; relativePath: string; depth: number }> = [
     { realPath: input.startReal ?? input.rootReal, relativePath: input.startRelativePath ?? "", depth: 0 },
   ];
   const items: WorkspaceFileListItem[] = [];
   let scannedCount = 0;
+  let matchedCount = 0;
   let truncated = false;
   let hitScanCap = false;
 
@@ -804,20 +806,32 @@ async function enumerateWorkspaceFiles(input: {
         relativePath,
         normalizedQuery: input.normalizedQuery,
       });
-      if (item) items.push(item);
+      if (!item) continue;
 
-      if (input.mode !== "recent" && items.length >= input.limit) {
+      if (input.mode === "recent") {
+        items.push(item);
+        continue;
+      }
+
+      if (matchedCount < input.offset) {
+        matchedCount += 1;
+        continue;
+      }
+      if (items.length >= input.limit) {
         truncated = true;
         break;
       }
+      matchedCount += 1;
+      items.push(item);
     }
     if (hitScanCap || (truncated && input.mode !== "recent")) break;
   }
 
   if (input.mode === "recent") {
     items.sort((a, b) => (b.modifiedAt ?? "").localeCompare(a.modifiedAt ?? "") || a.displayPath.localeCompare(b.displayPath));
-    truncated = truncated || items.length > input.limit;
-    return { items: items.slice(0, input.limit), scannedCount, truncated };
+    const end = input.offset + input.limit;
+    truncated = truncated || items.length > end;
+    return { items: items.slice(input.offset, end), scannedCount, truncated };
   }
 
   return { items, scannedCount, truncated };
@@ -847,6 +861,7 @@ async function listChangedWorkspaceFiles(input: {
   rootReal: string;
   normalizedQuery: string | null;
   limit: number;
+  offset: number;
 }) {
   let stdout: string;
   try {
@@ -861,7 +876,7 @@ async function listChangedWorkspaceFiles(input: {
   }
 
   const { paths, hitScanCap } = parseGitStatusPaths(stdout);
-  const items: WorkspaceFileListItem[] = [];
+  const matchedItems: WorkspaceFileListItem[] = [];
   let scannedCount = 0;
   for (const filePath of paths) {
     scannedCount += 1;
@@ -871,14 +886,14 @@ async function listChangedWorkspaceFiles(input: {
       relativePath: filePath,
       normalizedQuery: input.normalizedQuery,
     });
-    if (item) items.push(item);
-    if (items.length >= input.limit) break;
+    if (item) matchedItems.push(item);
   }
-  items.sort((a, b) => a.displayPath.localeCompare(b.displayPath));
+  matchedItems.sort((a, b) => a.displayPath.localeCompare(b.displayPath));
+  const end = input.offset + input.limit;
   return {
-    items,
+    items: matchedItems.slice(input.offset, end),
     scannedCount,
-    truncated: hitScanCap || paths.length > scannedCount || items.length > input.limit,
+    truncated: hitScanCap || matchedItems.length > end,
   };
 }
 
@@ -1166,7 +1181,7 @@ export function workspaceFileResourceService(db: Db) {
       }
 
       if (mode === "changed") {
-        const changed = await listChangedWorkspaceFiles({ candidate, rootReal, normalizedQuery, limit });
+        const changed = await listChangedWorkspaceFiles({ candidate, rootReal, normalizedQuery, limit, offset });
         if ("unavailableReason" in changed) {
           const reason = changed.unavailableReason ?? "changed_unavailable";
           firstUnavailable ??= { candidate, reason };
@@ -1216,6 +1231,7 @@ export function workspaceFileResourceService(db: Db) {
         mode,
         normalizedQuery,
         limit,
+        offset,
       });
       return availableFileList({
         selector,
@@ -1265,6 +1281,7 @@ export function workspaceFileResourceService(db: Db) {
           mode,
           normalizedQuery,
           limit,
+          offset,
         });
         return availableFileList({
           selector,

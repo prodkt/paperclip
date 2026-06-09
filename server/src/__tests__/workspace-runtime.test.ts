@@ -3087,7 +3087,7 @@ describeEmbeddedPostgres("workspace runtime startup reconciliation", () => {
     await expect(fetch(service!.url!)).rejects.toThrow();
   });
 
-  it("replaces unhealthy adopted Paperclip dev services on a reused auto port", async () => {
+  it("does not reuse a stopped auto-port service port while another process owns it", async () => {
     const workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-runtime-unhealthy-adopt-"));
     const paperclipHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-runtime-home-"));
     process.env.PAPERCLIP_HOME = paperclipHome;
@@ -3278,9 +3278,11 @@ describeEmbeddedPostgres("workspace runtime startup reconciliation", () => {
       expect(services).toHaveLength(1);
       expect(services[0]?.reused).toBe(false);
       expect(services[0]?.id).toBe(stoppedServiceId);
-      expect(services[0]?.port).toBe(stalePort);
-      await expect(fetch(healthUrl)).resolves.toMatchObject({ ok: true });
-      expect(await readLocalServicePortOwner(stalePort!)).not.toBe(staleProcess.pid);
+      expect(services[0]?.port).not.toBe(stalePort);
+      expect(services[0]?.url).not.toBe(rootUrl);
+      await expect(fetch(services[0]!.url!)).resolves.toMatchObject({ ok: true });
+      await expect(fetch(healthUrl)).resolves.toMatchObject({ ok: false, status: 503 });
+      expect(await readLocalServicePortOwner(stalePort!)).toBe(staleProcess.pid);
     } finally {
       leasedRunIds.delete(runId);
       await releaseRuntimeServicesForRun(runId);

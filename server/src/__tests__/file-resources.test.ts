@@ -1,8 +1,10 @@
 import express from "express";
 import type { Request } from "express";
+import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { activityLog, agents, companies, createDb, executionWorkspaces, goals, issues, projects, projectWorkspaces, type Db } from "@paperclipai/db";
@@ -25,6 +27,7 @@ import {
 
 const embeddedPostgresSupport = await getEmbeddedPostgresTestSupport();
 const describeEmbeddedPostgres = embeddedPostgresSupport.supported ? describe : describe.skip;
+const execFileAsync = promisify(execFile);
 
 type TestGraph = {
   companyId: string;
@@ -772,6 +775,52 @@ describeEmbeddedPostgres("workspace file resources", () => {
     expect(JSON.stringify(listRead?.details)).not.toContain(projectRoot);
     expect(JSON.stringify(listRead?.details)).not.toContain("old.ts");
     expect(JSON.stringify(listRead?.details)).not.toContain("new.ts");
+  });
+
+  it("applies list offsets to search, recent, and changed modes", async () => {
+    const { projectRoot, executionRoot } = await makeWorkspace();
+    const graph = await seedGraph(db, { projectRoot, executionRoot });
+    await execFileAsync("git", ["-C", projectRoot, "init"]);
+    await Promise.all([
+      fs.writeFile(path.join(projectRoot, "alpha.ts"), "export const alpha = true;\n", "utf8"),
+      fs.writeFile(path.join(projectRoot, "beta.ts"), "export const beta = true;\n", "utf8"),
+      fs.writeFile(path.join(projectRoot, "gamma.ts"), "export const gamma = true;\n", "utf8"),
+    ]);
+    const older = new Date("2026-01-01T00:00:00.000Z");
+    const middle = new Date("2026-01-02T00:00:00.000Z");
+    const newer = new Date("2026-01-03T00:00:00.000Z");
+    await fs.utimes(path.join(projectRoot, "alpha.ts"), older, older);
+    await fs.utimes(path.join(projectRoot, "beta.ts"), middle, middle);
+    await fs.utimes(path.join(projectRoot, "gamma.ts"), newer, newer);
+
+    const app = createApp(db, {
+      type: "board",
+      userId: "board-user",
+      companyIds: [graph.companyId],
+      source: "session",
+      isInstanceAdmin: false,
+    });
+
+    const searchPage = await request(app)
+      .get(`/api/issues/${graph.issueId}/file-resources/list`)
+      .query({ workspace: "project", q: ".ts", limit: 1, offset: 1 });
+    expect(searchPage.status).toBe(200);
+    expect(searchPage.body.items.map((item: { relativePath: string }) => item.relativePath)).toEqual(["beta.ts"]);
+    expect(searchPage.body.truncated).toBe(true);
+
+    const recentPage = await request(app)
+      .get(`/api/issues/${graph.issueId}/file-resources/list`)
+      .query({ workspace: "project", mode: "recent", limit: 1, offset: 1 });
+    expect(recentPage.status).toBe(200);
+    expect(recentPage.body.items.map((item: { relativePath: string }) => item.relativePath)).toEqual(["beta.ts"]);
+    expect(recentPage.body.truncated).toBe(true);
+
+    const changedPage = await request(app)
+      .get(`/api/issues/${graph.issueId}/file-resources/list`)
+      .query({ workspace: "project", mode: "changed", limit: 1, offset: 1 });
+    expect(changedPage.status).toBe(200);
+    expect(changedPage.body.items.map((item: { relativePath: string }) => item.relativePath)).toEqual(["beta.ts"]);
+    expect(changedPage.body.truncated).toBe(true);
   });
 
   it("rejects overlong list searches and redacts the raw query from denial audit details", async () => {
