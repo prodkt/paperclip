@@ -11,7 +11,7 @@ function writeExecutable(path, body) {
   writeFileSync(path, body, { mode: 0o755 });
 }
 
-function runPublishHelper({ pnpmMode, npmVersionExists = false }) {
+function runPublishHelper({ pnpmMode, npmVersionExists = false, distTag = "canary", callerPipefail = true }) {
   const fixtureDir = mkdtempSync(join(tmpdir(), "paperclip-release-lib-"));
   const binDir = join(fixtureDir, "bin");
   const stateDir = join(fixtureDir, "state");
@@ -74,10 +74,11 @@ exit 1
 `,
   );
 
+  const shellOptions = callerPipefail ? "set -euo pipefail" : "set -eu";
   const script = `
-set -euo pipefail
+${shellOptions}
 source "${repoRoot}/scripts/release-lib.sh"
-publish_package_to_npm canary @paperclipai/example 1.2.3
+publish_package_to_npm ${distTag} @paperclipai/example 1.2.3
 `;
 
   let status = 0;
@@ -142,5 +143,21 @@ test("publish_package_to_npm does not retry unrelated publish failures", () => {
 
   assert.notEqual(result.status, 0);
   assert.doesNotMatch(result.calls, /npm view/);
+  assert.doesNotMatch(result.calls, /--provenance=false/);
+});
+
+test("publish_package_to_npm does not mask failures when caller has no pipefail", () => {
+  const result = runPublishHelper({ pnpmMode: "non-tlog-failure", callerPipefail: false });
+
+  assert.notEqual(result.status, 0);
+  assert.doesNotMatch(result.calls, /npm view/);
+  assert.doesNotMatch(result.calls, /--provenance=false/);
+});
+
+test("publish_package_to_npm does not retry stable publishes without provenance", () => {
+  const result = runPublishHelper({ pnpmMode: "tlog-then-success", distTag: "latest" });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.calls, /^npm view @paperclipai\/example@1\.2\.3 version$/m);
   assert.doesNotMatch(result.calls, /--provenance=false/);
 });

@@ -278,7 +278,7 @@ publish_package_to_npm() {
 
   publish_log="$(mktemp "${TMPDIR:-/tmp}/paperclip-npm-publish.XXXXXX")"
 
-  if pnpm publish --no-git-checks --tag "$dist_tag" --access public 2>&1 | tee "$publish_log"; then
+  if (set -o pipefail; pnpm publish --no-git-checks --tag "$dist_tag" --access public 2>&1 | tee "$publish_log"); then
     rm -f "$publish_log"
     return 0
   fi
@@ -294,6 +294,12 @@ publish_package_to_npm() {
     release_warn "npm already exposes ${package_name}@${package_version}; continuing to registry verification."
     rm -f "$publish_log"
     return 0
+  fi
+
+  if [ "$dist_tag" != "canary" ]; then
+    release_warn "Not retrying ${package_name}@${package_version} without provenance for dist-tag ${dist_tag}."
+    rm -f "$publish_log"
+    return 1
   fi
 
   release_warn "Retrying ${package_name}@${package_version} once with npm provenance disabled."
