@@ -18,6 +18,25 @@ const pipelineStageOnEnterSchema = z.object({
   run_routine: pipelineStageRunRoutineSchema,
 }).strict();
 
+export const pipelineStageDisableConfigSchema = z.object({
+  newEntries: z.boolean().optional().default(false),
+  reason: z.string().trim().max(1_000).nullable().optional().default(null),
+}).strict();
+
+export const pipelineStageApprovalConfigSchema = z.object({
+  required: z.boolean().optional().default(false),
+  approverType: z.enum(["any_human", "human", "agent"]).optional().default("any_human"),
+  approverId: z.string().trim().max(200).nullable().optional().default(null),
+}).strict().superRefine((value, ctx) => {
+  if (value.required && value.approverType !== "any_human" && !value.approverId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["approverId"],
+      message: "A human or agent approver must be selected",
+    });
+  }
+});
+
 export const pipelineStageVariableSchema = z.object({
   key: routineVariableLikeNameSchema,
   label: z.string().trim().max(120),
@@ -45,6 +64,9 @@ export const pipelineStageVariableSchema = z.object({
 export const pipelineStageConfigSchema = z.object({
   variables: z.array(pipelineStageVariableSchema).default([]),
   onEnter: pipelineStageOnEnterSchema.optional(),
+  disable: pipelineStageDisableConfigSchema.optional(),
+  approval: pipelineStageApprovalConfigSchema.optional(),
+  whatHappensHere: z.string().trim().max(10_000).optional(),
 }).passthrough().superRefine((value, ctx) => {
   const keys = new Set<string>();
   value.variables.forEach((variable, index) => {
@@ -276,4 +298,6 @@ export type PipelineCaseTransitionConfig = Record<string, unknown>;
 export type PipelineCaseConfig = Record<string, unknown>;
 export type PipelineStageConfig = z.infer<typeof pipelineStageConfigSchema>;
 export type PipelineStageVariable = z.infer<typeof pipelineStageVariableSchema>;
+export type PipelineStageDisableConfig = z.infer<typeof pipelineStageDisableConfigSchema>;
+export type PipelineStageApprovalConfig = z.infer<typeof pipelineStageApprovalConfigSchema>;
 export type PipelineStageRunRoutineConfig = z.infer<typeof pipelineStageRunRoutineSchema>;

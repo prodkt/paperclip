@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { extractPipelineIntakeFormFields, mapConfiguredFields, triggerStageOnEnter, validateStageRequiredFields } from "./pipelines.js";
+import { extractPipelineIntakeFormFields, isStageNewEntryDisabled, mapConfiguredFields, triggerStageOnEnter, validateStageRequiredFields } from "./pipelines.js";
 
 describe("pipeline service helpers", () => {
   it("derives intake fields from first stage variables", () => {
@@ -60,6 +60,12 @@ describe("pipeline service helpers", () => {
     expect(() =>
       validateStageRequiredFields({ notes: "Urgent follow-up" }, variables),
     ).toThrowError(/Missing required field\(s\): customer/);
+  });
+
+  it("detects stages that block new entries from config", () => {
+    expect(isStageNewEntryDisabled({ variables: [], disable: { newEntries: true } })).toBe(true);
+    expect(isStageNewEntryDisabled({ variables: [], disable: { newEntries: false } })).toBe(false);
+    expect(isStageNewEntryDisabled({ variables: [], disabled: true })).toBe(true);
   });
 
   it("maps configured fields and triggers run_routine with resolved payload and actor", async () => {

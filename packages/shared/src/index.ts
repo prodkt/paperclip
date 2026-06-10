@@ -1145,6 +1145,8 @@ export {
   pipelineStageConfigSchema,
   pipelineStageVariableSchema,
   pipelineStageRunRoutineSchema,
+  pipelineStageDisableConfigSchema,
+  pipelineStageApprovalConfigSchema,
   pipelineStatusSchema,
   pipelineStageKindSchema,
   pipelineCaseIssueLinkRoleSchema,

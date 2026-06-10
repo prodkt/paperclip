@@ -41,6 +41,7 @@ import type {
   PipelineCaseEvent,
   PipelineConnectionRef,
   PipelineConnections,
+  PipelineIntakeForm,
   PipelineIssueLink,
   PipelineStage,
   PipelineTransition,
@@ -826,6 +827,7 @@ function PipelineBoardColumn({
   return (
     <div
       key={stage.id}
+      aria-label={`${stage.name} column`}
       className={`flex min-w-[260px] max-w-[320px] shrink-0 flex-col rounded-md border border-border ${isBlockedDropTarget ? "ring-1 ring-red-500/45" : ""}`}
     >
       <div className="flex items-center justify-between border-b border-border px-3 py-2 text-sm font-semibold text-muted-foreground">
@@ -916,6 +918,191 @@ function NewPipelineDialog({
             </Button>
             <Button type="submit" disabled={pending || !name.trim()}>
               {pending ? "Creating..." : "Create pipeline"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PipelineAddItemDialog({
+  open,
+  onOpenChange,
+  intakeForm,
+  onSubmit,
+  pending,
+  error,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  intakeForm: PipelineIntakeForm | null;
+  onSubmit: (data: { items: Array<{ title: string; fields: Record<string, unknown> }> }) => void;
+  pending: boolean;
+  error: string | null;
+}) {
+  type DraftItem = { id: string; title: string; fields: Record<string, string> };
+  const createDraftItem = () => {
+    const initialFields: Record<string, string> = {};
+    for (const field of intakeForm?.fields ?? []) {
+      initialFields[field.key] = "";
+    }
+    return {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      title: "",
+      fields: initialFields,
+    };
+  };
+  const [items, setItems] = useState<DraftItem[]>(() => [createDraftItem()]);
+
+  useEffect(() => {
+    if (!open) return;
+    setItems([createDraftItem()]);
+  }, [intakeForm, open]);
+
+  const updateItem = (itemId: string, patch: Partial<DraftItem>) => {
+    setItems((current) =>
+      current.map((item) => item.id === itemId ? { ...item, ...patch } : item),
+    );
+  };
+
+  const updateItemField = (itemId: string, key: string, value: string) => {
+    setItems((current) =>
+      current.map((item) =>
+        item.id === itemId ? { ...item, fields: { ...item.fields, [key]: value } } : item,
+      ),
+    );
+  };
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextItems = items
+      .map((item) => {
+        const nextFields: Record<string, unknown> = {};
+        for (const field of intakeForm?.fields ?? []) {
+          const value = item.fields[field.key]?.trim() ?? "";
+          if (value || field.required) {
+            nextFields[field.key] = value;
+          }
+        }
+        return { title: item.title.trim(), fields: nextFields };
+      })
+      .filter((item) => item.title.length > 0);
+    if (nextItems.length === 0) return;
+    onSubmit({ items: nextItems });
+  };
+
+  const submitCount = items.filter((item) => item.title.trim()).length;
+  const fieldSource = intakeForm?.stageName ?? "the first stage";
+
+  const renderFieldControl = (item: DraftItem, field: PipelineIntakeForm["fields"][number]) => {
+    if (field.type === "multiline") {
+      return (
+        <Textarea
+          value={item.fields[field.key] ?? ""}
+          onChange={(event) => updateItemField(item.id, field.key, event.target.value)}
+          required={field.required}
+          rows={2}
+        />
+      );
+    }
+    if (field.type === "select") {
+      return (
+        <select
+          value={item.fields[field.key] ?? ""}
+          onChange={(event) => updateItemField(item.id, field.key, event.target.value)}
+          required={field.required}
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+        >
+          <option value="">Select...</option>
+          {(field.options ?? []).map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      );
+    }
+    return (
+      <Input
+        value={item.fields[field.key] ?? ""}
+        onChange={(event) => updateItemField(item.id, field.key, event.target.value)}
+        required={field.required}
+      />
+    );
+  };
+
+  const addAnotherItem = () => {
+    setItems((current) => [...current, createDraftItem()]);
+  };
+
+  const removeItem = (itemId: string) => {
+    setItems((current) => {
+      if (current.length === 1) {
+        return [createDraftItem()];
+      }
+      return current.filter((item) => item.id !== itemId);
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl">
+        <form onSubmit={submit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>Add items</DialogTitle>
+            <DialogDescription>
+              New items enter {fieldSource}. These fields come from Pipeline settings.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+            {items.map((item, index) => (
+              <section key={item.id} className="space-y-3 rounded-md border border-border p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-foreground">Item {index + 1}</h3>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Remove item ${index + 1}`}
+                    onClick={() => removeItem(item.id)}
+                    disabled={pending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <label className="block space-y-1.5 text-sm font-medium">
+                  <span>Title</span>
+                  <Input
+                    value={item.title}
+                    onChange={(event) => updateItem(item.id, { title: event.target.value })}
+                    required
+                    autoFocus={index === 0}
+                  />
+                </label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {(intakeForm?.fields ?? []).map((field) => (
+                    <label key={field.key} className="block space-y-1.5 text-sm font-medium">
+                      <span>
+                        {field.label}
+                        {field.required ? <span className="text-destructive"> *</span> : null}
+                      </span>
+                      {renderFieldControl(item, field)}
+                    </label>
+                  ))}
+                </div>
+              </section>
+            ))}
+            <Button type="button" variant="outline" onClick={addAnotherItem} disabled={pending}>
+              <Plus className="h-4 w-4" />
+              Add another item
+            </Button>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending || submitCount === 0}>
+              {pending ? "Adding..." : `Submit ${formatNumber(submitCount)} item${submitCount === 1 ? "" : "s"}`}
             </Button>
           </DialogFooter>
         </form>
@@ -1028,6 +1215,16 @@ export function PipelineBoardStub() {
   const navigate = useNavigate();
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const [activeOverId, setActiveOverId] = useState<string | null>(null);
+  const [addItemOpen, setAddItemOpen] = useState(false);
+  const [pendingMove, setPendingMove] = useState<{
+    caseId: string;
+    itemTitle: string;
+    sourceName: string;
+    targetStageId: string;
+    targetName: string;
+    allowed: boolean;
+  } | null>(null);
+  const [overrideReason, setOverrideReason] = useState("");
   const hasBoardContext = !!selectedCompanyId && !!pipelineId;
 
   const pipelineQuery = useQuery({
@@ -1039,6 +1236,12 @@ export function PipelineBoardStub() {
   const casesQuery = useQuery({
     queryKey: pipelineId ? queryKeys.pipelines.cases(pipelineId) : ["pipelines", "cases", "none"],
     queryFn: () => pipelinesApi.listCases(pipelineId!),
+    enabled: hasBoardContext,
+  });
+
+  const intakeFormQuery = useQuery({
+    queryKey: pipelineId ? queryKeys.pipelines.intakeForm(pipelineId) : ["pipelines", "intake-form", "none"],
+    queryFn: () => pipelinesApi.getIntakeForm(pipelineId!),
     enabled: hasBoardContext,
   });
 
@@ -1097,9 +1300,11 @@ export function PipelineBoardStub() {
   }, [boardColumns.columns]);
 
   const transitionCase = useMutation({
-    mutationFn: ({ caseId, toStageId }: { caseId: string; toStageId: string }) =>
-      pipelinesApi.transitionCase(caseId, { toStageId }),
+    mutationFn: ({ caseId, toStageId, reason }: { caseId: string; toStageId: string; reason?: string | null }) =>
+      pipelinesApi.transitionCase(caseId, { toStageId, reason }),
     onSuccess: async () => {
+      setPendingMove(null);
+      setOverrideReason("");
       await queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(pipelineId!) });
       await queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.cases(pipelineId!) });
     },
@@ -1111,6 +1316,22 @@ export function PipelineBoardStub() {
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(pipelineId!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.cases(pipelineId!) });
+    },
+  });
+
+  const addItem = useMutation({
+    mutationFn: (data: { items: Array<{ title: string; fields: Record<string, unknown> }> }) =>
+      pipelinesApi.ingestCasesBatch(pipelineId!, {
+        items: data.items.map((item) => ({
+          title: item.title,
+          fields: item.fields,
+        })),
+      }),
+    onSuccess: async () => {
+      setAddItemOpen(false);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.detail(pipelineId!) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.cases(pipelineId!) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.intakeForm(pipelineId!) });
     },
   });
 
@@ -1144,22 +1365,15 @@ export function PipelineBoardStub() {
 
     if (!targetStageId || sourceStageId === targetStageId) return;
 
-    if (!isGuardedTransitionAllowed(transitions, sourceStageId, targetStageId)) {
-      const sourceName = stageNameById.get(sourceStageId ?? "") ?? "Unassigned";
-      const targetName = stageNameById.get(targetStageId) ?? UNASSIGNED_STAGE_NAME;
-      pushToast({
-        title: "Move blocked",
-        body: transitionsEnabled
-          ? `Cannot move "${activeCase.title}" from ${sourceName} to ${targetName}.`
-          : `Cannot move "${activeCase.title}" because its source stage is missing.`,
-        tone: "warn",
-      });
-      return;
-    }
-
-    transitionCase.mutate({
+    const sourceName = stageNameById.get(sourceStageId ?? "") ?? "Unassigned";
+    const targetName = stageNameById.get(targetStageId) ?? UNASSIGNED_STAGE_NAME;
+    setPendingMove({
       caseId: activeCase.id,
-      toStageId: targetStageId,
+      itemTitle: getCaseTitle(activeCase),
+      sourceName,
+      targetStageId,
+      targetName,
+      allowed: isGuardedTransitionAllowed(transitions, sourceStageId, targetStageId),
     });
   }
 
@@ -1213,6 +1427,9 @@ export function PipelineBoardStub() {
   }
 
   const activeCase = activeCaseId ? boardColumns.caseById.get(activeCaseId) ?? null : null;
+  const intakeForm = intakeFormQuery.data ?? null;
+  const newEntriesDisabled = Boolean(intakeForm?.newEntriesDisabled);
+  const addItemDisabled = !intakeForm?.stageId || newEntriesDisabled || intakeFormQuery.isLoading;
 
   return (
     <div className="space-y-4">
@@ -1222,10 +1439,28 @@ export function PipelineBoardStub() {
           {pipeline.description ? <p className="mt-1 text-sm text-muted-foreground">{pipeline.description}</p> : null}
           <p className="mt-1 text-xs text-muted-foreground">{cases.length} total item{cases.length === 1 ? "" : "s"}</p>
         </div>
-        <Button variant="outline" onClick={() => navigate(`/pipelines/${pipeline.id}/settings`)}>
-          Settings
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setAddItemOpen(true)}
+            disabled={addItemDisabled}
+            title={newEntriesDisabled ? "New entries are disabled for the first stage" : undefined}
+          >
+            <Plus className="h-4 w-4" />
+            Add items
+          </Button>
+          <Button variant="outline" onClick={() => navigate(`/pipelines/${pipeline.id}/settings`)}>
+            Settings
+          </Button>
+        </div>
       </div>
+
+      {newEntriesDisabled ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-300/30 dark:bg-amber-400/10 dark:text-amber-200">
+          New entries are disabled for {intakeForm?.stageName ?? "the first stage"}. Existing items remain visible.
+          {intakeForm?.disabledReason ? ` ${intakeForm.disabledReason}` : ""}
+        </p>
+      ) : null}
 
       {transitionsEnabled ? (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-300/30 dark:bg-amber-400/10 dark:text-amber-200">
@@ -1277,6 +1512,94 @@ export function PipelineBoardStub() {
           {activeCase ? <PipelineCaseCard caseItem={activeCase} isOverlay /> : null}
         </DragOverlay>
       </DndContext>
+
+      <PipelineAddItemDialog
+        open={addItemOpen}
+        onOpenChange={setAddItemOpen}
+        intakeForm={intakeForm}
+        onSubmit={(data) => addItem.mutate(data)}
+        pending={addItem.isPending}
+        error={addItem.error ? addItem.error.message : null}
+      />
+
+      <Dialog
+        open={Boolean(pendingMove)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingMove(null);
+            setOverrideReason("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pendingMove?.allowed ? `Move ${pendingMove.itemTitle}?` : "This skips the normal flow"}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingMove?.allowed
+                ? `Move ${pendingMove.itemTitle} to ${pendingMove.targetName} yourself? Usually the agent suggests this when it is ready.`
+                : pendingMove
+                  ? `${pendingMove.itemTitle} would jump from ${pendingMove.sourceName} to ${pendingMove.targetName}. Add a reason before overriding.`
+                  : "Review this move before continuing."}
+            </DialogDescription>
+          </DialogHeader>
+          {pendingMove && !pendingMove.allowed ? (
+            <label className="block space-y-1.5 text-sm font-medium">
+              <span>Reason</span>
+              <Textarea
+                value={overrideReason}
+                onChange={(event) => setOverrideReason(event.target.value)}
+                rows={3}
+                placeholder="Explain why this item should skip the normal flow."
+                autoFocus
+              />
+            </label>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={transitionCase.isPending}
+              onClick={() => {
+                setPendingMove(null);
+                setOverrideReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            {pendingMove?.allowed ? (
+              <Button
+                type="button"
+                disabled={transitionCase.isPending}
+                onClick={() =>
+                  transitionCase.mutate({
+                    caseId: pendingMove.caseId,
+                    toStageId: pendingMove.targetStageId,
+                  })
+                }
+              >
+                Move it
+              </Button>
+            ) : pendingMove ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={transitionCase.isPending || !overrideReason.trim()}
+                onClick={() =>
+                  transitionCase.mutate({
+                    caseId: pendingMove.caseId,
+                    toStageId: pendingMove.targetStageId,
+                    reason: overrideReason.trim(),
+                  })
+                }
+              >
+                Override and move
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1296,13 +1619,234 @@ function StubPage({ title }: { title: string }) {
 }
 
 export function PipelineItemStub() {
-  useParams<{ pipelineId: string; caseId: string }>();
-  return <StubPage title="Item" />;
-}
+  const { pipelineId, caseId } = useParams<{ pipelineId: string; caseId: string }>();
+  const { selectedCompanyId } = useCompany();
+  const { setBreadcrumbs } = useBreadcrumbs();
+  const queryClient = useQueryClient();
 
-export function PipelineSettingsStub() {
-  useParams<{ pipelineId: string }>();
-  return <StubPage title="Pipeline settings" />;
+  const pipelineQuery = useQuery({
+    queryKey: pipelineId ? queryKeys.pipelines.detail(pipelineId) : ["pipelines", "detail", "none"],
+    queryFn: () => pipelinesApi.get(pipelineId!),
+    enabled: !!selectedCompanyId && !!pipelineId,
+  });
+
+  const itemQuery = useQuery({
+    queryKey: caseId ? queryKeys.pipelines.caseDetail(caseId) : ["pipelines", "case", "none"],
+    queryFn: () => pipelinesApi.getCase(caseId!),
+    enabled: !!selectedCompanyId && !!caseId,
+  });
+
+  const eventsQuery = useQuery({
+    queryKey: caseId ? queryKeys.pipelines.caseEvents(caseId) : ["pipelines", "case", "none", "events"],
+    queryFn: () => pipelinesApi.listCaseEvents(caseId!),
+    enabled: !!selectedCompanyId && !!caseId,
+  });
+
+  const childrenQuery = useQuery({
+    queryKey: caseId ? queryKeys.pipelines.caseChildren(caseId) : ["pipelines", "case", "none", "children"],
+    queryFn: () => pipelinesApi.listChildren(caseId!),
+    enabled: !!selectedCompanyId && !!caseId,
+  });
+
+  const issueLinksQuery = useQuery({
+    queryKey: caseId ? queryKeys.pipelines.caseIssueLinks(caseId) : ["pipelines", "case", "none", "issue-links"],
+    queryFn: () => pipelinesApi.listIssueLinks(caseId!),
+    enabled: !!selectedCompanyId && !!caseId,
+  });
+
+  const pipeline = pipelineQuery.data ?? null;
+  const item = itemQuery.data ?? null;
+  const stages = useMemo(() => [...(pipeline?.stages ?? [])].sort((left, right) => left.position - right.position), [pipeline?.stages]);
+  const currentStage = stages.find((stage) => stage.id === item?.stageId) ?? null;
+  const pendingSuggestion = getPendingTransitionBannerState(item, stages);
+  const fieldEntries = displayPipelineItemFields(item?.fields ?? null);
+  const children = childrenQuery.data ?? [];
+  const events = eventsQuery.data ?? [];
+  const workLink = (issueLinksQuery.data ?? []).find((link) => link.role === "work" || link.role === "conversation")
+    ?? (issueLinksQuery.data ?? [])[0]
+    ?? null;
+
+  useEffect(() => {
+    if (!pipeline || !item) return;
+    setBreadcrumbs([
+      { label: "Pipelines", href: "/pipelines" },
+      { label: pipeline.name, href: `/pipelines/${pipeline.id}` },
+      { label: getCaseTitle(item) },
+    ]);
+  }, [item, pipeline, setBreadcrumbs]);
+
+  const resolveSuggestion = useMutation({
+    mutationFn: (decision: "accept" | "decline") =>
+      pipelinesApi.resolveSuggestion(caseId!, {
+        decision,
+        note: decision === "accept" ? "Accepted from the item page." : "Kept in the current stage.",
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.caseDetail(caseId!) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.caseEvents(caseId!) }),
+        pipelineId
+          ? queryClient.invalidateQueries({ queryKey: queryKeys.pipelines.cases(pipelineId) })
+          : Promise.resolve(),
+      ]);
+    },
+  });
+
+  if (!selectedCompanyId) {
+    return <EmptyState icon={Hexagon} message="Select a company to view this item." />;
+  }
+
+  if (!pipelineId || !caseId) {
+    return <EmptyState icon={Hexagon} message="No item selected." />;
+  }
+
+  if (pipelineQuery.isLoading || itemQuery.isLoading) {
+    return <PageSkeleton variant="detail" />;
+  }
+
+  if (pipelineQuery.error || itemQuery.error) {
+    return <p className="text-sm text-destructive">Could not load this item.</p>;
+  }
+
+  if (!pipeline || !item) {
+    return <EmptyState icon={Hexagon} message="Item not found." />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <Link to={`/pipelines/${pipeline.id}`} className="text-sm text-muted-foreground hover:text-foreground">
+            Back to board
+          </Link>
+          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-foreground">{getCaseTitle(item)}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-full border border-border px-2 py-0.5 font-semibold text-muted-foreground">
+              {currentStage?.name ?? "No stage"}
+            </span>
+            <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">
+              {humanizePipelineItemStatus(item.status)}
+            </span>
+            {itemHasChangedNotice(item) ? (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-semibold text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-300">
+                This changed
+              </span>
+            ) : null}
+          </div>
+        </div>
+        {workLink ? (
+          <Button asChild variant="outline">
+            <Link to={`/issues/${workLink.issueId}`}>
+              <ExternalLink className="h-4 w-4" />
+              Open full view
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+
+      {pendingSuggestion.visible ? (
+        <section className="rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/70 dark:bg-amber-950/30">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Agent suggests moving this item</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Move to <span className="font-semibold text-foreground">{pendingSuggestion.toStageName}</span>
+                {pendingSuggestion.reason ? ` - ${pendingSuggestion.reason}` : ""}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={resolveSuggestion.isPending}
+                onClick={() => resolveSuggestion.mutate("decline")}
+              >
+                Decline
+              </Button>
+              <Button
+                type="button"
+                disabled={resolveSuggestion.isPending}
+                onClick={() => resolveSuggestion.mutate("accept")}
+              >
+                Accept
+              </Button>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Item details</h2>
+        {fieldEntries.length > 0 ? (
+          <div className="divide-y divide-border rounded-md border border-border">
+            {fieldEntries.map((field) => (
+              <div key={field.key} className="grid gap-2 px-3 py-2 text-sm sm:grid-cols-[180px_1fr]">
+                <span className="text-muted-foreground">{field.label}</span>
+                <span className="text-foreground">{field.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-md border border-border px-3 py-3 text-sm text-muted-foreground">
+            No details have been added yet.
+          </p>
+        )}
+      </section>
+
+      {children.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Built from {formatNumber(children.length)} items</h2>
+          <div className="divide-y divide-border rounded-md border border-border">
+            {children.map((child) => (
+              <Link
+                key={child.id}
+                to={`/pipelines/${child.pipelineId}/items/${child.id}`}
+                className="grid min-h-10 grid-cols-[1fr_auto] items-center gap-3 px-3 py-2 text-sm hover:bg-accent/40"
+              >
+                <span className="font-medium text-foreground">{getCaseTitle(child)}</span>
+                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                  {humanizePipelineItemStatus(child.status)}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Activity</h2>
+        {events.length > 0 ? (
+          <div className="divide-y divide-border rounded-md border border-border">
+            {events.slice(0, 8).map((event) => {
+              const presentation = formatPipelineItemEvent(event, item.title);
+              return (
+                <div key={event.id} className="px-3 py-2 text-sm text-foreground">
+                  {presentation.sentence}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="rounded-md border border-border px-3 py-3 text-sm text-muted-foreground">
+            No activity yet.
+          </p>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Activity & conversation</h2>
+        {workLink ? (
+          <p className="rounded-md border border-border px-3 py-3 text-sm text-muted-foreground">
+            A work conversation is linked to this item. Open the full view to continue the thread.
+          </p>
+        ) : (
+          <p className="rounded-md border border-border px-3 py-3 text-sm text-muted-foreground">
+            No work conversation is linked yet.
+          </p>
+        )}
+      </section>
+    </div>
+  );
 }
 
 function ReviewQueueStatusChip({ failed }: { failed: boolean }) {

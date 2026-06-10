@@ -136,6 +136,9 @@ export interface PipelineAttentionItem {
 export interface PipelineIntakeForm {
   pipelineId: string;
   stageId: string | null;
+  stageName?: string | null;
+  newEntriesDisabled?: boolean;
+  disabledReason?: string | null;
   fields: Array<{
     key: string;
     label: string;

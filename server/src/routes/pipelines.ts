@@ -22,7 +22,7 @@ import {
   updatePipelineSchema,
   updatePipelineStageSchema,
 } from "@paperclipai/shared";
-import { extractPipelineIntakeFormFields } from "../services/pipelines.js";
+import { extractPipelineIntakeFormFields, isStageNewEntryDisabled } from "../services/pipelines.js";
 import { validate } from "../middleware/validate.js";
 import { pipelineService, issueService, logActivity } from "../services/index.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
@@ -826,9 +826,13 @@ export function pipelineRoutes(db: Db) {
     const pipeline = await svc.getPipelineWithRelations(pipelineId);
     const firstStage = pipeline?.stages?.[0] ?? null;
     const fields = firstStage ? extractPipelineIntakeFormFields([firstStage]) : [];
+    const disabledConfig = firstStage?.config?.disable;
     res.json({
       pipelineId,
       stageId: firstStage?.id ?? null,
+      stageName: firstStage?.name ?? null,
+      newEntriesDisabled: firstStage ? isStageNewEntryDisabled(firstStage.config) : false,
+      disabledReason: disabledConfig?.reason ?? null,
       fields,
     });
   });

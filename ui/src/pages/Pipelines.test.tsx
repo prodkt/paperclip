@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { act, useState } from "react";
+import { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Pipeline, PipelineAttentionItem, PipelineCase } from "../api/pipelines";
@@ -104,7 +105,7 @@ function renderTable({
     );
   }
 
-  act(() => {
+  flushSync(() => {
     root.render(<Harness />);
   });
 
@@ -135,7 +136,7 @@ describe("PipelinesIndexTable", () => {
     const collapse = container.querySelector<HTMLButtonElement>('button[aria-label="Collapse Release"]');
     expect(collapse).not.toBeNull();
 
-    act(() => {
+    flushSync(() => {
       root.unmount();
     });
   });
@@ -153,14 +154,14 @@ describe("PipelinesIndexTable", () => {
     );
     expect(flatButton).toBeTruthy();
 
-    act(() => {
+    flushSync(() => {
       flatButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(container.textContent).not.toContain("feeds into Release");
     expect(container.textContent).not.toContain("feeds into Features");
 
-    act(() => {
+    flushSync(() => {
       root.unmount();
     });
   });
@@ -181,7 +182,7 @@ describe("PipelinesIndexTable", () => {
     expect(container.textContent).toContain("Support knowledge base");
     expect(container.textContent).toContain("Sales decks");
 
-    act(() => {
+    flushSync(() => {
       root.unmount();
     });
   });
@@ -216,7 +217,7 @@ describe("PipelinesIndexTable", () => {
     expect(content).not.toContain("0 to review");
     expect(content).not.toContain("0 in motion");
 
-    act(() => {
+    flushSync(() => {
       root.unmount();
     });
   });
@@ -230,7 +231,7 @@ describe("PipelinesIndexTable", () => {
 
     expect(container.textContent).toContain("No pipelines match your search.");
 
-    act(() => {
+    flushSync(() => {
       root.unmount();
     });
   });
@@ -259,7 +260,7 @@ function renderReviewQueue() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
-  act(() => {
+  flushSync(() => {
     root.render(
       <QueryClientProvider client={queryClient}>
         <ReviewQueueStub />
@@ -347,7 +348,7 @@ describe("ReviewQueue", () => {
       note: null,
     });
 
-    act(() => {
+    flushSync(() => {
       root.unmount();
     });
     queryClient.clear();

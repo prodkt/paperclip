@@ -18,9 +18,9 @@ import {
   PipelineBoardStub,
   PipelineItemStub,
   Pipelines,
-  PipelineSettingsStub,
   ReviewQueueStub,
 } from "./pages/Pipelines";
+import { PipelineSettings } from "./pages/PipelineSettings";
 import { Issues } from "./pages/Issues";
 import { Search } from "./pages/Search";
 import { IssueDetail } from "./pages/IssueDetail";
@@ -129,7 +129,7 @@ function boardRoutes() {
       <Route path="pipelines" element={<Pipelines />} />
       <Route path="pipelines/:pipelineId" element={<PipelineBoardStub />} />
       <Route path="pipelines/:pipelineId/items/:caseId" element={<PipelineItemStub />} />
-      <Route path="pipelines/:pipelineId/settings" element={<PipelineSettingsStub />} />
+      <Route path="pipelines/:pipelineId/settings" element={<PipelineSettings />} />
       <Route path="learnings" element={<LearningsStub />} />
       <Route path="issues" element={<Issues />} />
       <Route path="search" element={<Search />} />

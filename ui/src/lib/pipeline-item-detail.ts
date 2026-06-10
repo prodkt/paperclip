@@ -58,8 +58,8 @@ function payloadText(event: PipelineCaseEvent, ...keys: string[]): string | null
   return null;
 }
 
-function sentenceSubject(event: PipelineCaseEvent): string {
-  return event.caseTitle ?? payloadText(event, "itemTitle", "title") ?? "This item";
+function sentenceSubject(event: PipelineCaseEvent, fallbackTitle?: string | null): string {
+  return event.caseTitle ?? payloadText(event, "itemTitle", "title") ?? asString(fallbackTitle) ?? "This item";
 }
 
 export function humanizePipelineItemStatus(status: string | null | undefined): string {
@@ -111,8 +111,11 @@ function formatReviewDecision(decision: string | null): string {
   return "approved this item";
 }
 
-export function formatPipelineItemEvent(event: PipelineCaseEvent): PipelineItemEventPresentation {
-  const title = sentenceSubject(event);
+export function formatPipelineItemEvent(
+  event: PipelineCaseEvent,
+  fallbackTitle?: string | null,
+): PipelineItemEventPresentation {
+  const title = sentenceSubject(event, fallbackTitle);
 
   if (event.kind === "case.ingested") {
     const stage = event.toStageName ?? payloadText(event, "toStageName", "stageName");

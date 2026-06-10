@@ -131,6 +131,18 @@ export function validateStageRequiredFields(
   }
 }
 
+export function isStageNewEntryDisabled(config: PipelineStageConfig | unknown) {
+  const stageConfig = normalizeStageConfig(config);
+  if (stageConfig.disable?.newEntries) return true;
+  if ("disabled" in stageConfig && typeof stageConfig.disabled === "boolean") {
+    return stageConfig.disabled;
+  }
+  if ("newEntriesDisabled" in stageConfig && typeof stageConfig.newEntriesDisabled === "boolean") {
+    return stageConfig.newEntriesDisabled;
+  }
+  return false;
+}
+
 function coerceCaseFields(fields: Record<string, unknown> | null | undefined) {
   return fields ?? {};
 }
@@ -248,6 +260,9 @@ async function resolvePipelineIntakeStage(db: PipelineDb, pipelineId: string, st
 }
 
 function validateStageRequiredFieldsForIngest(stage: PipelineStageRow, fields: Record<string, unknown>) {
+  if (isStageNewEntryDisabled(stage.config)) {
+    throw unprocessable(`Stage "${stage.name}" is disabled for new entries`);
+  }
   const config = normalizeStageConfig(stage.config);
   const requiredVariables = Array.isArray(config.variables)
     ? config.variables.filter((variable) => variable.showInAddForm)
@@ -519,6 +534,36 @@ export function pipelineService(db: Db) {
           });
 
       try {
+        if (input.position !== undefined) {
+          const stage = await db.transaction(async (tx) => {
+            await tx
+              .update(pipelineStages)
+              .set({ position: sql`${pipelineStages.position} + 10000`, updatedAt: new Date() })
+              .where(and(eq(pipelineStages.pipelineId, pipelineId), sql`${pipelineStages.position} >= ${nextPos}`));
+
+            const [inserted] = await tx
+              .insert(pipelineStages)
+              .values({
+                ...input,
+                pipelineId,
+                position: nextPos,
+                config: input.config ?? { variables: [] },
+              })
+              .returning();
+
+            await tx
+              .update(pipelineStages)
+              .set({ position: sql`${pipelineStages.position} - 9999`, updatedAt: new Date() })
+              .where(and(eq(pipelineStages.pipelineId, pipelineId), sql`${pipelineStages.position} >= ${nextPos + 10000}`));
+
+            return inserted;
+          });
+          if (!stage) {
+            throw conflict("Failed to create pipeline stage");
+          }
+          return stage as PipelineStageRow;
+        }
+
         const [stage] = await db
           .insert(pipelineStages)
           .values({
