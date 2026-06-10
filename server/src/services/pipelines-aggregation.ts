@@ -56,10 +56,10 @@ function caseDisplay(row: { case: CaseRow; stage: StageRow; pipeline: PipelineRo
 // Current review-stage approver semantics: reviewerKind "human" awaits any
 // human caller, "any" awaits anyone. B1 (stage requireApproval + named
 // approver) extends this predicate when it lands — keep the seam here.
-function reviewStageAwaitsCaller(config: Record<string, unknown>, caller: AttentionCaller) {
-  const reviewerKind = typeof config.reviewerKind === "string" ? config.reviewerKind : "human";
-  if (reviewerKind === "any") return true;
-  return caller.type === "user";
+// SQL-side so busy companies can't truncate an agent's review feed.
+function reviewStageAwaitsCallerSql(caller: AttentionCaller) {
+  if (caller.type === "user") return sql`true`;
+  return sql`coalesce(${pipelineStages.config}->>'reviewerKind', 'human') = 'any'`;
 }
 
 function boundedLimit(limit: number | undefined, fallback: number, max: number) {
@@ -129,13 +129,12 @@ export async function listPipelineAttention(
       eq(pipelines.companyId, input.companyId),
       eq(pipelineStages.kind, "review"),
       isNull(pipelineCases.terminalKind),
+      reviewStageAwaitsCallerSql(input.caller),
     ))
     .orderBy(asc(pipelineCases.createdAt))
-    .limit(PIPELINE_ATTENTION_MAX_LIMIT * 2);
+    .limit(limit);
 
   const reviews = reviewRows
-    .filter((row) => reviewStageAwaitsCaller((row.stage.config ?? {}) as Record<string, unknown>, input.caller))
-    .slice(0, limit)
     .map((row) => {
       const config = (row.stage.config ?? {}) as Record<string, unknown>;
       return {

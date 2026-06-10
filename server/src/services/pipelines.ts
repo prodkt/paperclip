@@ -853,15 +853,18 @@ export function pipelineService(db: Db, deps: { heartbeat?: IssueAssignmentWakeu
     dbOrTx: PipelineDb,
     input: { companyId: string; routineId: string; exceptStageId?: string | null },
   ) {
-    const stages = await dbOrTx
-      .select({ id: pipelineStages.id, config: pipelineStages.config })
+    const referencing = await dbOrTx
+      .select({ id: pipelineStages.id })
       .from(pipelineStages)
       .innerJoin(pipelines, eq(pipelineStages.pipelineId, pipelines.id))
-      .where(eq(pipelines.companyId, input.companyId));
-    return stages.some((stage) =>
-      stage.id !== input.exceptStageId &&
-      stageAutomationRoutineIdFromConfig((stage.config ?? {}) as PipelineStageConfig) === input.routineId
-    );
+      .where(and(
+        eq(pipelines.companyId, input.companyId),
+        sql`${pipelineStages.config}->'onEnter'->>'type' = 'run_routine'`,
+        sql`${pipelineStages.config}->'onEnter'->>'routineId' = ${input.routineId}`,
+        input.exceptStageId ? ne(pipelineStages.id, input.exceptStageId) : undefined,
+      ))
+      .limit(1);
+    return referencing.length > 0;
   }
 
   async function clearPipelineAutomationRoutineIfUnreferenced(

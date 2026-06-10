@@ -11,6 +11,7 @@ export interface PipelineListItem {
   archivedAt: Date | string | null;
   stageCount: number;
   openCaseCount: number;
+  connections: { upstreamPipelineIds: string[]; downstreamPipelineIds: string[] };
   createdAt: Date | string;
   updatedAt: Date | string;
 }
