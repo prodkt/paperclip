@@ -1431,6 +1431,7 @@ export function IssueProperties({
   const visibleAgentOptions = agentAssigneeOptions.filter((option) =>
     matchesAssigneeSearch(option.label, option.searchText),
   );
+  const showNoAssigneeOption = matchesAssigneeSearch("No assignee", "");
   const sectionHeader = (text: string) => (
     <div className="px-2 pb-0.5 pt-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
       {text}
@@ -1467,7 +1468,9 @@ export function IssueProperties({
         autoFocus={!inline}
       />
       <div className="max-h-56 overflow-y-auto overscroll-contain">
-        {renderAssigneeOption({ kind: "none", value: "", label: "No assignee", searchText: "" })}
+        {showNoAssigneeOption
+          ? renderAssigneeOption({ kind: "none", value: "", label: "No assignee", searchText: "" })
+          : null}
         {visibleAgentOptions.length > 0 ? (
           <>
             {sectionHeader("Agents")}
@@ -1480,7 +1483,7 @@ export function IssueProperties({
             {visibleUserOptions.map((option) => renderAssigneeOption(option))}
           </>
         ) : null}
-        {visibleAgentOptions.length === 0 && visibleUserOptions.length === 0 ? (
+        {!showNoAssigneeOption && visibleAgentOptions.length === 0 && visibleUserOptions.length === 0 ? (
           <div className="px-2 py-2 text-xs text-muted-foreground">No matches.</div>
         ) : null}
       </div>

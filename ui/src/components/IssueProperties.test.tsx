@@ -460,6 +460,53 @@ describe("IssueProperties", () => {
     act(() => root.unmount());
   });
 
+  it("filters the no-assignee option with assignee search", async () => {
+    mockAgentsApi.list.mockResolvedValue([
+      {
+        id: "agent-1",
+        name: "ClaudeCoder",
+        role: "",
+        title: null,
+        icon: null,
+        status: "active",
+        orgChainHealth: { status: "ok" },
+      } as unknown as Parameters<typeof mockAgentsApi.list.mockResolvedValue>[0][number],
+    ]);
+    const root = renderProperties(container, {
+      issue: createIssue(),
+      childIssues: [],
+      onUpdate: vi.fn(),
+    });
+    await flush();
+
+    const searchInput = container.querySelector(
+      'input[placeholder="Search assignees..."]',
+    ) as HTMLInputElement | null;
+    expect(searchInput).not.toBeNull();
+
+    await act(async () => {
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      nativeSetter?.call(searchInput, "no");
+      searchInput!.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await flush();
+
+    expect(container.textContent).toContain("No assignee");
+    expect(container.textContent).not.toContain("No matches.");
+
+    await act(async () => {
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      nativeSetter?.call(searchInput, "zzzz");
+      searchInput!.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await flush();
+
+    expect(container.textContent).not.toContain("No assignee");
+    expect(container.textContent).toContain("No matches.");
+
+    act(() => root.unmount());
+  });
+
   it("always exposes the add sub-issue action", async () => {
     const onAddSubIssue = vi.fn();
     const root = renderProperties(container, {
