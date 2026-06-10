@@ -392,7 +392,7 @@ export function pipelineRoutes(db: Db, options: Parameters<typeof pipelineServic
   router.post("/pipelines/:pipelineId/stages", validate(createStageSchema), async (req, res) => {
     const pipelineId = req.params.pipelineId as string;
     const companyId = await assertPipelineAccess(db, req, pipelineId);
-    actorForMutation(req);
+    const actor = actorForMutation(req);
     try {
       const stage = await svc.createStage({
         companyId,
@@ -402,6 +402,7 @@ export function pipelineRoutes(db: Db, options: Parameters<typeof pipelineServic
         kind: req.body.kind,
         position: req.body.position,
         config: req.body.config,
+        actor,
       });
       res.status(201).json(stage);
     } catch (error) {
@@ -413,9 +414,9 @@ export function pipelineRoutes(db: Db, options: Parameters<typeof pipelineServic
     const pipelineId = req.params.pipelineId as string;
     const stageId = req.params.stageId as string;
     const companyId = await assertPipelineAccess(db, req, pipelineId);
-    actorForMutation(req);
+    const actor = actorForMutation(req);
     try {
-      res.json(await svc.updateStage({ companyId, pipelineId, stageId, patch: req.body }));
+      res.json(await svc.updateStage({ companyId, pipelineId, stageId, patch: req.body, actor }));
     } catch (error) {
       codedConflictForUnique(error);
     }

@@ -198,6 +198,7 @@ export DRAFTING_ROUTINE_ID="$(
   paperclipai routine create \
     -C "$PAPERCLIP_COMPANY_ID" \
     --payload-json "$(jq -c . /tmp/drafting-routine.json)" \
+    --pipeline "$CONTENT_PIPELINE" \
     --json | jq -r '.id'
 )"
 
@@ -208,6 +209,8 @@ paperclipai pipelines set-automation \
   --routine "$DRAFTING_ROUTINE_ID" \
   --note "Template-versioned with the routine prompt."
 ```
+
+Routines marked with `--pipeline` are treated as pipeline automation helpers. They are still configurable from `/routines`, but the default routines view groups them under "Pipeline automation" so they do not crowd out hand-managed recurring work during setup.
 
 **Convention:** v1 "templates" version with the routine prompt plus the batch file below, not with the pipeline. The pipeline `guidance` document carries the durable rubric. This is the accepted divergence from the long-term template-on-pipeline shape.
 

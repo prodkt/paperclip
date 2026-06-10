@@ -89,7 +89,18 @@ export function routineRoutes(
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
     const projectId = typeof req.query.projectId === "string" ? req.query.projectId : undefined;
-    const result = await svc.list(companyId, { projectId });
+    const originKind = typeof req.query.originKind === "string" ? req.query.originKind : undefined;
+    const rawExcludeOriginKinds = req.query.excludeOriginKinds;
+    const excludeOriginKinds = Array.isArray(rawExcludeOriginKinds)
+      ? rawExcludeOriginKinds.flatMap((value) => String(value).split(","))
+      : typeof rawExcludeOriginKinds === "string"
+        ? rawExcludeOriginKinds.split(",")
+        : [];
+    const result = await svc.list(companyId, {
+      projectId,
+      originKind,
+      excludeOriginKinds: excludeOriginKinds.map((value) => value.trim()).filter(Boolean),
+    });
     res.json(result);
   });
 

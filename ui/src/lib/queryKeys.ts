@@ -89,8 +89,14 @@ export const queryKeys = {
     workProducts: (issueId: string) => ["issues", "work-products", issueId] as const,
   },
   routines: {
-    list: (companyId: string, filters?: { projectId?: string | null }) =>
-      ["routines", companyId, filters?.projectId ?? "__all-projects__"] as const,
+    list: (companyId: string, filters?: { projectId?: string | null; originKind?: string | null; excludeOriginKinds?: string[] }) =>
+      [
+        "routines",
+        companyId,
+        filters?.projectId ?? "__all-projects__",
+        filters?.originKind ?? "__all-origins__",
+        filters?.excludeOriginKinds?.join(",") ?? "__exclude-none__",
+      ] as const,
     detail: (id: string) => ["routines", "detail", id] as const,
     runs: (id: string) => ["routines", "runs", id] as const,
     revisions: (id: string) => ["routines", "revisions", id] as const,
@@ -111,6 +117,9 @@ export const queryKeys = {
   projects: {
     list: (companyId: string) => ["projects", companyId] as const,
     detail: (id: string) => ["projects", "detail", id] as const,
+  },
+  pipelines: {
+    list: (companyId: string) => ["pipelines", companyId] as const,
   },
   goals: {
     list: (companyId: string) => ["goals", companyId] as const,

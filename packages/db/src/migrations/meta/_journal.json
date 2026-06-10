@@ -708,6 +708,13 @@
       "when": 1781059200000,
       "tag": "0100_pipeline_case_issue_unlinked_event",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1781098769536,
+      "tag": "0101_special_bloodstorm",
+      "breakpoints": true
     }
   ]
 }

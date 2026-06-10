@@ -15,6 +15,7 @@ import {
 import { envConfigSchema } from "./secret.js";
 
 const routineVariableValueSchema = z.union([z.string(), z.number().finite(), z.boolean()]);
+const routineOriginKindSchema = z.string().trim().min(1).max(120).optional().default("manual");
 
 export const routineVariableSchema = z.object({
   name: z.string().trim().regex(/^[A-Za-z][A-Za-z0-9_]*$/),
@@ -60,6 +61,8 @@ export const createRoutineSchema = z.object({
   status: z.enum(ROUTINE_STATUSES).optional().default("active"),
   concurrencyPolicy: z.enum(ROUTINE_CONCURRENCY_POLICIES).optional().default("coalesce_if_active"),
   catchUpPolicy: z.enum(ROUTINE_CATCH_UP_POLICIES).optional().default("skip_missed"),
+  originKind: routineOriginKindSchema,
+  originId: z.string().trim().max(255).optional().nullable(),
   variables: z.array(routineVariableSchema).optional().default([]),
   env: envConfigSchema.optional().nullable(),
 });
@@ -84,6 +87,8 @@ export const routineRevisionSnapshotRoutineV1Schema = z.object({
   status: z.enum(ROUTINE_STATUSES),
   concurrencyPolicy: z.enum(ROUTINE_CONCURRENCY_POLICIES),
   catchUpPolicy: z.enum(ROUTINE_CATCH_UP_POLICIES),
+  originKind: z.string().trim().min(1).default("manual"),
+  originId: z.string().nullable().default(null),
   variables: z.array(routineVariableSchema),
   env: envConfigSchema.nullable().default(null),
 }).strict();

@@ -5,6 +5,7 @@ import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   agents,
+  activityLog,
   companies,
   createDb,
   documents,
@@ -56,6 +57,7 @@ describeEmbeddedPostgres("pipeline routes", () => {
   }, 20_000);
 
   afterEach(async () => {
+    await db.delete(activityLog);
     await db.delete(pipelineAutomationExecutions);
     await db.delete(pipelineCaseBlockers);
     await db.delete(pipelineCaseIssueLinks);
@@ -240,6 +242,126 @@ describeEmbeddedPostgres("pipeline routes", () => {
     await http.post(`/api/cases/${blocked.body.case.id}/automations/retry-me/retry`).expect(200);
 
     await http.delete(`/api/pipelines/${pipelineId}/stages/${stageId}?moveCasesToStageId=${qaStage.body.id}`).expect(200);
+  });
+
+  it("stamps and clears pipeline automation routine origins when stage wiring changes", async () => {
+    const company = await seedCompany();
+    const http = request(app(boardActor));
+    const pipeline = await http.post(`/api/companies/${company.id}/pipelines`).send({ key: "origin", name: "Origin" }).expect(201);
+    const [routine] = await db.insert(routines).values({ companyId: company.id, title: "Pipeline backing routine" }).returning();
+
+    const intakeStage = pipeline.body.stages.find((stage: { key: string }) => stage.key === "intake");
+    await http
+      .patch(`/api/pipelines/${pipeline.body.id}/stages/${intakeStage.id}`)
+      .send({ config: { onEnter: { type: "run_routine", routineId: routine!.id } } })
+      .expect(200);
+
+    let [routineRow] = await db
+      .select({ originKind: routines.originKind, originId: routines.originId })
+      .from(routines)
+      .where(eq(routines.id, routine!.id));
+    expect(routineRow).toMatchObject({
+      originKind: "pipeline_automation",
+      originId: pipeline.body.id,
+    });
+
+    const qaStage = await http
+      .post(`/api/pipelines/${pipeline.body.id}/stages`)
+      .send({
+        key: "qa",
+        name: "QA",
+        kind: "working",
+        position: 250,
+        config: { onEnter: { type: "run_routine", routineId: routine!.id } },
+      })
+      .expect(201);
+
+    await http
+      .patch(`/api/pipelines/${pipeline.body.id}/stages/${intakeStage.id}`)
+      .send({ config: {} })
+      .expect(200);
+
+    [routineRow] = await db
+      .select({ originKind: routines.originKind, originId: routines.originId })
+      .from(routines)
+      .where(eq(routines.id, routine!.id));
+    expect(routineRow).toMatchObject({
+      originKind: "pipeline_automation",
+      originId: pipeline.body.id,
+    });
+
+    const secondPipeline = await http
+      .post(`/api/companies/${company.id}/pipelines`)
+      .send({ key: "origin-two", name: "Origin two" })
+      .expect(201);
+    const secondIntakeStage = secondPipeline.body.stages.find((stage: { key: string }) => stage.key === "intake");
+    await http
+      .patch(`/api/pipelines/${secondPipeline.body.id}/stages/${secondIntakeStage.id}`)
+      .send({ config: { onEnter: { type: "run_routine", routineId: routine!.id } } })
+      .expect(200);
+
+    await http
+      .patch(`/api/pipelines/${pipeline.body.id}/stages/${qaStage.body.id}`)
+      .send({ config: {} })
+      .expect(200);
+
+    [routineRow] = await db
+      .select({ originKind: routines.originKind, originId: routines.originId })
+      .from(routines)
+      .where(eq(routines.id, routine!.id));
+    expect(routineRow).toMatchObject({
+      originKind: "pipeline_automation",
+      originId: pipeline.body.id,
+    });
+
+    await http
+      .patch(`/api/pipelines/${secondPipeline.body.id}/stages/${secondIntakeStage.id}`)
+      .send({ config: {} })
+      .expect(200);
+
+    [routineRow] = await db
+      .select({ originKind: routines.originKind, originId: routines.originId })
+      .from(routines)
+      .where(eq(routines.id, routine!.id));
+    expect(routineRow).toMatchObject({
+      originKind: "manual",
+      originId: null,
+    });
+
+    const [handCuratedRoutine] = await db.insert(routines).values({
+      companyId: company.id,
+      title: "Hand curated",
+      originKind: "plugin:example",
+      originId: "plugin-routine",
+    }).returning();
+    await http
+      .post(`/api/pipelines/${pipeline.body.id}/stages`)
+      .send({
+        key: "custom",
+        name: "Custom",
+        kind: "working",
+        position: 275,
+        config: { onEnter: { type: "run_routine", routineId: handCuratedRoutine!.id } },
+      })
+      .expect(201);
+
+    const [handCuratedRow] = await db
+      .select({ originKind: routines.originKind, originId: routines.originId })
+      .from(routines)
+      .where(eq(routines.id, handCuratedRoutine!.id));
+    expect(handCuratedRow).toMatchObject({
+      originKind: "plugin:example",
+      originId: "plugin-routine",
+    });
+
+    const actions = await db
+      .select({ action: activityLog.action, entityId: activityLog.entityId })
+      .from(activityLog)
+      .where(eq(activityLog.companyId, company.id));
+    expect(actions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ action: "routine.origin_stamped", entityId: routine!.id }),
+      expect.objectContaining({ action: "routine.origin_cleared", entityId: routine!.id }),
+    ]));
   });
 
   it("writes an audit event when an agent removes a case issue link", async () => {

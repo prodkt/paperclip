@@ -19,6 +19,7 @@ import {
 import { conflict, HttpError, notFound, unprocessable } from "../errors.js";
 import { routineService } from "./routines.js";
 import type { IssueAssignmentWakeupDeps } from "./issue-assignment-wakeup.js";
+import { logActivity } from "./activity-log.js";
 
 const DEFAULT_LEASE_MS = 15 * 60 * 1000;
 const MAX_LEASE_MS = 24 * 60 * 60 * 1000;
@@ -87,6 +88,17 @@ function eventActorPatch(actor: PipelineActor) {
     return { actorType: "user", actorUserId: actor.userId };
   }
   return { actorType: "system" };
+}
+
+function activityActorPatch(actor: PipelineActor) {
+  if (actor.type === "agent") {
+    assertActorProvenance(actor);
+    return { actorType: "agent" as const, actorId: actor.agentId, agentId: actor.agentId, runId: actor.runId };
+  }
+  if (actor.type === "user") {
+    return { actorType: "user" as const, actorId: actor.userId, agentId: null, runId: null };
+  }
+  return { actorType: "system" as const, actorId: "pipeline-automation", agentId: null, runId: null };
 }
 
 function assertActorProvenance(actor: PipelineActor) {
@@ -220,6 +232,13 @@ function stageAutomation(stage: typeof pipelineStages.$inferSelect) {
     id: onEnter.id ?? `${stage.id}:on_enter`,
     routineId: onEnter.routineId,
   };
+}
+
+function stageAutomationRoutineIdFromConfig(config?: PipelineStageConfig | null) {
+  const onEnter = config?.onEnter;
+  return onEnter?.type === "run_routine" && typeof onEnter.routineId === "string"
+    ? onEnter.routineId
+    : null;
 }
 
 function buildCaseDeepLink(input: { pipelineId: string; caseId: string }) {
@@ -767,6 +786,79 @@ export function pipelineService(db: Db, deps: { heartbeat?: IssueAssignmentWakeu
     await assertRoutineInCompany(companyId, onEnter.routineId);
   }
 
+  async function stampPipelineAutomationRoutine(
+    dbOrTx: PipelineDb,
+    input: { companyId: string; pipelineId: string; routineId: string; actor: PipelineActor },
+  ) {
+    const updated = await dbOrTx
+      .update(routines)
+      .set({ originKind: "pipeline_automation", originId: input.pipelineId, updatedAt: nowDate() })
+      .where(and(
+        eq(routines.id, input.routineId),
+        eq(routines.companyId, input.companyId),
+        eq(routines.originKind, "manual"),
+      ))
+      .returning({ id: routines.id });
+    if (updated.length === 0) return;
+    const actorPatch = activityActorPatch(input.actor);
+    await logActivity(dbOrTx as Db, {
+      companyId: input.companyId,
+      ...actorPatch,
+      action: "routine.origin_stamped",
+      entityType: "routine",
+      entityId: input.routineId,
+      details: {
+        originKind: "pipeline_automation",
+        originId: input.pipelineId,
+      },
+    });
+  }
+
+  async function routineStillReferencedByAnyPipeline(
+    dbOrTx: PipelineDb,
+    input: { companyId: string; routineId: string; exceptStageId?: string | null },
+  ) {
+    const stages = await dbOrTx
+      .select({ id: pipelineStages.id, config: pipelineStages.config })
+      .from(pipelineStages)
+      .innerJoin(pipelines, eq(pipelineStages.pipelineId, pipelines.id))
+      .where(eq(pipelines.companyId, input.companyId));
+    return stages.some((stage) =>
+      stage.id !== input.exceptStageId &&
+      stageAutomationRoutineIdFromConfig((stage.config ?? {}) as PipelineStageConfig) === input.routineId
+    );
+  }
+
+  async function clearPipelineAutomationRoutineIfUnreferenced(
+    dbOrTx: PipelineDb,
+    input: { companyId: string; pipelineId: string; routineId: string; exceptStageId?: string | null; actor: PipelineActor },
+  ) {
+    const stillReferenced = await routineStillReferencedByAnyPipeline(dbOrTx, input);
+    if (stillReferenced) return;
+    const updated = await dbOrTx
+      .update(routines)
+      .set({ originKind: "manual", originId: null, updatedAt: nowDate() })
+      .where(and(
+        eq(routines.id, input.routineId),
+        eq(routines.companyId, input.companyId),
+        eq(routines.originKind, "pipeline_automation"),
+      ))
+      .returning({ id: routines.id, originId: routines.originId });
+    if (updated.length === 0) return;
+    const actorPatch = activityActorPatch(input.actor);
+    await logActivity(dbOrTx as Db, {
+      companyId: input.companyId,
+      ...actorPatch,
+      action: "routine.origin_cleared",
+      entityType: "routine",
+      entityId: input.routineId,
+      details: {
+        previousOriginKind: "pipeline_automation",
+        previousOriginId: updated[0]?.originId ?? null,
+      },
+    });
+  }
+
   async function validateStageTargets(companyId: string, pipelineId: string, kind: PipelineStageKind | string, config: PipelineStageConfig) {
     if (kind !== "review") return;
     const rows = await db
@@ -1184,6 +1276,17 @@ export function pipelineService(db: Db, deps: { heartbeat?: IssueAssignmentWakeu
             config: stage.config ?? {},
           })))
           .returning();
+        for (const stage of insertedStages) {
+          const routineId = stageAutomationRoutineIdFromConfig((stage.config ?? {}) as PipelineStageConfig);
+          if (routineId) {
+            await stampPipelineAutomationRoutine(tx, {
+              companyId: input.companyId,
+              pipelineId: pipeline!.id,
+              routineId,
+              actor: input.actor,
+            });
+          }
+        }
 
         if (!insertedStages.some((stage) => stage.kind === "done") || !insertedStages.some((stage) => stage.kind === "cancelled")) {
           throw unprocessable("Pipeline must include at least one done stage and one cancelled stage", { code: "validation" });
@@ -1224,23 +1327,35 @@ export function pipelineService(db: Db, deps: { heartbeat?: IssueAssignmentWakeu
       kind: PipelineStageKind;
       position: number;
       config?: PipelineStageConfig;
+      actor?: PipelineActor;
     }) {
       await getPipelineOrThrow(db, input.companyId, input.pipelineId);
       const config = normalizeStageConfig(input.kind, input.config);
       await validateStageTargets(input.companyId, input.pipelineId, input.kind, config);
       await validateStageAutomationConfig(input.companyId, config);
-      const [stage] = await db
-        .insert(pipelineStages)
-        .values({
-          pipelineId: input.pipelineId,
-          key: input.key,
-          name: input.name,
-          kind: input.kind,
-          position: input.position,
-          config,
-        })
-        .returning();
-      return stage!;
+      return db.transaction(async (tx) => {
+        const [stage] = await tx
+          .insert(pipelineStages)
+          .values({
+            pipelineId: input.pipelineId,
+            key: input.key,
+            name: input.name,
+            kind: input.kind,
+            position: input.position,
+            config,
+          })
+          .returning();
+        const routineId = stageAutomationRoutineIdFromConfig(config);
+        if (routineId) {
+          await stampPipelineAutomationRoutine(tx, {
+            companyId: input.companyId,
+            pipelineId: input.pipelineId,
+            routineId,
+            actor: input.actor ?? { type: "system" },
+          });
+        }
+        return stage!;
+      });
     },
 
     async updateStage(input: {
@@ -1254,25 +1369,47 @@ export function pipelineService(db: Db, deps: { heartbeat?: IssueAssignmentWakeu
         position?: number;
         config?: PipelineStageConfig;
       };
+      actor?: PipelineActor;
     }) {
       await getPipelineOrThrow(db, input.companyId, input.pipelineId);
       const existing = await getStageOrThrow(db, input.pipelineId, input.stageId);
       const kind = input.patch.kind ?? existing.kind;
+      const previousRoutineId = stageAutomationRoutineIdFromConfig(stageConfig(existing));
       const config = normalizeStageConfig(kind, input.patch.config !== undefined ? input.patch.config : stageConfig(existing));
+      const nextRoutineId = stageAutomationRoutineIdFromConfig(config);
       await validateStageTargets(input.companyId, input.pipelineId, kind, config);
       await validateStageAutomationConfig(input.companyId, config);
-      const [updated] = await db
-        .update(pipelineStages)
-        .set({
-          ...input.patch,
-          kind,
-          config,
-          updatedAt: nowDate(),
-        })
-        .where(and(eq(pipelineStages.id, input.stageId), eq(pipelineStages.pipelineId, input.pipelineId)))
-        .returning();
-      if (!updated) throw notFound("Pipeline stage not found");
-      return updated;
+      return db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(pipelineStages)
+          .set({
+            ...input.patch,
+            kind,
+            config,
+            updatedAt: nowDate(),
+          })
+          .where(and(eq(pipelineStages.id, input.stageId), eq(pipelineStages.pipelineId, input.pipelineId)))
+          .returning();
+        if (!updated) throw notFound("Pipeline stage not found");
+        if (nextRoutineId) {
+          await stampPipelineAutomationRoutine(tx, {
+            companyId: input.companyId,
+            pipelineId: input.pipelineId,
+            routineId: nextRoutineId,
+            actor: input.actor ?? { type: "system" },
+          });
+        }
+        if (previousRoutineId && previousRoutineId !== nextRoutineId) {
+          await clearPipelineAutomationRoutineIfUnreferenced(tx, {
+            companyId: input.companyId,
+            pipelineId: input.pipelineId,
+            routineId: previousRoutineId,
+            exceptStageId: input.stageId,
+            actor: input.actor ?? { type: "system" },
+          });
+        }
+        return updated;
+      });
     },
 
     async deleteStage(input: {
@@ -1326,6 +1463,16 @@ export function pipelineService(db: Db, deps: { heartbeat?: IssueAssignmentWakeu
         }
         await tx.delete(pipelineTransitions).where(or(eq(pipelineTransitions.fromStageId, stage.id), eq(pipelineTransitions.toStageId, stage.id)));
         await tx.delete(pipelineStages).where(eq(pipelineStages.id, stage.id));
+        const routineId = stageAutomationRoutineIdFromConfig(stageConfig(stage));
+        if (routineId) {
+          await clearPipelineAutomationRoutineIfUnreferenced(tx, {
+            companyId: input.companyId,
+            pipelineId: input.pipelineId,
+            routineId,
+            exceptStageId: stage.id,
+            actor: input.actor ?? { type: "system" },
+          });
+        }
         return { deleted: true };
       });
     },

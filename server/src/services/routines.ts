@@ -414,6 +414,8 @@ function routineRevisionSnapshotRoutine(routine: RoutineRow): RoutineRevisionSna
     status: routine.status as RoutineRevisionSnapshotV1["routine"]["status"],
     concurrencyPolicy: routine.concurrencyPolicy as RoutineRevisionSnapshotV1["routine"]["concurrencyPolicy"],
     catchUpPolicy: routine.catchUpPolicy as RoutineRevisionSnapshotV1["routine"]["catchUpPolicy"],
+    originKind: routine.originKind,
+    originId: routine.originId,
     variables: routine.variables ?? [],
     env: routine.env ?? null,
   };
@@ -1437,10 +1439,14 @@ export function routineService(
 
     list: async (
       companyId: string,
-      filters?: { projectId?: string | null },
+      filters?: { projectId?: string | null; originKind?: string | null; excludeOriginKinds?: string[] | null },
     ): Promise<RoutineListItem[]> => {
       const conditions = [eq(routines.companyId, companyId)];
       if (filters?.projectId) conditions.push(eq(routines.projectId, filters.projectId));
+      if (filters?.originKind) conditions.push(eq(routines.originKind, filters.originKind));
+      if (filters?.excludeOriginKinds?.length && !filters.originKind) {
+        conditions.push(not(inArray(routines.originKind, filters.excludeOriginKinds)));
+      }
 
       const rows = await db
         .select()
@@ -1605,6 +1611,8 @@ export function routineService(
             status,
             concurrencyPolicy: input.concurrencyPolicy,
             catchUpPolicy: input.catchUpPolicy,
+            originKind: input.originKind ?? "manual",
+            originId: input.originId ?? null,
             variables,
             env,
             createdByAgentId: actor.agentId ?? null,
@@ -1705,6 +1713,8 @@ export function routineService(
           status: nextStatus,
           concurrencyPolicy: patch.concurrencyPolicy ?? locked.concurrencyPolicy,
           catchUpPolicy: patch.catchUpPolicy ?? locked.catchUpPolicy,
+          originKind: patch.originKind ?? locked.originKind,
+          originId: patch.originId === undefined ? locked.originId : patch.originId,
           variables: nextVariables,
           env: nextEnv,
           updatedByAgentId: actor.agentId ?? null,
@@ -1754,6 +1764,8 @@ export function routineService(
             status: candidate.status,
             concurrencyPolicy: candidate.concurrencyPolicy,
             catchUpPolicy: candidate.catchUpPolicy,
+            originKind: candidate.originKind,
+            originId: candidate.originId,
             variables: candidate.variables,
             env: candidate.env,
             updatedByAgentId: actor.agentId ?? null,
