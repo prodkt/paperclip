@@ -71,4 +71,22 @@ describe("redactSensitive", () => {
 
     expect(() => redactSensitive(cycle)).not.toThrow();
   });
+
+  it("omits deeply-nested arrays at the depth cap instead of leaking null entries to JSON", () => {
+    // Build an object whose array field is reached at MAX_DEPTH. Recursing
+    // into the array elements would exceed the cap; without the array-level
+    // guard, `value.map` would produce `[undefined, ...]` which JSON.stringify
+    // renders as `[null, ...]`. Object properties at the same cap are
+    // already absent from the JSON output (JSON.stringify skips undefined
+    // values on objects), so this test pins the array path to the same
+    // contract: silently absent, not visible as nulls.
+    let payload: Record<string, unknown> = { values: [1, 2, 3] };
+    for (let i = 0; i < 5; i++) payload = { nested: payload };
+
+    const out = redactSensitive(payload);
+
+    const json = JSON.stringify(out);
+    expect(json).not.toContain("null");
+    expect(json).not.toContain("[1,2,3]");
+  });
 });
