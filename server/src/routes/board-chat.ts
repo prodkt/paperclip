@@ -45,6 +45,20 @@ function serializeTurn(role: "user" | "assistant", body: string): string {
   return `<turn role="${role}">\n${safeBody}\n</turn>`;
 }
 
+/**
+ * Only the relay's own persisted replies are assistant turns — they are the
+ * comments stored under the "board-concierge" sentinel user (see the
+ * `proc.on("close")` handler). Agent-authored comments on the standing issue
+ * are other actors' words: labeling them `role="assistant"` would present
+ * them to the model as its own prior statements.
+ */
+export function isConciergeReply(comment: {
+  authorAgentId?: string | null;
+  authorUserId?: string | null;
+}): boolean {
+  return !comment.authorAgentId && comment.authorUserId === "board-concierge";
+}
+
 /** Max simultaneous `claude` subprocesses across all board-chat requests. */
 const MAX_CONCURRENT_BOARD_CHATS = 3;
 
@@ -177,12 +191,7 @@ export function boardChatRoutes(
     const comments = await issueSvc.listComments(resolvedIssueId, { order: "asc" });
     const recent = comments.slice(-20);
     const history = recent
-      .map((c) => {
-        const isAssistant = !c.authorAgentId
-          ? c.authorUserId === "board-concierge"
-          : true;
-        return serializeTurn(isAssistant ? "assistant" : "user", c.body);
-      })
+      .map((c) => serializeTurn(isConciergeReply(c) ? "assistant" : "user", c.body))
       .join("\n\n");
 
     const systemPrompt = loadBoardSkill();
@@ -254,6 +263,17 @@ export function boardChatRoutes(
       killed = true;
       proc.kill("SIGTERM");
     }, 120000);
+
+    // If the client disconnects mid-stream, stop the subprocess rather than
+    // letting it run out the remaining timeout window. `close` also fires
+    // after a normal `res.end()`, so guard on the process still being live;
+    // the `proc.on("close")` handler still persists partial output and
+    // releases the concurrency slot.
+    res.on("close", () => {
+      if (proc.exitCode === null && !proc.killed) {
+        proc.kill("SIGTERM");
+      }
+    });
 
     const writeChunk = (text: string) => {
       fullResponse += text;
