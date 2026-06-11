@@ -847,12 +847,13 @@ export function createToolGatewayService(
 
   async function listToolsForContext(session: ToolGatewaySession): Promise<ToolGatewayDescriptor[]> {
     await assertAgentInCompany(session.companyId, session.agentId);
-    const visible: ToolGatewayDescriptor[] = [];
-    for (const tool of allTools()) {
+    const decisions = await Promise.all(allTools().map(async (tool) => {
       const decision = await policyService.decide(policyInputForTool({ session, tool }));
-      if (decision.allowed || decision.decision === "require_approval") visible.push(tool);
-    }
-    return visible;
+      return { tool, decision };
+    }));
+    return decisions
+      .filter(({ decision }) => decision.allowed || decision.decision === "require_approval")
+      .map(({ tool }) => tool);
   }
 
   async function executeBuiltinTool(session: ToolGatewaySession, tool: ToolGatewayDescriptor, parameters: unknown) {
@@ -1103,19 +1104,20 @@ export function createToolGatewayService(
 
     async listPluginToolsForAgent(input: { companyId: string; agentId: string }): Promise<AgentToolDescriptor[]> {
       await assertAgentInCompany(input.companyId, input.agentId);
-      const visible: AgentToolDescriptor[] = [];
-      for (const tool of pluginTools()) {
+      const decisions = await Promise.all(pluginTools().map(async (tool) => {
         const decision = await policyService.decide(policyInputForAgentTool({
           companyId: input.companyId,
           agentId: input.agentId,
           tool,
         }));
-        if (decision.allowed || decision.decision === "require_approval") {
+        return { tool, decision };
+      }));
+      return decisions
+        .filter(({ decision }) => decision.allowed || decision.decision === "require_approval")
+        .map(({ tool }) => {
           const { providerType: _providerType, risk: _risk, ...descriptor } = tool;
-          visible.push(descriptor);
-        }
-      }
-      return visible;
+          return descriptor;
+        });
     },
 
     async approveActionRequest(input: {
