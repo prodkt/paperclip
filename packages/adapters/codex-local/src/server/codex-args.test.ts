@@ -70,6 +70,25 @@ describe("buildCodexExecArgs", () => {
     ]);
   });
 
+  it("enables Codex fast mode overrides when model is omitted (CLI default)", () => {
+    const result = buildCodexExecArgs({
+      fastMode: true,
+    });
+
+    expect(result.fastModeRequested).toBe(true);
+    expect(result.fastModeApplied).toBe(true);
+    expect(result.fastModeIgnoredReason).toBeNull();
+    expect(result.args).toEqual([
+      "exec",
+      "--json",
+      "-c",
+      'service_tier="fast"',
+      "-c",
+      "features.fast_mode=true",
+      "-",
+    ]);
+  });
+
   it("ignores fast mode for unsupported models", () => {
     const result = buildCodexExecArgs({
       model: "gpt-5.3-codex",
