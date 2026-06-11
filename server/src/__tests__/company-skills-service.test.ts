@@ -459,12 +459,12 @@ describeEmbeddedPostgres("companySkillService.list", () => {
     await expect(svc.resolveRequestedSkillEntries(companyId, [
       "pinned-skill",
     ])).resolves.toEqual([
-      { key: `company/${companyId}/pinned-skill`, versionId: version.id },
+      { key: `company/${companyId}/pinned-skill`, versionId: null },
     ]);
     await expect(svc.resolveRequestedSkillEntries(companyId, [
       { key: "pinned-skill", versionId: null },
     ])).resolves.toEqual([
-      { key: `company/${companyId}/pinned-skill`, versionId: version.id },
+      { key: `company/${companyId}/pinned-skill`, versionId: null },
     ]);
     await expect(svc.resolveRequestedSkillEntries(companyId, [
       { key: "pinned-skill", versionId: version.id },

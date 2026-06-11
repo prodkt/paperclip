@@ -1721,7 +1721,7 @@ async function resolveRequestedSkillEntriesOrThrow(
         missing.add(selection.key);
         continue;
       }
-      const selectedVersionId = selection.versionId ?? skill.currentVersionId ?? null;
+      const selectedVersionId = selection.versionId ?? null;
       await assertVersionMatchesSkill(db, companyId, skill.id, selectedVersionId);
       if (!resolved.has(skill.key)) {
         resolved.set(skill.key, { key: skill.key, versionId: selectedVersionId });
