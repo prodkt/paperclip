@@ -2,13 +2,14 @@ import { randomUUID } from "node:crypto";
 import express from "express";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { agents, companies, createDb, issues } from "@paperclipai/db";
+import { agents, companies, companyMemberships, createDb, issues, principalPermissionGrants } from "@paperclipai/db";
 import {
   getEmbeddedPostgresTestSupport,
   startEmbeddedPostgresTestDatabase,
 } from "./helpers/embedded-postgres.js";
 import { errorHandler } from "../middleware/index.js";
 import { issueRoutes } from "../routes/issues.js";
+import { ensureHumanRoleDefaultGrants } from "../services/principal-access-compatibility.js";
 
 const embeddedPostgresSupport = await getEmbeddedPostgresTestSupport();
 const describeEmbeddedPostgres = embeddedPostgresSupport.supported ? describe : describe.skip;
@@ -31,6 +32,8 @@ describeEmbeddedPostgres("issue list routes assigneeAgentId filter", () => {
   afterEach(async () => {
     await db.delete(issues);
     await db.delete(agents);
+    await db.delete(principalPermissionGrants);
+    await db.delete(companyMemberships);
     await db.delete(companies);
   });
 
@@ -48,13 +51,35 @@ describeEmbeddedPostgres("issue list routes assigneeAgentId filter", () => {
         companyIds: [companyId],
         memberships: [{ companyId, membershipRole: "owner", status: "active" }],
         source: "cloud_tenant",
-        isInstanceAdmin: true,
+        isInstanceAdmin: false,
       };
       next();
     });
     app.use("/api", issueRoutes(db, {} as any));
     app.use(errorHandler);
     return app;
+  }
+
+
+  function uniqueIssuePrefix() {
+    return `P${randomUUID().replace(/-/g, "").slice(0, 4).toUpperCase()}`;
+  }
+
+  async function seedCloudTenantMember(companyId: string) {
+    await db.insert(companyMemberships).values({
+      companyId,
+      principalType: "user",
+      principalId: "cloud-user-1",
+      status: "active",
+      membershipRole: "owner",
+      updatedAt: new Date(),
+    });
+    await ensureHumanRoleDefaultGrants(db, {
+      companyId,
+      principalId: "cloud-user-1",
+      membershipRole: "owner",
+      grantedByUserId: null,
+    });
   }
 
   it("returns only unassigned issues for assigneeAgentId=null", async () => {
@@ -66,9 +91,10 @@ describeEmbeddedPostgres("issue list routes assigneeAgentId filter", () => {
     await db.insert(companies).values({
       id: companyId,
       name: "Paperclip",
-      issuePrefix: "PAP",
+      issuePrefix: uniqueIssuePrefix(),
       requireBoardApprovalForNewAgents: false,
     });
+    await seedCloudTenantMember(companyId);
     await db.insert(agents).values({
       id: assigneeAgentId,
       companyId,
@@ -118,9 +144,10 @@ describeEmbeddedPostgres("issue list routes assigneeAgentId filter", () => {
     await db.insert(companies).values({
       id: companyId,
       name: "Paperclip",
-      issuePrefix: "PAP",
+      issuePrefix: uniqueIssuePrefix(),
       requireBoardApprovalForNewAgents: false,
     });
+    await seedCloudTenantMember(companyId);
     await db.insert(agents).values([
       {
         id: assigneeAgentId,
@@ -178,9 +205,10 @@ describeEmbeddedPostgres("issue list routes assigneeAgentId filter", () => {
     await db.insert(companies).values({
       id: companyId,
       name: "Paperclip",
-      issuePrefix: "PAP",
+      issuePrefix: uniqueIssuePrefix(),
       requireBoardApprovalForNewAgents: false,
     });
+    await seedCloudTenantMember(companyId);
 
     const app = createApp(companyId);
     const res = await request(app)
