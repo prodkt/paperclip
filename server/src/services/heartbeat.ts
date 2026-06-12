@@ -10593,10 +10593,9 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
             shouldQueueFollowupForRunningIssueWake({ contextSnapshot: enrichedContextSnapshot, wakeCommentId }) &&
             activeExecutionRun.status === "running" &&
             isSameExecutionAgent;
-          const availableActiveExecutionRun = filterZombieCoalesceTarget(
-            activeExecutionRun,
-            liveRunExecutions,
-          );
+          const availableActiveExecutionRun = isSameExecutionAgent
+            ? filterZombieCoalesceTarget(activeExecutionRun, liveRunExecutions)
+            : activeExecutionRun;
 
           if (
             isSameExecutionAgent
