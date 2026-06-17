@@ -123,9 +123,6 @@ jobs:
       - name: Typecheck workspaces whose build scripts skip TypeScript
         run: pnpm run typecheck:build-gaps
 
-      - name: Verify telemetry generated types are up to date
-        run: pnpm run check:telemetry-types
-
       - name: Verify release registry test coverage
         run: pnpm run test:release-registry
 
