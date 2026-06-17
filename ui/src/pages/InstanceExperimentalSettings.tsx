@@ -30,7 +30,7 @@ function formatRecoveryState(state: string) {
   return state.replace(/_/g, " ");
 }
 
-// PAP-11233: keep Conference Room code intact, but hide the user-facing opt-in for now.
+// TODO(PAP-11233): keep Conference Room code intact, but hide the user-facing opt-in for now.
 const SHOW_CONFERENCE_ROOM_EXPERIMENTAL_SETTING = false;
 
 function RecoveryPreviewDialog({

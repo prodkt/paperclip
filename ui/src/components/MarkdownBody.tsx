@@ -756,6 +756,7 @@ function MarkdownBodyImpl({
         );
       };
     }
+    // linkWorkspaceFileRefs only changes remark output; anchor rendering reads the resolved href.
     return map;
   }, [theme, linkIssueReferences, resolveImageSrc, onImageClick]);
 
