@@ -105,6 +105,13 @@ describe("okf-export buildOkfBundle", () => {
     expect(log).toMatch(/^## 2026-06-14$/m);
   });
 
+  it("uses a non-duplicated fallback metadata title without a company name", () => {
+    const files = buildOkfBundle({ skills: [{ name: "postmortem" }] });
+    const meta = files.find((f) => f.path === "okf.yaml")!.content;
+    expect(meta).toContain('title: "Company knowledge"');
+    expect(meta).not.toContain("Company knowledge knowledge");
+  });
+
   it("renders decision citations and bundle-relative index links", () => {
     const files = buildOkfBundle(dump);
     const decision = files.find((f) => f.path === "decisions/acme-318.md")!.content;

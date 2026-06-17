@@ -46,7 +46,6 @@ export function buildOkfBundle(dump, opts = {}) {
   const generatedAt = opts.generatedAt ?? dump?.company?.exportedAt ?? "";
   const company = dump.company ?? {};
   const files = [];
-  const usedNames = new Set();
 
   // Concept documents, grouped by section for index.md.
   const indexGroups = [];
@@ -65,7 +64,6 @@ export function buildOkfBundle(dump, opts = {}) {
         title: concept.title,
         description: concept.description,
       });
-      usedNames.add(relPath);
     }
     indexGroups.push(group);
   }
@@ -119,7 +117,7 @@ function buildConcept(entry, section) {
 function buildOkfMeta(company, generatedAt) {
   const meta = {
     okf_version: OKF_VERSION,
-    title: firstNonEmpty(company.name, "Company knowledge") + " knowledge",
+    title: firstNonEmpty(company.name, "Company") + " knowledge",
     description: oneLine(
       firstNonEmpty(company.description, "Company knowledge exported from Paperclip as an OKF bundle."),
     ),
