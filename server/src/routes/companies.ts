@@ -84,10 +84,6 @@ export function companyRoutes(db: Db, storage?: StorageService) {
     }
   }
 
-  async function assertCanManagePortability(req: Request, companyId: string, capability: "imports" | "exports") {
-    await assertSameCompanyCeoAgentOrBoard(req, companyId, `company ${capability}`);
-  }
-
   router.get("/", async (req, res) => {
     assertBoard(req);
     const result = await svc.list();
@@ -172,7 +168,7 @@ export function companyRoutes(db: Db, storage?: StorageService) {
 
   router.post("/:companyId/export", async (req, res) => {
     const companyId = req.params.companyId as string;
-    await assertCanManagePortability(req, companyId, "exports");
+    await assertSameCompanyCeoAgentOrBoard(req, companyId, "company exports");
     const body = companyPortabilityExportSchema.parse(req.body);
     const result = await portability.exportBundle(companyId, body);
     res.json(result);
@@ -232,7 +228,7 @@ export function companyRoutes(db: Db, storage?: StorageService) {
 
   router.post("/:companyId/exports/preview", async (req, res) => {
     const companyId = req.params.companyId as string;
-    await assertCanManagePortability(req, companyId, "exports");
+    await assertSameCompanyCeoAgentOrBoard(req, companyId, "company exports");
     const body = companyPortabilityExportSchema.parse(req.body);
     const preview = await portability.previewExport(companyId, body);
     res.json(preview);
@@ -240,7 +236,7 @@ export function companyRoutes(db: Db, storage?: StorageService) {
 
   router.post("/:companyId/exports", async (req, res) => {
     const companyId = req.params.companyId as string;
-    await assertCanManagePortability(req, companyId, "exports");
+    await assertSameCompanyCeoAgentOrBoard(req, companyId, "company exports");
     const body = companyPortabilityExportSchema.parse(req.body);
     const result = await portability.exportBundle(companyId, body);
     res.json(result);
@@ -248,7 +244,7 @@ export function companyRoutes(db: Db, storage?: StorageService) {
 
   router.post("/:companyId/imports/preview", async (req, res) => {
     const companyId = req.params.companyId as string;
-    await assertCanManagePortability(req, companyId, "imports");
+    await assertSameCompanyCeoAgentOrBoard(req, companyId, "company imports");
     const body = companyPortabilityPreviewSchema.parse(req.body);
     if (body.target.mode === "existing_company" && body.target.companyId !== companyId) {
       throw forbidden("Safe import route can only target the route company");
@@ -265,7 +261,7 @@ export function companyRoutes(db: Db, storage?: StorageService) {
 
   router.post("/:companyId/imports/apply", async (req, res) => {
     const companyId = req.params.companyId as string;
-    await assertCanManagePortability(req, companyId, "imports");
+    await assertSameCompanyCeoAgentOrBoard(req, companyId, "company imports");
     const body = companyPortabilityImportSchema.parse(req.body);
     if (body.target.mode === "existing_company" && body.target.companyId !== companyId) {
       throw forbidden("Safe import route can only target the route company");
