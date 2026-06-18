@@ -267,7 +267,7 @@ async function resolveConfigSecretRefsForRuntime(input: {
 async function resolveConfigSecretRefsForProbe(input: {
   db: Db;
   companyId: string;
-  actorType: "board" | "agent";
+  actorType: "board" | "agent" | "none";
   config: Record<string, unknown>;
   schema: Record<string, unknown> | null;
 }): Promise<Record<string, unknown>> {
@@ -278,7 +278,7 @@ async function resolveConfigSecretRefsForProbe(input: {
     if (typeof current !== "string") continue;
     const trimmed = current.trim();
     if (!isUuidSecretRef(trimmed)) continue;
-    if (input.actorType !== "board") {
+    if (input.actorType === "agent") {
       throw forbidden("Agent authentication cannot resolve unbound secret refs for unsaved probes");
     }
     // Unsaved draft probes do not have an environment record yet, so they
