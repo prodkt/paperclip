@@ -590,6 +590,7 @@ describe.sequential("issue comment reopen routes", () => {
     ["resume", { resume: true }],
     ["reopen", { reopen: true }],
   ])(
+    // Mention grants are append-only; explicit lifecycle intent still requires mutation authority.
     "denies mention-granted non-assignee agent POST comments on closed issues with %s intent",
     async (_name, intent) => {
       const mentionedAgentId = "33333333-3333-4333-8333-333333333333";
