@@ -269,7 +269,7 @@ describe("instance settings routes", () => {
     });
   });
 
-  it("allows non-admin board users with company access to update experimental settings", async () => {
+  it("allows non-admin board users with company access to read but not update experimental settings", async () => {
     const app = await createApp({
       type: "board",
       userId: "user-1",
@@ -278,14 +278,14 @@ describe("instance settings routes", () => {
       companyIds: ["company-1"],
     });
 
+    await request(app).get("/api/instance/settings/experimental").expect(200);
+
     await request(app)
       .patch("/api/instance/settings/experimental")
       .send({ enableTaskWatchdogs: true })
-      .expect(200);
+      .expect(403);
 
-    expect(mockInstanceSettingsService.updateExperimental).toHaveBeenCalledWith({
-      enableTaskWatchdogs: true,
-    });
+    expect(mockInstanceSettingsService.updateExperimental).not.toHaveBeenCalled();
   });
 
   it("allows local board users to read and update general settings", async () => {
