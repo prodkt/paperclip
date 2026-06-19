@@ -26,6 +26,7 @@ export type PipelineHealthWarningCode =
   | "breakdown_target_missing"
   | "breakdown_no_wait"
   | "breakdown_target_not_entry_safe"
+  | "breakdown_field_mismatch"
   | "unset_required_variable";
 
 export interface PipelineHealthWarning {
