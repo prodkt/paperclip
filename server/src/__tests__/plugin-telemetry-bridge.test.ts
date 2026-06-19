@@ -203,6 +203,23 @@ describe("plugin telemetry bridge", () => {
     });
   });
 
+  it("rejects private refs that generate colliding telemetry output keys", async () => {
+    const track = vi.fn();
+    const hashPrivateRef = vi.fn((value: string) => `hashed-${value}`);
+    mockGetTelemetryClient.mockReturnValue({ track, hashPrivateRef });
+    const services = createTelemetryServices();
+
+    await expect(
+      services.telemetry.track({
+        eventName: "sync_completed",
+        privateRefs: { foo: "v1", foo_is: "v2" },
+      }),
+    ).rejects.toThrow('Plugin telemetry private ref "foo_is" collides with existing dimensions.');
+
+    expect(hashPrivateRef).not.toHaveBeenCalled();
+    expect(track).not.toHaveBeenCalled();
+  });
+
   it("rejects telemetry events with too many outgoing dimensions", async () => {
     const track = vi.fn();
     mockGetTelemetryClient.mockReturnValue({ track });

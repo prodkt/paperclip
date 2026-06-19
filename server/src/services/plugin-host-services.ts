@@ -231,6 +231,7 @@ function validatePluginTelemetryInput(
     safeDimensions[key] = assertSafePluginTelemetryDimensionValue(key, value);
   }
 
+  const allocatedOutputKeys = new Set(Object.keys(safeDimensions));
   for (const [key, value] of privateEntries) {
     assertPluginTelemetryKey(key, "private ref");
     if (typeof value !== "string" || value.length === 0 || value.length > PLUGIN_TELEMETRY_MAX_PRIVATE_REF_LENGTH) {
@@ -240,12 +241,11 @@ function validatePluginTelemetryInput(
     }
     const hashKey = `${key}_hashed`;
     const markerKey = `${key}_is_hashed`;
-    if (
-      Object.prototype.hasOwnProperty.call(safeDimensions, hashKey) ||
-      Object.prototype.hasOwnProperty.call(safeDimensions, markerKey)
-    ) {
+    if (allocatedOutputKeys.has(hashKey) || allocatedOutputKeys.has(markerKey)) {
       throw new Error(`Plugin telemetry private ref "${key}" collides with existing dimensions.`);
     }
+    allocatedOutputKeys.add(hashKey);
+    allocatedOutputKeys.add(markerKey);
     privateRefEntries.push({ key, value });
   }
 
