@@ -30,6 +30,12 @@ function buttonByText(container: HTMLElement, label: string): HTMLButtonElement 
   return button as HTMLButtonElement;
 }
 
+function typeCron(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 function Harness({ createMutate }: { createMutate: ReturnType<typeof vi.fn> }) {
   const [newTrigger, setNewTrigger] = useState<NewTriggerDraft>({
     ...createDefaultNewTrigger(),
@@ -100,6 +106,39 @@ describe("TriggersSection", () => {
     });
     expect(container.querySelector('input[aria-label="Cron expression"]')).toBeNull();
     expect(container.textContent).toContain("Every day");
+
+    act(() => root.unmount());
+  });
+
+  it("disables add trigger while the custom cron draft is invalid locally", () => {
+    const createMutate = vi.fn();
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(<Harness createMutate={createMutate} />);
+    });
+
+    act(() => {
+      buttonByText(container, "New trigger").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="Cron expression"]');
+    expect(input).not.toBeNull();
+    expect(buttonByText(container, "Add trigger").disabled).toBe(false);
+
+    act(() => {
+      typeCron(input!, "0 8-18/2 *");
+    });
+
+    expect(input?.value).toBe("0 8-18/2 *");
+    expect(container.textContent).toContain("Use exactly 5 fields");
+    expect(buttonByText(container, "Add trigger").disabled).toBe(true);
+
+    act(() => {
+      buttonByText(container, "Add trigger").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(createMutate).not.toHaveBeenCalled();
 
     act(() => root.unmount());
   });

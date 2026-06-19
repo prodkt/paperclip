@@ -16,14 +16,17 @@ import {
 function Harness({
   initial,
   onChange,
+  onValidityChange,
 }: {
   initial: string;
   onChange?: (value: string) => void;
+  onValidityChange?: (valid: boolean) => void;
 }) {
   const [value, setValue] = useState(initial);
   return (
     <ScheduleEditor
       value={value}
+      onValidityChange={onValidityChange}
       onChange={(cron) => {
         setValue(cron);
         onChange?.(cron);
@@ -96,9 +99,16 @@ describe("ScheduleEditor", () => {
 
   it("keeps Custom open while partial edits and pasted valid cron values round-trip through parent state", () => {
     const onChange = vi.fn();
+    const onValidityChange = vi.fn();
     const root = createRoot(container);
     act(() => {
-      root.render(<Harness initial="0 8-18/2 * * 1-5" onChange={onChange} />);
+      root.render(
+        <Harness
+          initial="0 8-18/2 * * 1-5"
+          onChange={onChange}
+          onValidityChange={onValidityChange}
+        />,
+      );
     });
 
     act(() => {
@@ -108,6 +118,7 @@ describe("ScheduleEditor", () => {
     expect(cronInput()?.getAttribute("aria-invalid")).toBe("true");
     expect(container.textContent).toContain("Use exactly 5 fields");
     expect(onChange).not.toHaveBeenCalledWith("0 8-18/2 *");
+    expect(onValidityChange).toHaveBeenLastCalledWith(false);
 
     act(() => {
       typeCron(cronInput()!, "0 8-18/2 * * 1-5");
@@ -115,6 +126,7 @@ describe("ScheduleEditor", () => {
     expect(cronInput()?.value).toBe("0 8-18/2 * * 1-5");
     expect(cronInput()?.getAttribute("aria-invalid")).toBe("false");
     expect(onChange).toHaveBeenLastCalledWith("0 8-18/2 * * 1-5");
+    expect(onValidityChange).toHaveBeenLastCalledWith(true);
 
     act(() => root.unmount());
   });

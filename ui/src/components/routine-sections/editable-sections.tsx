@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Braces,
@@ -341,11 +341,18 @@ export function TriggersSection() {
   const ctx = useRoutineDetail();
   const { routine, newTrigger, setNewTrigger, createTrigger, updateTrigger, deleteTrigger, rotateTrigger } = ctx;
   const [addOpen, setAddOpen] = useState(false);
+  const [newScheduleEditorValid, setNewScheduleEditorValid] = useState(true);
   const newScheduleValidation = useMemo(
     () => newTrigger.kind === "schedule" ? getScheduleCronValidation(newTrigger.cronExpression) : null,
     [newTrigger.cronExpression, newTrigger.kind],
   );
-  const addDisabled = createTrigger.isPending || (newScheduleValidation ? !newScheduleValidation.valid : false);
+  const addDisabled =
+    createTrigger.isPending ||
+    (newScheduleValidation ? !newScheduleValidation.valid || !newScheduleEditorValid : false);
+
+  useEffect(() => {
+    if (newTrigger.kind !== "schedule") setNewScheduleEditorValid(true);
+  }, [newTrigger.kind]);
 
   return (
     <div className="space-y-4">
@@ -408,6 +415,7 @@ export function TriggersSection() {
                 onChange={(cronExpression) =>
                   setNewTrigger((current) => ({ ...current, cronExpression }))
                 }
+                onValidityChange={setNewScheduleEditorValid}
               />
             </div>
           )}

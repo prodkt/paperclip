@@ -194,9 +194,11 @@ export function getScheduleCronValidation(cron: string): {
 export function ScheduleEditor({
   value,
   onChange,
+  onValidityChange,
 }: {
   value: string;
   onChange: (cron: string) => void;
+  onValidityChange?: (valid: boolean) => void;
 }) {
   const parsed = useMemo(() => parseCronToPreset(value), [value]);
   const [preset, setPreset] = useState<SchedulePreset>(parsed.preset);
@@ -206,6 +208,10 @@ export function ScheduleEditor({
   const [dayOfMonth, setDayOfMonth] = useState(parsed.dayOfMonth);
   const [customCron, setCustomCron] = useState(preset === "custom" ? value : "");
   const customValidation = useMemo(() => getScheduleCronValidation(customCron), [customCron]);
+
+  useEffect(() => {
+    onValidityChange?.(preset !== "custom" || customValidation.valid);
+  }, [customValidation.valid, onValidityChange, preset]);
 
   // Sync from external value changes
   useEffect(() => {
