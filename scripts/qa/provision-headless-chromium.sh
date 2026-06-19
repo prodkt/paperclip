@@ -67,6 +67,10 @@ mapfile -t CLOSURE < <(clean apt-cache depends --recurse --no-recommends \
   --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances \
   "${ROOTS[@]}" 2>/dev/null | grep '^\w' | sort -u)
 log "Closure: ${#CLOSURE[@]} packages."
+if [ "${#CLOSURE[@]}" -eq 0 ]; then
+  echo "ERROR: dependency closure is empty -- apt package index may be unpopulated. Run 'apt-get update' and retry." >&2
+  exit 1
+fi
 
 log "Downloading .debs into $DEBS (no root required)..."
 (
@@ -80,7 +84,10 @@ log "Downloading .debs into $DEBS (no root required)..."
 )
 
 log "Extracting into $ROOT (no root required)..."
-for d in "$DEBS"/*.deb; do clean dpkg-deb -x "$d" "$ROOT" 2>/dev/null || true; done
+(
+  shopt -s nullglob
+  for d in "$DEBS"/*.deb; do clean dpkg-deb -x "$d" "$ROOT" 2>/dev/null || true; done
+)
 
 # Discover every directory that contains a shared object.
 LIBDIRS="$(find "$ROOT" -name '*.so*' -type f -printf '%h\n' | sort -u | paste -sd:)"
