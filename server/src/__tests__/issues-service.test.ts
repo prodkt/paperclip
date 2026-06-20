@@ -2957,7 +2957,13 @@ describeEmbeddedPostgres("issueService.create workspace inheritance", () => {
       body: `A user pasted the mirror marker: <!-- gate-confirmation-mirror:${child.id} -->`,
     });
 
-    const mirrored = await svc.mirrorGateConfirmationToParent(child.id);
+    const mirrorResults = await Promise.all([
+      svc.mirrorGateConfirmationToParent(child.id),
+      svc.mirrorGateConfirmationToParent(child.id),
+    ]);
+    expect(mirrorResults.filter(Boolean)).toHaveLength(1);
+    expect(mirrorResults.filter((result) => result === null)).toHaveLength(1);
+    const mirrored = mirrorResults.find(Boolean);
     expect(mirrored).toMatchObject({
       issueId: parentIssueId,
       authorType: "system",

@@ -4645,8 +4645,8 @@ export function issueService(db: Db) {
       };
     },
 
-    mirrorGateConfirmationToParent: async (childIssueId: string) => {
-      const child = await db
+    mirrorGateConfirmationToParent: async (childIssueId: string) => db.transaction(async (tx) => {
+      const child = await tx
         .select({
           id: issues.id,
           companyId: issues.companyId,
@@ -4658,6 +4658,7 @@ export function issueService(db: Db) {
         })
         .from(issues)
         .where(eq(issues.id, childIssueId))
+        .for("update")
         .then((rows) => rows[0] ?? null);
       if (!child || child.status !== "done" || !child.parentId) return null;
 
@@ -4665,7 +4666,7 @@ export function issueService(db: Db) {
       if (!mirror || mirror.parentIssueId !== child.parentId) return null;
 
       const marker = buildGateConfirmationMirrorMarker(child.id);
-      const existingMirror = await db
+      const existingMirror = await tx
         .select({ id: issueComments.id })
         .from(issueComments)
         .where(and(
@@ -4678,7 +4679,7 @@ export function issueService(db: Db) {
         .then((rows) => rows[0] ?? null);
       if (existingMirror) return null;
 
-      const latestChildComment = await db
+      const latestChildComment = await tx
         .select({ body: issueComments.body })
         .from(issueComments)
         .where(and(
@@ -4700,8 +4701,9 @@ export function issueService(db: Db) {
         }),
         {},
         { authorType: "system" },
+        tx,
       );
-    },
+    }),
 
     createChild: async (
       parentIssueId: string,
