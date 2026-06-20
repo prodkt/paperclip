@@ -205,4 +205,77 @@ describe("createRuntimeProgressReporter", () => {
       "[paperclip] Restoring workspace from ssh: 8.0 MB\n",
     ]);
   });
+
+  it("fail() emits a terminal failure marker with the last percent instead of a dangling line", async () => {
+    const clock = makeClock();
+    const lines: string[] = [];
+    const reporter = createRuntimeProgressReporter({
+      sink: (line) => {
+        lines.push(line);
+      },
+      phase: "Syncing",
+      label: "workspace",
+      direction: "to",
+      target: "ssh",
+      now: clock.now,
+    });
+
+    await reporter.report(40 * MB, 100 * MB); // emit at 40%
+    await reporter.fail();
+
+    expect(lines).toEqual([
+      "[paperclip] Syncing workspace to ssh: 40% (40.0/100.0 MB)\n",
+      "[paperclip] Syncing workspace to ssh: failed at 40% (40.0/100.0 MB)\n",
+    ]);
+  });
+
+  it("fail() falls back to an MB marker when the total is unknown", async () => {
+    const lines: string[] = [];
+    const reporter = createRuntimeProgressReporter({
+      sink: (line) => {
+        lines.push(line);
+      },
+      phase: "Restoring",
+      direction: "from",
+      target: "ssh",
+    });
+
+    await reporter.report(3 * MB, null);
+    await reporter.fail();
+
+    expect(lines.at(-1)).toBe("[paperclip] Restoring from ssh: failed after 3.0 MB\n");
+  });
+
+  it("fail() is suppressed after a terminal completion and complete() after a failure", async () => {
+    const lines: string[] = [];
+    const reporter = createRuntimeProgressReporter({
+      sink: (line) => {
+        lines.push(line);
+      },
+      phase: "Syncing",
+      label: "workspace",
+      direction: "to",
+      target: "ssh",
+    });
+
+    await reporter.report(100 * MB, 100 * MB); // terminal complete
+    await reporter.fail(); // suppressed — already completed
+    expect(lines).toHaveLength(1);
+
+    const failLines: string[] = [];
+    const failed = createRuntimeProgressReporter({
+      sink: (line) => {
+        failLines.push(line);
+      },
+      phase: "Syncing",
+      label: "workspace",
+      direction: "to",
+      target: "ssh",
+    });
+    await failed.report(20 * MB, 100 * MB);
+    await failed.fail();
+    await failed.complete(); // suppressed — already failed
+    expect(failLines).toHaveLength(2);
+    expect(failLines.at(-1)).toContain("failed at 20%");
+  });
 });

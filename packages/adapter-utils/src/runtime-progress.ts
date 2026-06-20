@@ -47,6 +47,12 @@ export interface RuntimeProgressReporter {
    * Emit the terminal completion line if it hasn't been emitted yet. Idempotent.
    */
   complete(doneBytes?: number, totalBytes?: number | null): Promise<void>;
+  /**
+   * Emit a terminal failure line if no terminal line has been emitted yet, so a
+   * failed transfer leaves an explicit marker instead of a dangling percentage.
+   * Idempotent and mutually exclusive with `complete()`.
+   */
+  fail(doneBytes?: number, totalBytes?: number | null): Promise<void>;
 }
 
 const BYTES_PER_MB = 1024 * 1024;
@@ -81,6 +87,14 @@ export function createRuntimeProgressReporter(
       return `${prefix}: ${pct}% (${formatMb(doneBytes)}/${formatMb(totalBytes)} MB)\n`;
     }
     return `${prefix}: ${formatMb(doneBytes)} MB\n`;
+  }
+
+  function buildFailLine(doneBytes: number, totalBytes: number | null): string {
+    if (totalBytes != null && totalBytes > 0) {
+      const pct = clampPercent((doneBytes / totalBytes) * 100);
+      return `${prefix}: failed at ${pct}% (${formatMb(doneBytes)}/${formatMb(totalBytes)} MB)\n`;
+    }
+    return `${prefix}: failed after ${formatMb(doneBytes)} MB\n`;
   }
 
   async function emit(doneBytes: number, totalBytes: number | null): Promise<void> {
@@ -126,6 +140,13 @@ export function createRuntimeProgressReporter(
             ? total
             : lastDoneBytes;
       await options.sink(buildLine(done, total));
+    },
+    async fail(doneBytes, totalBytes) {
+      if (completed) return;
+      completed = true;
+      const total = totalBytes !== undefined ? totalBytes : lastTotalBytes;
+      const done = doneBytes !== undefined ? doneBytes : lastDoneBytes;
+      await options.sink(buildFailLine(done, total));
     },
   };
 }
