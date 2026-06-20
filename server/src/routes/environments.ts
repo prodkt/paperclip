@@ -62,6 +62,34 @@ export function environmentRoutes(
     assertBoardOrgAccess(req);
   }
 
+  function canReadFullInstanceEnvironment(req: Request) {
+    return req.actor.type === "board"
+      && (req.actor.source === "local_implicit" || req.actor.isInstanceAdmin);
+  }
+
+  function redactEnvironmentForRestrictedView<T extends {
+    config: Record<string, unknown> | null;
+    envVars?: Record<string, unknown> | null;
+    metadata: Record<string, unknown> | null;
+  }>(environment: T): T {
+    return {
+      ...environment,
+      config: {},
+      ...(Object.prototype.hasOwnProperty.call(environment, "envVars") ? { envVars: {} } : {}),
+      metadata: null,
+    };
+  }
+
+  function presentEnvironmentForRead<T extends {
+    config: Record<string, unknown> | null;
+    envVars?: Record<string, unknown> | null;
+    metadata: Record<string, unknown> | null;
+  }>(req: Request, environment: T): T {
+    return canReadFullInstanceEnvironment(req)
+      ? environment
+      : redactEnvironmentForRestrictedView(environment);
+  }
+
   async function assertCanReadSecretsForDraftProbe(req: Request, companyId: string) {
     assertCanAccessInstanceEnvironments(req);
     return companyId;
@@ -164,7 +192,7 @@ export function environmentRoutes(
       status: req.query.status as string | undefined,
       driver: req.query.driver as string | undefined,
     });
-    res.json(rows);
+    res.json(rows.map((row) => presentEnvironmentForRead(req, row)));
   });
 
   router.get("/companies/:companyId/environments/capabilities", async (req, res) => {
@@ -258,7 +286,7 @@ export function environmentRoutes(
       return;
     }
     assertCanReadInstanceEnvironments(req);
-    res.json(environment);
+    res.json(presentEnvironmentForRead(req, environment));
   });
 
   router.get("/environments/:id/leases", async (req, res) => {
@@ -413,6 +441,14 @@ export function environmentRoutes(
     assertCanAccessInstanceEnvironments(req);
     const actor = getActorInfo(req);
     const companyIdForSecrets = await resolveEnvironmentSecretContextCompanyId(req, environment.id, { required: false });
+    if (!companyIdForSecrets) {
+      const secretRefs = await collectEnvironmentSecretRefs({ db, environment });
+      if (secretRefs.length > 0) {
+        throw unprocessable(
+          "Environment probe requires an explicit companyId to resolve secret-backed config for this environment.",
+        );
+      }
+    }
     const probe = await probeEnvironment(db, environment, {
       companyId: companyIdForSecrets,
       pluginWorkerManager: options.pluginWorkerManager,

@@ -247,6 +247,51 @@ describe("environment routes", () => {
     });
   });
 
+  it("redacts environment config for non-admin board readers", async () => {
+    mockEnvironmentService.list.mockResolvedValue([createEnvironment()]);
+    const app = createApp({
+      type: "board",
+      userId: "user-2",
+      source: "session",
+      companyIds: ["company-1"],
+      memberships: [{ companyId: "company-1", status: "active", membershipRole: "member" }],
+      isInstanceAdmin: false,
+    });
+
+    const res = await request(app).get("/api/companies/company-1/environments");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toMatchObject({
+      id: "env-1",
+      name: "Local",
+      config: {},
+      envVars: {},
+      metadata: null,
+    });
+  });
+
+  it("redacts environment detail config for non-admin board readers", async () => {
+    mockEnvironmentService.getById.mockResolvedValue(createEnvironment());
+    const app = createApp({
+      type: "board",
+      userId: "user-2",
+      source: "session",
+      companyIds: ["company-1"],
+      memberships: [{ companyId: "company-1", status: "active", membershipRole: "member" }],
+      isInstanceAdmin: false,
+    });
+
+    const res = await request(app).get("/api/environments/env-1");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: "env-1",
+      config: {},
+      envVars: {},
+      metadata: null,
+    });
+  });
+
   it("returns provider capabilities for the company", async () => {
     const app = createApp({
       type: "board",
@@ -1260,6 +1305,49 @@ describe("environment routes", () => {
         }),
       }),
     );
+  });
+
+  it("requires explicit companyId when probing a secret-backed environment without inferable secret context", async () => {
+    const environment = {
+      ...createEnvironment(),
+      driver: "ssh" as const,
+      config: {
+        host: "ssh.example.test",
+        port: 22,
+        username: "ssh-user",
+        remoteWorkspacePath: "/srv/paperclip/workspace",
+        privateKey: null,
+        privateKeySecretRef: {
+          type: "secret_ref",
+          secretId: "11111111-1111-4111-8111-111111111111",
+          version: "latest",
+        },
+        knownHosts: null,
+        strictHostKeyChecking: true,
+      },
+    };
+    mockEnvironmentService.getById.mockResolvedValue(environment);
+    mockSecretService.listBindingCompanyIdsForTarget.mockResolvedValue([]);
+    const app = createApp({
+      type: "board",
+      userId: "user-1",
+      source: "session",
+      companyIds: ["company-1", "company-2"],
+      memberships: [
+        { companyId: "company-1", status: "active", membershipRole: "member" },
+        { companyId: "company-2", status: "active", membershipRole: "member" },
+      ],
+      isInstanceAdmin: true,
+      runId: "run-1",
+    });
+
+    const res = await request(app)
+      .post(`/api/environments/${environment.id}/probe`)
+      .send({});
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toContain("explicit companyId");
+    expect(mockProbeEnvironment).not.toHaveBeenCalled();
   });
 
   it("probes a sandbox environment and logs the result", async () => {
