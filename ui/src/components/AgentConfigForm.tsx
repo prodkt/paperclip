@@ -400,11 +400,19 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
     }),
     [environments, supportedEnvironmentDrivers],
   );
+  const environmentOptions = useMemo(() => {
+    if (!currentDefaultEnvironment) return runnableEnvironments;
+    if (runnableEnvironments.some((environment) => environment.id === currentDefaultEnvironment.id)) {
+      return runnableEnvironments;
+    }
+    return [...runnableEnvironments, currentDefaultEnvironment];
+  }, [currentDefaultEnvironment, runnableEnvironments]);
   // `runnableEnvironments` excludes the always-available Local environment, so a
   // single entry already means the user has more than one environment configured
   // (Local + that environment) and the override selector is meaningful.
   const showEnvironmentOverrideControl = environmentsEnabled && (
     forcedKubernetes ||
+    currentDefaultEnvironmentId.length > 0 ||
     runnableEnvironments.length >= 1
   );
   const inheritedEnvironmentLabel = instanceDefaultEnvironment
@@ -929,7 +937,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
                   }}
                 >
                   <option value="">Default: {inheritedEnvironmentLabel}</option>
-                  {runnableEnvironments.map((environment) => (
+                  {environmentOptions.map((environment) => (
                     <option key={environment.id} value={environment.id}>
                       {environment.name} · {environment.driver}
                     </option>

@@ -155,7 +155,7 @@ function makeEnvironment(overrides: Partial<Environment>): Environment {
   };
 }
 
-async function renderForm(environments: Environment[]) {
+async function renderForm(environments: Environment[], agentOverrides: Partial<Agent> = {}) {
   mockEnvironmentsApi.list.mockResolvedValue(environments);
 
   const container = document.createElement("div");
@@ -174,7 +174,7 @@ async function renderForm(environments: Environment[]) {
         <TooltipProvider>
           <AgentConfigForm
             mode="edit"
-            agent={makeAgent()}
+            agent={makeAgent(agentOverrides)}
             onSave={vi.fn()}
             hidePromptTemplate
             showAdapterTypeField={false}
@@ -245,5 +245,28 @@ describe("AgentConfigForm environment selector", () => {
     expect(text).not.toContain("Execution");
     expect(text).not.toContain("Leave this unset to inherit the instance default");
     expect(text).not.toContain("Inherit instance default");
+  });
+
+  it("keeps an existing non-runnable override visible so it can be cleared", async () => {
+    const result = await renderForm(
+      [
+        makeEnvironment({ id: "local-1", name: "Local", driver: "local" }),
+        makeEnvironment({
+          id: "fake-sandbox-1",
+          name: "Fake Sandbox",
+          driver: "sandbox",
+          config: { provider: "fake" },
+        }),
+      ],
+      { defaultEnvironmentId: "fake-sandbox-1" },
+    );
+    roots.push(result.root);
+
+    const text = result.container.textContent ?? "";
+    const selector = result.container.querySelector("select");
+
+    expect(text).toContain("Environment override");
+    expect(selector?.textContent).toContain("Default: Local");
+    expect(selector?.textContent).toContain("Fake Sandbox · sandbox");
   });
 });
