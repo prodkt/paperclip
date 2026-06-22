@@ -163,11 +163,28 @@ When adding endpoints:
 When creating a pull request (via `gh pr create` or any other method), you **must** read and fill in every section of [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md). Do not craft ad-hoc PR bodies — use the template as the structure for your PR description. Required sections:
 
 - **Thinking Path** — trace reasoning from project context to this change (see `CONTRIBUTING.md` for examples)
+- **Linked Issues or Issue Description** — see below; this is the most common reason `commitperclip` fails a PR
 - **What Changed** — bullet list of concrete changes
 - **Verification** — how a reviewer can confirm it works
 - **Risks** — what could go wrong
 - **Model Used** — the AI model that produced or assisted with the change (provider, exact model ID, context window, capabilities). Write "None — human-authored" if no AI was used.
 - **Checklist** — all items checked
+
+### Linked issue (avoid the most common `commitperclip` failure)
+
+`commitperclip` runs on every PR and **fails it** unless the body satisfies one of the two paths below. Do this when you write the PR body, not after the bot complains:
+
+1. **A public GitHub issue exists** — tag it in the body with `Fixes #123`, `Closes #123`, `Resolves #123`, or `Refs #123` (a bare `#123` also counts). Link **all** related/duplicate issues and prior PRs, not just one.
+2. **No public issue exists** — describe the problem inline so a reviewer gets the same fields a filed issue would give them. Include **at least 3** headings/labels from the matching issue template:
+   - **Bug:** `What happened`, `Expected behavior`, `Steps to reproduce`, `Paperclip version or commit`, `Deployment mode`
+   - **Feature:** `Problem or motivation`, `Proposed solution`, `Alternatives considered`, `Roadmap alignment`
+   - **Adapter:** `Agent or provider`, `Why this adapter is useful`, `How the agent is invoked`
+
+   Write each as its own `## Heading`, `**Bold label**`, or `Label:` line — that is what the check scans for.
+
+The check is **skipped** only for PRs whose title uses a `docs:`, `chore:`, `build:`, `ci:`, `style:`, `test:`, or `revert:` conventional-commit prefix. Everything else (`feat:`, `fix:`, `refactor:`, `perf:`, or no prefix) requires path 1 or path 2.
+
+> **Only reference public GitHub issues.** Never put internal/instance-local Paperclip references in the PR title, body, commits, or branch name — no `PAPA-123` / `PAP-224` ticket ids, no `/PAP/issues/...` or `agent://...` links, no `localhost`/tailnet URLs. The working branch is usually named after an internal ticket (e.g. `PAPA-945-...`); rename it to describe the change (e.g. `docs/...`, `fix/...`) before pushing. If an internal issue had useful context, restate it in plain English. See `CONTRIBUTING.md` → "No Internal Issue References".
 
 ## 11. Definition of Done
 
