@@ -73,7 +73,7 @@ Use the Paperclip API to write the plan document, then comment:
 - If approval is required: `POST /api/issues/{issueId}/interactions` with `kind: request_confirmation`, `targetRevisionId` set to the new plan revision, `continuationPolicy: wake_assignee`, and `idempotencyKey: "confirmation:{issueId}:plan:{revisionId}"`.
 - Set the issue to `in_review` after creating the confirmation. Stay assigned so the acceptance wakes the planner.
 
-When the plan is accepted, see the companion skill for converting accepted plans into Paperclip executable tasks. The conversion must include a compact task matrix with planned task, owner, initial status, and blockers. Parent/child issue nesting does not create execution dependencies: every hard dependency from the plan must become `blockedByIssueIds` on the dependent issue, while any task that can start immediately should state why it has no blockers. After creating tasks, re-fetch or otherwise verify the created issue graph before closing the source planning issue; if expected blockers are missing, report the mismatch and leave the planning issue in review or blocked posture until the graph is corrected.
+When the plan is accepted, see the companion skill for converting accepted plans into Paperclip executable tasks. Key requirements covered there: produce a compact task matrix (task, owner, initial status, blockers); encode every hard dependency as `blockedByIssueIds` — parent/child nesting alone does not block execution; and verify the created issue graph before closing the source planning issue.
 
 ## Anti-patterns
 
