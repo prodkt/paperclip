@@ -120,6 +120,7 @@ import {
   computeComposerHandoffPreview,
   extractAgentMentionIds,
   findPlainAgentNameCandidate,
+  type ComposerHandoffPreview,
   type HandoffAgentMention,
 } from "../lib/interrupt-handoff";
 import { restoreSubmittedCommentDraft } from "../lib/comment-submit-draft";
@@ -314,6 +315,10 @@ function useStableEvent<T extends (...args: never[]) => unknown>(callback: T | u
 interface CommentReassignment {
   assigneeAgentId: string | null;
   assigneeUserId: string | null;
+}
+
+export function shouldRenderComposerHandoffPreview(body: string, preview: ComposerHandoffPreview): boolean {
+  return Boolean(body.trim()) && preview.kind !== "none";
 }
 
 export interface IssueChatComposerHandle {
@@ -3840,7 +3845,7 @@ const IssueChatComposer = forwardRef<IssueChatComposerHandle, IssueChatComposerP
         </div>
       ) : null}
 
-      {body.trim() && handoffPreview.kind !== "none" ? (
+      {shouldRenderComposerHandoffPreview(body, handoffPreview) ? (
         <div className="my-2">
           <ComposerHandoffPreviewRow preview={handoffPreview} resolvers={handoffResolvers} />
         </div>
