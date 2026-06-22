@@ -766,6 +766,7 @@ describe("IssueProperties", () => {
     expect(container.textContent).toContain("BLOCK-6");
     expect(container.textContent).toContain("BLOCK-7");
     expect(container.textContent).not.toContain("SUB-6");
+    expect(container.textContent).toContain("show less");
 
     const expandSubTasks = Array.from(container.querySelectorAll("button")).find((button) =>
       button.textContent?.trim() === "and 2 more...",
@@ -782,6 +783,84 @@ describe("IssueProperties", () => {
         button.textContent?.trim() === "and 2 more...",
       ),
     ).toHaveLength(0);
+    expect(
+      Array.from(container.querySelectorAll("button")).filter((button) =>
+        button.textContent?.trim() === "show less",
+      ),
+    ).toHaveLength(2);
+
+    const collapseBlockedBy = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.trim() === "show less",
+    );
+    expect(collapseBlockedBy).not.toBeUndefined();
+    await act(async () => {
+      collapseBlockedBy!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.textContent).not.toContain("BLOCK-6");
+    expect(container.textContent).toContain("SUB-6");
+    expect(container.textContent).toContain("and 2 more...");
+
+    act(() => root.unmount());
+  });
+
+  it("resets expanded relation previews when the issue changes", async () => {
+    const blockedBy = Array.from({ length: 7 }, (_, index) => ({
+      id: `blocker-${index + 1}`,
+      identifier: `BLOCK-${index + 1}`,
+      title: `Blocker ${index + 1}`,
+      status: "todo",
+      priority: "medium",
+      assigneeAgentId: null,
+      assigneeUserId: null,
+    })) as NonNullable<Issue["blockedBy"]>;
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <IssueProperties
+            issue={createIssue({ id: "issue-a", blockedBy })}
+            childIssues={[]}
+            onUpdate={vi.fn()}
+            inline
+          />
+        </QueryClientProvider>,
+      );
+    });
+    await flush();
+
+    const expandBlockedBy = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.trim() === "and 2 more...",
+    );
+    expect(expandBlockedBy).not.toBeUndefined();
+    await act(async () => {
+      expandBlockedBy!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("BLOCK-6");
+
+    act(() => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <IssueProperties
+            issue={createIssue({ id: "issue-b", blockedBy })}
+            childIssues={[]}
+            onUpdate={vi.fn()}
+            inline
+          />
+        </QueryClientProvider>,
+      );
+    });
+    await flush();
+
+    expect(container.textContent).not.toContain("BLOCK-6");
+    expect(container.textContent).toContain("and 2 more...");
 
     act(() => root.unmount());
   });

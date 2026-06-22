@@ -324,19 +324,21 @@ function RemovableIssueReferencePill({
 
 function ExpandRelationListButton({
   hiddenCount,
+  expanded,
   onClick,
 }: {
   hiddenCount: number;
+  expanded: boolean;
   onClick: () => void;
 }) {
-  if (hiddenCount <= 0) return null;
+  if (!expanded && hiddenCount <= 0) return null;
   return (
     <button
       type="button"
       className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
       onClick={onClick}
     >
-      and {hiddenCount} more...
+      {expanded ? "show less" : `and ${hiddenCount} more...`}
     </button>
   );
 }
@@ -447,6 +449,11 @@ export function IssueProperties({
   const [monitorNotesInput, setMonitorNotesInput] = useState(issue.executionPolicy?.monitor?.notes ?? "");
   const [monitorServiceInput, setMonitorServiceInput] = useState(issue.executionPolicy?.monitor?.serviceName ?? "");
   const normalizedBlockedBySearch = blockedBySearch.trim();
+
+  useEffect(() => {
+    setBlockedByExpanded(false);
+    setSubTasksExpanded(false);
+  }, [issue.id]);
 
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
@@ -2021,7 +2028,8 @@ export function IssueProperties({
               ))}
               <ExpandRelationListButton
                 hiddenCount={hiddenBlockedByCount}
-                onClick={() => setBlockedByExpanded(true)}
+                expanded={blockedByExpanded}
+                onClick={() => setBlockedByExpanded((expanded) => !expanded)}
               />
               {renderAddBlockedByButton(() => setBlockedByOpen((open) => !open))}
             </PropertyRow>
@@ -2038,7 +2046,8 @@ export function IssueProperties({
             ))}
             <ExpandRelationListButton
               hiddenCount={hiddenBlockedByCount}
-              onClick={() => setBlockedByExpanded(true)}
+              expanded={blockedByExpanded}
+              onClick={() => setBlockedByExpanded((expanded) => !expanded)}
             />
             <Popover
               open={blockedByOpen}
@@ -2076,7 +2085,8 @@ export function IssueProperties({
               : null}
             <ExpandRelationListButton
               hiddenCount={hiddenChildIssueCount}
-              onClick={() => setSubTasksExpanded(true)}
+              expanded={subTasksExpanded}
+              onClick={() => setSubTasksExpanded((expanded) => !expanded)}
             />
             {onAddSubIssue ? (
               <button
