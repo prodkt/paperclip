@@ -1481,6 +1481,7 @@ export function IssuesList({
             currentUserId={currentUserId}
             enableRoutineVisibilityFilter={enableRoutineVisibilityFilter}
             iconOnly
+            buttonVariant="outline"
             workspaces={isolatedWorkspacesEnabled ? workspaceOptions : undefined}
           />
 
