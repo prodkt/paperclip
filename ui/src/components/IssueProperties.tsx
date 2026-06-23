@@ -2369,7 +2369,7 @@ export function IssueProperties({
                   <PropertyRow
                     key={group.object?.id ?? `${pill.providerKey}:${pill.objectType}:${pill.url ?? "anon"}`}
                     label={externalObjectRowLabel(externalObject)}
-                    labelClassName="w-24 max-w-24 whitespace-normal leading-tight"
+                    labelClassName="w-20 max-w-20 whitespace-normal leading-tight"
                   >
                     <ExternalObjectPropertyValue group={externalObject} />
                   </PropertyRow>
