@@ -569,8 +569,8 @@ function createSandboxEnvironmentDriver(
         // provider lease. If they did, releasing the test lease at the end of
         // the probe would tear down the live heartbeat run that owns it.
         // We also filter out leases whose policy is not reuse_by_environment
-        // so any non-reusable lease (including ad-hoc test leases that
-        // landed in the table from older code paths) cannot be matched.
+        // and whose status is not reusable so non-reusable, cleanup-pending,
+        // or terminal rows cannot be matched.
         const reusableExistingLeases =
           supportsReusableLeases &&
           parsed.config.reuseLease &&
@@ -580,6 +580,7 @@ function createSandboxEnvironmentDriver(
           ? (await environmentsSvc.listLeases(input.environment.id))
               .filter((lease) =>
                 lease.leasePolicy === "reuse_by_environment" &&
+                ["active", "released", "retained"].includes(lease.status) &&
                 lease.executionWorkspaceId === input.executionWorkspaceId &&
                 lease.metadata?.agentId === input.agentId &&
                 reusableSandboxLeaseScopeMatches({
@@ -716,8 +717,8 @@ function createSandboxEnvironmentDriver(
       // Built-in sandbox provider path. Same guard as the plugin-backed path:
       // ad-hoc tests (heartbeatRunId === null) must never resume an existing
       // provider lease, or releasing the test lease will terminate the live
-      // heartbeat run that shares it. Filter to leases whose policy is
-      // reuse_by_environment so non-reusable rows can never be matched.
+      // heartbeat run that shares it. Filter to reusable policies and statuses
+      // so non-reusable, cleanup-pending, or terminal rows can never be matched.
       const builtinSandboxProvider = getBuiltinSandboxProvider(parsed.config.provider);
       const supportsReusableLeases = builtinSandboxProvider?.supportsReusableLeases === true;
       const reusableProviderLeaseId =
@@ -733,6 +734,7 @@ function createSandboxEnvironmentDriver(
                 config: parsed.config,
                 leases: leases.filter((lease) =>
                   lease.leasePolicy === "reuse_by_environment" &&
+                  ["active", "released", "retained"].includes(lease.status) &&
                   lease.executionWorkspaceId === input.executionWorkspaceId &&
                   lease.metadata?.agentId === input.agentId &&
                   reusableSandboxLeaseScopeMatches({
@@ -1061,10 +1063,14 @@ function createSandboxEnvironmentDriver(
       cleanupStatus = "failed";
     }
 
-    return await environmentsSvc.releaseLease(input.lease.id, "expired", {
-      failureReason: input.failureReason,
-      cleanupStatus,
-    });
+    return await environmentsSvc.releaseLease(
+      input.lease.id,
+      cleanupStatus === "success" ? "expired" : "pending_cleanup",
+      {
+        failureReason: input.failureReason,
+        cleanupStatus,
+      },
+    );
   }
 }
 
@@ -1535,7 +1541,7 @@ export function environmentRuntimeService(
           and(
             eq(environmentLeases.companyId, input.companyId),
             eq(environmentLeases.leasePolicy, "reuse_by_environment"),
-            inArray(environmentLeases.status, ["active", "released", "retained"]),
+            inArray(environmentLeases.status, ["active", "released", "retained", "pending_cleanup"]),
             ...scopeConditions,
           ),
         );
@@ -1552,7 +1558,7 @@ export function environmentRuntimeService(
               lease: leaseSnapshot,
               failureReason: input.failureReason ?? "reusable_lease_destroyed",
             })
-          : await environmentsSvc.releaseLease(leaseSnapshot.id, "expired", {
+          : await environmentsSvc.releaseLease(leaseSnapshot.id, "pending_cleanup", {
               failureReason: input.failureReason ?? "reusable_lease_destroyed",
               cleanupStatus: "failed",
             });
