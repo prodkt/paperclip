@@ -64,17 +64,17 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
 	IF NOT EXISTS (
-		SELECT 1 FROM "pg_constraint" WHERE "conname" = 'document_annotation_threads_exactly_one_owner_chk'
+		SELECT 1 FROM "pg_constraint" WHERE "conname" = 'document_annotation_threads_owner_check'
 	) THEN
-		ALTER TABLE "document_annotation_threads" ADD CONSTRAINT "document_annotation_threads_exactly_one_owner_chk" CHECK (num_nonnulls("issue_id", "routine_id") = 1);
+		ALTER TABLE "document_annotation_threads" ADD CONSTRAINT "document_annotation_threads_owner_check" CHECK ("issue_id" IS NOT NULL OR "routine_id" IS NOT NULL);
 	END IF;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
 	IF NOT EXISTS (
-		SELECT 1 FROM "pg_constraint" WHERE "conname" = 'document_annotation_comments_exactly_one_owner_chk'
+		SELECT 1 FROM "pg_constraint" WHERE "conname" = 'document_annotation_comments_owner_check'
 	) THEN
-		ALTER TABLE "document_annotation_comments" ADD CONSTRAINT "document_annotation_comments_exactly_one_owner_chk" CHECK (num_nonnulls("issue_id", "routine_id") = 1);
+		ALTER TABLE "document_annotation_comments" ADD CONSTRAINT "document_annotation_comments_owner_check" CHECK ("issue_id" IS NOT NULL OR "routine_id" IS NOT NULL);
 	END IF;
 END $$;
 --> statement-breakpoint

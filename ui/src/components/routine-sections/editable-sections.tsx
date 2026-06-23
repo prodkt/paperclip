@@ -78,7 +78,11 @@ const signingModeDescriptions: Record<string, string> = {
 };
 const SIGNING_MODES_WITHOUT_REPLAY_WINDOW = new Set(["github_hmac", "none"]);
 
-export function OverviewSection() {
+export function OverviewSection({
+  defaultDescriptionAnnotationsOpen = false,
+}: {
+  defaultDescriptionAnnotationsOpen?: boolean;
+} = {}) {
   const ctx = useRoutineDetail();
   const {
     routine,
@@ -103,7 +107,7 @@ export function OverviewSection() {
     isSectionDirty,
     navigateToSection,
   } = ctx;
-  const [descriptionAnnotationsOpen, setDescriptionAnnotationsOpen] = useState(false);
+  const [descriptionAnnotationsOpen, setDescriptionAnnotationsOpen] = useState(defaultDescriptionAnnotationsOpen);
 
   const activeTriggers = routine.triggers.length;
   const nextFire = useMemo(() => {

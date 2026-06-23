@@ -785,7 +785,150 @@ describe("IssueProperties", () => {
     act(() => root.unmount());
   });
 
-  it("shows workspace runtime controls below the workspace row for a non-main workspace", async () => {
+  it("collapses long blocked-by and sub-task lists until the more button is clicked", async () => {
+    const blockedBy = Array.from({ length: 7 }, (_, index) => ({
+      id: `blocker-${index + 1}`,
+      identifier: `BLOCK-${index + 1}`,
+      title: `Blocker ${index + 1}`,
+      status: "todo",
+      priority: "medium",
+      assigneeAgentId: null,
+      assigneeUserId: null,
+    })) as NonNullable<Issue["blockedBy"]>;
+    const childIssues = Array.from({ length: 7 }, (_, index) => createIssue({
+      id: `child-${index + 1}`,
+      identifier: `SUB-${index + 1}`,
+      title: `Sub-task ${index + 1}`,
+    }));
+    const root = renderProperties(container, {
+      issue: createIssue({ blockedBy }),
+      childIssues,
+      onUpdate: vi.fn(),
+      inline: true,
+    });
+    await flush();
+
+    expect(container.textContent).toContain("BLOCK-5");
+    expect(container.textContent).not.toContain("BLOCK-6");
+    expect(container.textContent).toContain("SUB-5");
+    expect(container.textContent).not.toContain("SUB-6");
+    expect(
+      Array.from(container.querySelectorAll("button")).filter((button) =>
+        button.textContent?.trim() === "and 2 more...",
+      ),
+    ).toHaveLength(2);
+
+    const expandBlockedBy = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.trim() === "and 2 more...",
+    );
+    expect(expandBlockedBy).not.toBeUndefined();
+    await act(async () => {
+      expandBlockedBy!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("BLOCK-6");
+    expect(container.textContent).toContain("BLOCK-7");
+    expect(container.textContent).not.toContain("SUB-6");
+    expect(container.textContent).toContain("show less");
+
+    const expandSubTasks = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.trim() === "and 2 more...",
+    );
+    expect(expandSubTasks).not.toBeUndefined();
+    await act(async () => {
+      expandSubTasks!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("SUB-6");
+    expect(container.textContent).toContain("SUB-7");
+    expect(
+      Array.from(container.querySelectorAll("button")).filter((button) =>
+        button.textContent?.trim() === "and 2 more...",
+      ),
+    ).toHaveLength(0);
+    expect(
+      Array.from(container.querySelectorAll("button")).filter((button) =>
+        button.textContent?.trim() === "show less",
+      ),
+    ).toHaveLength(2);
+
+    const collapseBlockedBy = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.trim() === "show less",
+    );
+    expect(collapseBlockedBy).not.toBeUndefined();
+    await act(async () => {
+      collapseBlockedBy!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.textContent).not.toContain("BLOCK-6");
+    expect(container.textContent).toContain("SUB-6");
+    expect(container.textContent).toContain("and 2 more...");
+
+    act(() => root.unmount());
+  });
+
+  it("resets expanded relation previews when the issue changes", async () => {
+    const blockedBy = Array.from({ length: 7 }, (_, index) => ({
+      id: `blocker-${index + 1}`,
+      identifier: `BLOCK-${index + 1}`,
+      title: `Blocker ${index + 1}`,
+      status: "todo",
+      priority: "medium",
+      assigneeAgentId: null,
+      assigneeUserId: null,
+    })) as NonNullable<Issue["blockedBy"]>;
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <IssueProperties
+            issue={createIssue({ id: "issue-a", blockedBy })}
+            childIssues={[]}
+            onUpdate={vi.fn()}
+            inline
+          />
+        </QueryClientProvider>,
+      );
+    });
+    await flush();
+
+    const expandBlockedBy = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.trim() === "and 2 more...",
+    );
+    expect(expandBlockedBy).not.toBeUndefined();
+    await act(async () => {
+      expandBlockedBy!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("BLOCK-6");
+
+    act(() => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <IssueProperties
+            issue={createIssue({ id: "issue-b", blockedBy })}
+            childIssues={[]}
+            onUpdate={vi.fn()}
+            inline
+          />
+        </QueryClientProvider>,
+      );
+    });
+    await flush();
+
+    expect(container.textContent).not.toContain("BLOCK-6");
+    expect(container.textContent).toContain("and 2 more...");
+
+    act(() => root.unmount());
+  });
+
+  it("shows a green service link above the workspace row for a live non-main workspace", async () => {
     mockProjectsApi.list.mockResolvedValue([createProject()]);
     const serviceUrl = "http://127.0.0.1:62475";
     const updatedWorkspace = createExecutionWorkspace({
@@ -1734,6 +1877,83 @@ describe("IssueProperties", () => {
       expect(link).toBeTruthy();
       expect(link!.textContent).toContain("PAP-42");
     });
+
+    act(() => root.unmount());
+  });
+
+  it("renders each external object as its own properties row using display metadata", async () => {
+    const root = renderProperties(container, {
+      issue: createIssue(),
+      childIssues: [],
+      onUpdate: vi.fn(),
+      inline: true,
+      externalObjects: [
+        {
+          mentionCount: 1,
+          sourceLabels: ["Description"],
+          pill: {
+            providerKey: "github",
+            objectType: "pull_request",
+            displayKey: null,
+            iconKey: "github",
+            statusCategory: "succeeded",
+            statusIconKey: null,
+            statusLabel: "Merged",
+            liveness: "fresh",
+            displayTitle: "acme/web#241: Add rich object presentation metadata",
+            url: "https://github.com/acme/web/pull/241",
+          },
+          group: {
+            object: null,
+            mentions: [],
+            mentionCount: 1,
+            sourceLabels: ["Description"],
+          },
+        },
+        {
+          mentionCount: 1,
+          sourceLabels: ["Comment"],
+          pill: {
+            providerKey: "github",
+            objectType: "issue",
+            displayKey: "Github Issue",
+            iconKey: "github",
+            statusCategory: "open",
+            statusIconKey: "circle-dot",
+            statusLabel: "Open",
+            liveness: "fresh",
+            displayTitle: "acme/web#12: Follow-up",
+            url: "https://github.com/acme/web/issues/12",
+          },
+          group: {
+            object: null,
+            mentions: [],
+            mentionCount: 1,
+            sourceLabels: ["Comment"],
+          },
+        },
+      ],
+    });
+    await flush();
+
+    expect(container.textContent).toContain("Github Pull Request");
+    expect(container.textContent).toContain("Github Issue");
+    expect(container.textContent).toContain("PR 241 - Merged");
+    expect(container.textContent).toContain("Merged");
+    expect(container.textContent).toContain("Open");
+    expect(container.textContent).not.toContain("External objects");
+    const label = Array.from(container.querySelectorAll("span"))
+      .find((span) => span.textContent === "Github Pull Request");
+    expect(label?.querySelector("svg")).toBeTruthy();
+    const pullRequestLink = Array.from(container.querySelectorAll("a"))
+      .find((anchor) => anchor.getAttribute("href") === "https://github.com/acme/web/pull/241");
+    expect(pullRequestLink?.textContent).toContain("PR 241 - Merged");
+    expect(pullRequestLink?.textContent).not.toContain("acme/web#241");
+    expect(pullRequestLink?.textContent).not.toContain("Github Pull Request");
+    expect(pullRequestLink?.querySelectorAll("svg")).toHaveLength(1);
+    expect(pullRequestLink?.className).not.toContain("paperclip-mention-chip");
+    expect(pullRequestLink?.className).not.toContain("rounded-full");
+    expect(pullRequestLink?.className).not.toContain("border");
 
     act(() => root.unmount());
   });
