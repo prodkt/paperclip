@@ -1381,6 +1381,7 @@ export function taskWatchdogService(db: Db, deps: TaskWatchdogServiceDeps = {}) 
     if (!outcome) return { watchdog, outcome: null, suppressesCurrentProof: false };
 
     const method = `watchdog_issue_status:${watchdogIssue.status}`;
+    const resultClassification = classification.state === "already_reviewed" ? "stopped" : classification.state;
     await recordWatchdogProofOutcome({
       watchdog,
       watchdogIssue,
@@ -1388,7 +1389,7 @@ export function taskWatchdogService(db: Db, deps: TaskWatchdogServiceDeps = {}) 
       method,
       stopFingerprint,
       proofObligationFingerprint,
-      resultClassification: classification.state,
+      resultClassification,
       redactedDetails: {
         version: 1,
         target: {
@@ -1396,7 +1397,7 @@ export function taskWatchdogService(db: Db, deps: TaskWatchdogServiceDeps = {}) 
           watchdogIssueId: watchdogIssue.id,
         },
         method,
-        classification: classification.state,
+        classification: resultClassification,
         watchdogIssueStatus: watchdogIssue.status,
         hasUnresolvedBlocker,
         hasPendingReviewPath,

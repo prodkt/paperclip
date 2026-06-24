@@ -421,6 +421,8 @@ describeEmbeddedPostgres("task watchdog scheduler", () => {
       .from(issueWatchdogProofOutcomes)
       .where(eq(issueWatchdogProofOutcomes.watchdogId, watchdog!.id));
     expect(outcomes).toHaveLength(1);
+    expect(outcomes[0]?.resultClassification).toBe("stopped");
+    expect(outcomes[0]?.redactedDetails).toEqual(expect.objectContaining({ classification: "stopped" }));
 
     await db
       .update(issues)
