@@ -156,6 +156,17 @@ Notes:
 - Without API keys, the app still runs normally.
 - Adapter environment checks in Paperclip will surface missing auth/CLI prerequisites.
 
+## Bring Your Own Subscription
+
+Paperclip's subscription-credential flow is per user, not a company-shared secret store. Each employee links their own official Claude or Codex subscription material from the profile/settings UI, and Paperclip stores the material encrypted at rest while only showing redacted metadata back to the board.
+
+Keep these caveats in mind when you run a public deployment:
+
+- Do not ask one employee to paste another employee's subscription token or `auth.json` / `.credentials.json` file.
+- Do not treat the linked credential as a shared service account.
+- Runtime refreshes are written back to the same encrypted per-user record, so the stored copy stays authoritative after a CLI session rotates material.
+- Live-provider checks still depend on the employee's local CLI login state or subscription account access; automated tests cover the storage and redaction paths, but they do not replace a real host-side login.
+
 ## Podman Quadlet (systemd)
 
 The `docker/quadlet/` directory contains unit files to run Paperclip + PostgreSQL as systemd services via Podman Quadlet.
