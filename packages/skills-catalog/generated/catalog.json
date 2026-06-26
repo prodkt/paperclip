@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "packageName": "@paperclipai/skills-catalog",
   "packageVersion": "0.3.1",
-  "generatedAt": "2026-06-26T13:58:14.468Z",
+  "generatedAt": "2026-06-26T18:09:08.922Z",
   "skills": [
     {
       "id": "paperclipai:bundled:docs:doc-maintenance",
@@ -146,8 +146,8 @@
         {
           "path": "references/generator-workflows.md",
           "kind": "reference",
-          "sizeBytes": 4356,
-          "sha256": "b5f72e5b6683e8f93f2d852e84c2cc19e6ab438b250bf777dfb2480dd4f6e1b6"
+          "sizeBytes": 4346,
+          "sha256": "d2a51160120b5bf3f1f03bfd832a3a8293f8044edfbcb98fed680926a7a36e23"
         },
         {
           "path": "references/hero-capsule-bank.md",
@@ -158,8 +158,8 @@
         {
           "path": "references/identicon-prototyper.md",
           "kind": "reference",
-          "sizeBytes": 6494,
-          "sha256": "193f6b5df0f2f71ddddd52018c9483100a35b9e9d3fb1af0491197eb5a7d4fc8"
+          "sizeBytes": 6588,
+          "sha256": "06786524299d79dd532f1e09ec06157a9ba81d3599af290ce17b0b56c689c8f5"
         },
         {
           "path": "references/individual-status-capsules.md",
@@ -168,7 +168,7 @@
           "sha256": "be1f2eccf96b4d2deefe45b3bc1dd0a3597278472c2ffedadc43c57161e9103d"
         }
       ],
-      "contentHash": "sha256:bd7253a59f3e3400cad27627c1f74641db5f8d46d3ae50c9b9a9da28e870fbf0"
+      "contentHash": "sha256:9cfb19e18b39c026242f78a54567b84bf87216c3aebf592bd9af1a1a87538c1e"
     },
     {
       "id": "paperclipai:bundled:product:wireframe",

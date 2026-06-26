@@ -6,9 +6,9 @@ Use this reference when the request is to generate Paperclip capsule graphics, c
 
 1. Brand authority: app, website brand guide, feature-video references, and hero-bank spec.
 2. Deterministic identicon/profile-pill prototype:
-   - `paperclip-content/design/PAP-11825/paperclip-capsule-identicon-prototyper/README.md`
-   - `src/identicon.ts`
-   - `src/App.tsx`
+   - `identicon-prototyper.md`
+   - Seeded renderer contract
+   - UI control and artifact record contract
 3. Website embedded generator:
    - `paperclip-website/public/brand/generator.js`
    - `paperclip-website/src/components/brand/sections/08-imagery.html`
@@ -88,7 +88,7 @@ Palette caution:
 
 ## Deterministic Identicon / Profile Pill
 
-Use `identicon-prototyper.md` when generating a reproducible capsule identity for one agent. That reference carries the detailed variant ids, HSL/OKLCH color schemes, dither algorithms, density/tone behavior, motion, share/export controls, and recommended combinations from the PAP-11825 prototype.
+Use `identicon-prototyper.md` when generating a reproducible capsule identity for one agent. That reference carries the detailed variant ids, HSL/OKLCH color schemes, dither algorithms, density/tone behavior, motion, share/export controls, and recommended combinations from the portable identicon prototype contract.
 
 ## Artifact Record Template
 

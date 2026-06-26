@@ -1,10 +1,8 @@
 # Identicon Prototyper
 
-Use this reference when generating or reviewing deterministic Paperclip capsule identicons/profile pills. Source of truth:
+Use this reference when generating or reviewing deterministic Paperclip capsule identicons/profile pills.
 
-- `/srv/paperclip/home/paperclipai/paperclip-content/design/PAP-11825/paperclip-capsule-identicon-prototyper/README.md`
-- `src/identicon.ts`
-- `src/App.tsx`
+This file is the portable source of truth for packaged skill consumers. The original prototype used `src/identicon.ts` for seeded rendering and `src/App.tsx` for the UI controls, but consumers should rely on the contract below rather than any internal workspace path.
 
 These are individual agent marks. They do not replace product UI status capsules or the canonical hero capsule bank.
 
@@ -198,7 +196,7 @@ Capsule identicon
 - Motion:
 - Angle: seeded auto | <degrees>
 - Export: SVG | PNG | data URI | React snippet | card URL
-- Source: PAP-11825 identicon prototyper
+- Source: Identicon prototyper reference
 ```
 
 ## Smoke Checks
