@@ -36,9 +36,8 @@ export interface CreateSecretInput {
 }
 
 export interface TestDynamicCommandInput {
-  command: string;
-  ttlSeconds?: number;
-  staticArgv?: string[];
+  secretId: string;
+  bindingId: string;
 }
 
 export interface TestDynamicCommandResult {

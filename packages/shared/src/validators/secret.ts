@@ -39,13 +39,12 @@ export const dynamicSecretCommandSchema = z.object({
 
 export const staticArgvSchema = z.array(z.string().max(4096)).max(64).default([]);
 
-// Operator dry-run of a dynamic (host-command) generator before saving a
-// secret or binding. The resolved value is never returned to the caller —
-// only a pass/fail signal plus non-sensitive metadata.
+// Operator dry-run of a saved dynamic (host-command) generator. The route
+// never accepts arbitrary command text; it reuses persisted secret + binding
+// configuration and returns only pass/fail metadata.
 export const testDynamicSecretCommandSchema = z.object({
-  command: z.string().trim().min(1).max(2048),
-  ttlSeconds: z.number().int().min(1).max(86_400).optional(),
-  staticArgv: staticArgvSchema,
+  secretId: z.string().uuid(),
+  bindingId: z.string().uuid(),
 }).strict();
 
 export type TestDynamicSecretCommand = z.infer<typeof testDynamicSecretCommandSchema>;

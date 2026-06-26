@@ -21,7 +21,6 @@ import {
   ShieldAlert,
   Clock,
   TerminalSquare,
-  Play,
   Star,
   Trash2,
   X,
@@ -50,7 +49,6 @@ import {
   type CreateSecretInput,
   type CreateSecretProviderConfigInput,
   type SecretProviderHealthResponse,
-  type TestDynamicCommandResult,
   type UpdateSecretProviderConfigInput,
 } from "../api/secrets";
 import { instanceSettingsApi } from "../api/instanceSettings";
@@ -496,7 +494,6 @@ export function Secrets() {
     ttlSeconds: String(DEFAULT_DYNAMIC_TTL_SECONDS),
   });
   const [createError, setCreateError] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<TestDynamicCommandResult | null>(null);
   const [rotateOpen, setRotateOpen] = useState(false);
   const [rotateValue, setRotateValue] = useState("");
   const [rotateExternalRef, setRotateExternalRef] = useState("");
@@ -705,30 +702,11 @@ export function Secrets() {
         ttlSeconds: String(DEFAULT_DYNAMIC_TTL_SECONDS),
       });
       setCreateError(null);
-      setTestResult(null);
       setSelectedSecretId(created.id);
       invalidateAll([created.id]);
     },
     onError: (error) => {
       setCreateError(error instanceof ApiError ? error.message : (error as Error).message);
-    },
-  });
-
-  const testDynamicMutation = useMutation({
-    mutationFn: () =>
-      secretsApi.testDynamicCommand(selectedCompanyId!, {
-        command: createForm.command.trim(),
-        ttlSeconds: dynamicTtlValid ? dynamicTtlSeconds : undefined,
-      }),
-    onSuccess: (result) => {
-      setTestResult(result);
-    },
-    onError: (error) => {
-      setTestResult({
-        ok: false,
-        posture: "soft",
-        message: error instanceof ApiError ? error.message : (error as Error).message,
-      });
     },
   });
 
@@ -1334,10 +1312,6 @@ export function Secrets() {
         open={createOpen}
         onOpenChange={(open) => {
           setCreateOpen(open);
-          if (!open) {
-            setTestResult(null);
-            testDynamicMutation.reset();
-          }
         }}
       >
         <DialogContent className="sm:max-w-lg">
@@ -1353,7 +1327,6 @@ export function Secrets() {
             value={createMode}
             onValueChange={(value) => {
               setCreateMode(value as CreateMode);
-              setTestResult(null);
             }}
           >
             <TabsList
@@ -1539,7 +1512,6 @@ export function Secrets() {
                       onChange={(event) => {
                         const command = event.target.value;
                         setCreateForm((current) => ({ ...current, command }));
-                        setTestResult(null);
                       }}
                       placeholder="/usr/local/bin/mint-github-token"
                       className="pl-7 font-mono text-xs"
@@ -1574,52 +1546,11 @@ export function Secrets() {
                     </p>
                   ) : null}
                 </div>
-                <RuntimePostureExplainer posture={testResult?.posture ?? "soft"} />
-                <div className="rounded-md border border-border p-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium">Test generator before saving</span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setTestResult(null);
-                        testDynamicMutation.mutate();
-                      }}
-                      disabled={testDynamicMutation.isPending || !createForm.command.trim()}
-                    >
-                      {testDynamicMutation.isPending ? (
-                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Play className="mr-1 h-3.5 w-3.5" />
-                      )}
-                      Test
-                    </Button>
-                  </div>
-                  {testResult ? (
-                    testResult.ok ? (
-                      <p className="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-300">
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                        Generator produced a fresh value
-                        {typeof testResult.bytes === "number" ? ` (${testResult.bytes} bytes)` : ""}.
-                        The value is not shown.
-                      </p>
-                    ) : (
-                      <p className="mt-2 flex items-start gap-1.5 text-[11px] text-destructive">
-                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        <span>
-                          Generator failed{testResult.errorCode ? ` (${testResult.errorCode})` : ""}.{" "}
-                          {testResult.message ?? "Check the command and try again."}
-                        </span>
-                      </p>
-                    )
-                  ) : (
-                    <p className="mt-2 text-[11px] text-muted-foreground">
-                      Runs the command once under Paperclip's control to confirm it returns a value.
-                      Nothing is saved.
-                    </p>
-                  )}
-                </div>
+                <RuntimePostureExplainer posture="soft" />
+                <p className="text-[11px] text-muted-foreground">
+                  Saved generators are tested from an existing secret binding so Paperclip can reuse
+                  the persisted command and operator-fixed arguments.
+                </p>
                 <div className="flex items-start gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-amber-700 dark:text-amber-300">
                   <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>

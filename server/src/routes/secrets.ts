@@ -307,9 +307,9 @@ export function secretRoutes(db: Db) {
     res.status(201).json(created);
   });
 
-  // Operator-only dry-run of a dynamic (host-command) generator before saving.
-  // Gated behind the experimental flag and the board scope. Returns only a
-  // pass/fail signal and non-sensitive metadata — never the generated value.
+  // Operator-only dry-run of a saved dynamic (host-command) generator. This
+  // endpoint deliberately does not accept arbitrary command text; the service
+  // resolves persisted secret + binding config after company ownership checks.
   router.post(
     "/companies/:companyId/secrets/dynamic-command/test",
     validate(testDynamicSecretCommandSchema),
@@ -323,8 +323,8 @@ export function secretRoutes(db: Db) {
       }
       const result = await svc.testDynamicCommand({
         companyId,
-        command: req.body.command,
-        staticArgv: req.body.staticArgv,
+        secretId: req.body.secretId,
+        bindingId: req.body.bindingId,
       });
       await logActivity(db, {
         companyId,
@@ -332,8 +332,8 @@ export function secretRoutes(db: Db) {
         actorId: req.actor.userId ?? "board",
         action: "secret.dynamic_command.tested",
         entityType: "secret",
-        entityId: "dynamic-command-test",
-        details: { ok: result.ok, errorCode: result.errorCode ?? null },
+        entityId: req.body.secretId,
+        details: { ok: result.ok, bindingId: req.body.bindingId, errorCode: result.errorCode ?? null },
       });
       res.json(result);
     },

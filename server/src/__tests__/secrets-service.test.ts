@@ -308,6 +308,63 @@ console.log("minted-" + count + ":" + process.argv.slice(2).join("|"));
     expect(activityJson).not.toContain(scriptPath);
   });
 
+  it("runs dynamic command generators with a sanitized environment", async () => {
+    const previousEnv = {
+      DATABASE_URL: process.env.DATABASE_URL,
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+      PAPERCLIP_API_KEY: process.env.PAPERCLIP_API_KEY,
+      PAPERCLIP_TEST_TOKEN: process.env.PAPERCLIP_TEST_TOKEN,
+    };
+    process.env.DATABASE_URL = "postgres://paperclip:secret@example.test/paperclip";
+    process.env.OPENAI_API_KEY = "sk-should-not-leak";
+    process.env.PAPERCLIP_API_KEY = "paperclip-api-key";
+    process.env.PAPERCLIP_TEST_TOKEN = "token-should-not-leak";
+    try {
+      const companyId = await seedCompany();
+      await enableDynamicSecrets();
+      const scriptPath = writeGeneratorScript("dynamic-env", `
+const sensitive = ["DATABASE_URL", "OPENAI_API_KEY", "PAPERCLIP_API_KEY", "PAPERCLIP_TEST_TOKEN"];
+const visible = sensitive.filter((key) => process.env[key]).join(",");
+console.log(JSON.stringify({ visible, path: typeof process.env.PATH === "string" && process.env.PATH.length > 0 }));
+`);
+      const svc = secretService(db);
+      const secret = await svc.create(companyId, {
+        name: `dynamic-env-${randomUUID()}`,
+        provider: "host_command",
+        managedMode: "dynamic_command",
+        dynamicCommand: {
+          provider: "host-command",
+          command: process.execPath,
+          ttlSeconds: 60,
+        },
+      });
+      await svc.createBinding({
+        companyId,
+        secretId: secret.id,
+        targetType: "agent",
+        targetId: "agent-env",
+        configPath: "env.GITHUB_TOKEN",
+        staticArgv: [scriptPath],
+      });
+
+      const resolved = await svc.resolveAdapterConfigForRuntime(
+        companyId,
+        { env: { GITHUB_TOKEN: { type: "secret_ref", secretId: secret.id } } },
+        { consumerType: "agent", consumerId: "agent-env" },
+      );
+
+      expect(JSON.parse(resolved.config.env.GITHUB_TOKEN)).toEqual({ visible: "", path: true });
+    } finally {
+      for (const [key, value] of Object.entries(previousEnv)) {
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    }
+  });
+
   it("fails closed at runtime when dynamic secrets are disabled after creation", async () => {
     const companyId = await seedCompany();
     await enableDynamicSecrets();
@@ -415,7 +472,7 @@ console.log("should-not-run");
     expect(activities).toHaveLength(0);
   });
 
-  it("dry-runs a dynamic generator without returning the value", async () => {
+  it("dry-runs a saved dynamic generator binding without returning the value", async () => {
     const companyId = await seedCompany();
     await enableDynamicSecrets();
     const svc = secretService(db);
@@ -424,11 +481,26 @@ console.log("should-not-run");
       "console.log('minted:' + process.argv.slice(2).join('|'));",
     );
 
-    const ok = await svc.testDynamicCommand({
+    const secret = await svc.create(companyId, {
+      name: `dynamic-test-${randomUUID()}`,
+      provider: "host_command",
+      managedMode: "dynamic_command",
+      dynamicCommand: {
+        provider: "host-command",
+        command: process.execPath,
+        ttlSeconds: 60,
+      },
+    });
+    const binding = await svc.createBinding({
       companyId,
-      command: process.execPath,
+      secretId: secret.id,
+      targetType: "agent",
+      targetId: "agent-test",
+      configPath: "env.GITHUB_TOKEN",
       staticArgv: [scriptPath, "--installation", "999"],
     });
+
+    const ok = await svc.testDynamicCommand({ companyId, secretId: secret.id, bindingId: binding.id });
     expect(ok.ok).toBe(true);
     expect(ok.posture).toBe("soft");
     expect(ok.bytes).toBe("minted:--installation|999".length);
@@ -438,15 +510,78 @@ console.log("should-not-run");
       "dynamic-test-fail",
       "process.stderr.write('boom'); process.exit(2);",
     );
+    const failingSecret = await svc.create(companyId, {
+      name: `dynamic-test-fail-${randomUUID()}`,
+      provider: "host_command",
+      managedMode: "dynamic_command",
+      dynamicCommand: {
+        provider: "host-command",
+        command: process.execPath,
+        ttlSeconds: 60,
+      },
+    });
+    const failingBinding = await svc.createBinding({
+      companyId,
+      secretId: failingSecret.id,
+      targetType: "agent",
+      targetId: "agent-test-fail",
+      configPath: "env.GITHUB_TOKEN",
+      staticArgv: [failing],
+    });
     const failure = await svc.testDynamicCommand({
       companyId,
-      command: process.execPath,
-      staticArgv: [failing],
+      secretId: failingSecret.id,
+      bindingId: failingBinding.id,
     });
     expect(failure.ok).toBe(false);
     expect(failure.posture).toBe("soft");
     expect(failure.errorCode).toBe("dynamic_secret_command_failed");
     expect(failure.bytes).toBeUndefined();
+  });
+
+  it("rejects dynamic command dry-runs for bindings outside the secret company", async () => {
+    const companyA = await seedCompany("A");
+    const companyB = await seedCompany("B");
+    await enableDynamicSecrets();
+    const svc = secretService(db);
+    const scriptPath = writeGeneratorScript("dynamic-test-foreign", "console.log('minted');");
+    const secretA = await svc.create(companyA, {
+      name: `dynamic-company-a-${randomUUID()}`,
+      provider: "host_command",
+      managedMode: "dynamic_command",
+      dynamicCommand: {
+        provider: "host-command",
+        command: process.execPath,
+        ttlSeconds: 60,
+      },
+    });
+    const secretB = await svc.create(companyB, {
+      name: `dynamic-company-b-${randomUUID()}`,
+      provider: "host_command",
+      managedMode: "dynamic_command",
+      dynamicCommand: {
+        provider: "host-command",
+        command: process.execPath,
+        ttlSeconds: 60,
+      },
+    });
+    const foreignBinding = await svc.createBinding({
+      companyId: companyB,
+      secretId: secretB.id,
+      targetType: "agent",
+      targetId: "agent-foreign",
+      configPath: "env.GITHUB_TOKEN",
+      staticArgv: [scriptPath],
+    });
+
+    const result = await svc.testDynamicCommand({
+      companyId: companyA,
+      secretId: secretA.id,
+      bindingId: foreignBinding.id,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("binding_missing");
   });
 
   it("threads operator static argv from env bindings into binding rows", async () => {

@@ -30,15 +30,24 @@ describe("secret validators", () => {
     expect(parsed.staticArgv).toBeUndefined();
   });
 
-  it("validates a dynamic-command test payload and defaults argv to []", () => {
+  it("validates a dynamic-command test payload for a saved secret binding", () => {
     const parsed = testDynamicSecretCommandSchema.parse({
-      command: "/usr/local/bin/mint-github-token",
+      secretId: "11111111-1111-1111-1111-111111111111",
+      bindingId: "22222222-2222-2222-2222-222222222222",
     });
-    expect(parsed.staticArgv).toEqual([]);
+    expect(parsed).toEqual({
+      secretId: "11111111-1111-1111-1111-111111111111",
+      bindingId: "22222222-2222-2222-2222-222222222222",
+    });
   });
 
-  it("rejects an empty command on the dynamic-command test payload", () => {
-    expect(() => testDynamicSecretCommandSchema.parse({ command: "  " })).toThrow();
+  it("rejects arbitrary command text on the dynamic-command test payload", () => {
+    expect(() =>
+      testDynamicSecretCommandSchema.parse({
+        command: "/usr/local/bin/mint-github-token",
+        staticArgv: ["--installation", "123"],
+      }),
+    ).toThrow();
   });
 
   it("allows dynamic command secrets with host-command generator config", () => {

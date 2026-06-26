@@ -76,6 +76,15 @@ const EMPTY_STATIC_ARGV: string[] = [];
 const DEFAULT_DYNAMIC_SECRET_COMMAND_TIMEOUT_MS = 30_000;
 const REDACTED_DYNAMIC_SECRET_FIELD = "***REDACTED***";
 const DYNAMIC_SECRET_CONFIG_VERSION = 1;
+const DYNAMIC_SECRET_COMMAND_ENV_ALLOWLIST = new Set([
+  "PATH",
+  "HOME",
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "SystemRoot",
+  "ComSpec",
+]);
 const dynamicSecretCache = new Map<string, { value: string; expiresAt: number }>();
 type DbTransaction = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type SecretBindingDb = Pick<Db | DbTransaction, "select" | "delete" | "insert">;
@@ -394,6 +403,15 @@ function dynamicSecretCommandTimeoutMs() {
     : DEFAULT_DYNAMIC_SECRET_COMMAND_TIMEOUT_MS;
 }
 
+function buildDynamicSecretCommandEnv(source: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const key of DYNAMIC_SECRET_COMMAND_ENV_ALLOWLIST) {
+    const value = source[key];
+    if (typeof value === "string") env[key] = value;
+  }
+  return env;
+}
+
 async function runDynamicSecretCommand(input: {
   command: string;
   staticArgv: string[];
@@ -407,7 +425,7 @@ async function runDynamicSecretCommand(input: {
       shell: false,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
-      env: process.env,
+      env: buildDynamicSecretCommandEnv(),
     });
     const timeout = setTimeout(() => {
       if (settled) return;
@@ -605,6 +623,14 @@ export function secretService(db: Db) {
           eq(companySecretBindings.configPath, input.configPath),
         ),
       )
+      .then((rows) => rows[0] ?? null);
+  }
+
+  async function getBindingById(bindingId: string) {
+    return db
+      .select()
+      .from(companySecretBindings)
+      .where(eq(companySecretBindings.id, bindingId))
       .then((rows) => rows[0] ?? null);
   }
 
@@ -2619,16 +2645,14 @@ export function secretService(db: Db) {
         .then((rows) => rows[0] ?? null);
     },
 
-    // Operator dry-run of a dynamic (host-command) generator. Runs the command
-    // under Paperclip's privileged control exactly as injection would, but
-    // never returns the resolved value — only a pass/fail signal plus
-    // non-sensitive metadata (byte length, posture). Posture is "soft" because
-    // an unbound generator is not yet attached to any hard-isolation
-    // environment; the runtime resolver labels the bound posture per Stage 5.
+    // Operator dry-run of a saved dynamic (host-command) generator. Runs the
+    // persisted command and persisted binding argv under Paperclip's privileged
+    // control exactly as injection would, but never accepts arbitrary command
+    // text and never returns the resolved value.
     testDynamicCommand: async (input: {
       companyId: string;
-      command: string;
-      staticArgv?: string[];
+      secretId: string;
+      bindingId: string;
     }): Promise<{
       ok: boolean;
       posture: "hard" | "soft";
@@ -2638,9 +2662,29 @@ export function secretService(db: Db) {
     }> => {
       try {
         await assertDynamicSecretsEnabled();
+        const secret = await assertSecretInCompany(input.companyId, input.secretId);
+        if (secret.managedMode !== "dynamic_command" || secret.provider !== "host_command") {
+          throw unprocessable("Secret is not a dynamic command secret", {
+            code: "dynamic_secret_command_failed",
+          });
+        }
+        const binding = await getBindingById(input.bindingId);
+        if (!binding) throw notFound("Secret binding not found");
+        if (binding.companyId !== input.companyId || binding.secretId !== secret.id) {
+          throw unprocessable("Secret binding must belong to same company and secret", {
+            code: "binding_missing",
+          });
+        }
+        const dynamicCommand = await resolveDynamicCommandConfig({
+          id: secret.id,
+          companyId: secret.companyId,
+          key: secret.key,
+          latestVersion: secret.latestVersion,
+        });
+        const staticArgv = await resolveBindingStaticArgv(binding);
         const value = await runDynamicSecretCommand({
-          command: input.command,
-          staticArgv: normalizeStaticArgv(input.staticArgv ?? EMPTY_STATIC_ARGV),
+          command: dynamicCommand.command,
+          staticArgv,
         });
         return { ok: true, posture: "soft", bytes: Buffer.byteLength(value) };
       } catch (err) {
