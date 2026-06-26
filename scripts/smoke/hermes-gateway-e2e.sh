@@ -104,6 +104,9 @@ Mode notes:
   network and reverse-proxy smoke runs.
 
   Raw Hermes and Paperclip API keys are redacted from logs and diagnostic files.
+  The E2E helper seeds a minimal non-secret Hermes config in the fresh container
+  state, including command_allowlist: execute_code so gateway/API runs do not
+  pause on an interactive approval prompt.
   The generated/claimed key material is kept only in the per-run state directory,
   which is deleted on success unless HERMES_SMOKE_KEEP=1.
 
@@ -501,10 +504,11 @@ yaml_single_quote() {
 }
 
 write_hermes_model_config() {
-  if [[ -z "$HERMES_SMOKE_MODEL_PROVIDER" && -z "$HERMES_SMOKE_MODEL_DEFAULT" && -z "$HERMES_SMOKE_MODEL_BASE_URL" ]]; then
-    return
+  local has_model_config=0
+  if [[ -n "$HERMES_SMOKE_MODEL_PROVIDER" || -n "$HERMES_SMOKE_MODEL_DEFAULT" || -n "$HERMES_SMOKE_MODEL_BASE_URL" ]]; then
+    has_model_config=1
   fi
-  if [[ -z "$HERMES_SMOKE_MODEL_PROVIDER" || -z "$HERMES_SMOKE_MODEL_DEFAULT" ]]; then
+  if [[ "$has_model_config" == "1" && ( -z "$HERMES_SMOKE_MODEL_PROVIDER" || -z "$HERMES_SMOKE_MODEL_DEFAULT" ) ]]; then
     fail "HERMES_SMOKE_MODEL_PROVIDER and HERMES_SMOKE_MODEL_DEFAULT must be set together"
   fi
 
@@ -514,16 +518,24 @@ write_hermes_model_config() {
   fi
 
   {
-    echo "model:"
-    printf "  default: %s\n" "$(yaml_single_quote "$HERMES_SMOKE_MODEL_DEFAULT")"
-    printf "  provider: %s\n" "$(yaml_single_quote "$HERMES_SMOKE_MODEL_PROVIDER")"
-    if [[ -n "$HERMES_SMOKE_MODEL_BASE_URL" ]]; then
-      printf "  base_url: %s\n" "$(yaml_single_quote "$HERMES_SMOKE_MODEL_BASE_URL")"
+    if [[ "$has_model_config" == "1" ]]; then
+      echo "model:"
+      printf "  default: %s\n" "$(yaml_single_quote "$HERMES_SMOKE_MODEL_DEFAULT")"
+      printf "  provider: %s\n" "$(yaml_single_quote "$HERMES_SMOKE_MODEL_PROVIDER")"
+      if [[ -n "$HERMES_SMOKE_MODEL_BASE_URL" ]]; then
+        printf "  base_url: %s\n" "$(yaml_single_quote "$HERMES_SMOKE_MODEL_BASE_URL")"
+      fi
+      echo "providers: {}"
     fi
-    echo "providers: {}"
+    echo "command_allowlist:"
+    echo "- execute_code"
   } > "$config_file"
   chmod 644 "$config_file"
-  log "seeded Hermes model config provider=${HERMES_SMOKE_MODEL_PROVIDER} model=${HERMES_SMOKE_MODEL_DEFAULT}"
+  if [[ "$has_model_config" == "1" ]]; then
+    log "seeded Hermes model config provider=${HERMES_SMOKE_MODEL_PROVIDER} model=${HERMES_SMOKE_MODEL_DEFAULT}"
+  else
+    log "seeded Hermes smoke config"
+  fi
 }
 
 start_container() {

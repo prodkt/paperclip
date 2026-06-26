@@ -37,9 +37,13 @@ and the non-loopback HTTP guard.
   pnpm smoke:hermes-gateway-e2e
   ```
 
-  This writes only `model` and `providers: {}` into the temporary Hermes home;
-  provider keys still come from environment variables and are redacted from
-  diagnostics.
+  This writes only `model`, `providers: {}`, and
+  `command_allowlist: [execute_code]` into the temporary Hermes home. Provider
+  keys still come from environment variables and are redacted from diagnostics.
+- The E2E helper always seeds `command_allowlist: [execute_code]` in the fresh
+  Hermes config so non-interactive gateway/API runs do not wait for a manual
+  execute-code approval prompt. Do not copy a host `~/.hermes` directory into
+  the container to solve approval or provider setup.
 - Board/operator auth is required through `PAPERCLIP_AUTH_HEADER`,
   `PAPERCLIP_COOKIE`, or a board-capable `PAPERCLIP_API_KEY`.
 - Diagnostic files are redacted before they are written, except the join output
