@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import { forbidden, unauthorized } from "../errors.js";
+import { forbidden, HttpError, unauthorized } from "../errors.js";
 
 export function assertAuthenticated(req: Request) {
   if (req.actor.type === "none") {
@@ -10,6 +10,31 @@ export function assertAuthenticated(req: Request) {
 export function assertBoard(req: Request) {
   if (req.actor.type !== "board") {
     throw forbidden("Board access required");
+  }
+}
+
+// PRO-43: unscoped per-resource handlers (e.g. /heartbeat-runs/:runId) must
+// look the resource up first, then check company access. If the resource
+// exists but belongs to a different company, the standard assertCompanyAccess
+// would throw 403, which leaks the resource's existence to a probing caller
+// (status 403 + "Forbidden" differs from status 404 + "Heartbeat run not found"
+// for a nonexistent UUID). This wrapper translates the 403 into a canonical
+// 404 with the same body the "not found" branch produces, so the two cases
+// are indistinguishable. 401 (unauthenticated) is NOT translated — callers
+// should still see a clear auth error.
+//
+// Usage:
+//   const run = await heartbeat.getRun(runId);
+//   if (!run) { res.status(404).json({ error: "Heartbeat run not found" }); return; }
+//   assertCompanyAccessOrNotFound(req, run.companyId);
+export function assertCompanyAccessOrNotFound(req: Request, companyId: string, notFoundMessage = "Heartbeat run not found") {
+  try {
+    assertCompanyAccess(req, companyId);
+  } catch (err) {
+    if (err instanceof HttpError && err.status === 403) {
+      throw new HttpError(404, notFoundMessage);
+    }
+    throw err;
   }
 }
 

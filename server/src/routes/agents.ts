@@ -52,7 +52,7 @@ import {
   workspaceOperationService,
 } from "../services/index.js";
 import { conflict, forbidden, notFound, unprocessable } from "../errors.js";
-import { assertBoard, assertCompanyAccess, assertInstanceAdmin, getActorInfo } from "./authz.js";
+import { assertBoard, assertCompanyAccess, assertCompanyAccessOrNotFound, assertInstanceAdmin, getActorInfo } from "./authz.js";
 import {
   assertNoAgentHostWorkspaceCommandMutation,
   collectAgentAdapterWorkspaceCommandPaths,
@@ -3558,7 +3558,10 @@ export function agentRoutes(
       res.status(404).json({ error: "Heartbeat run not found" });
       return;
     }
-    assertCompanyAccess(req, run.companyId);
+    // PRO-43: classic IDOR/info-disclosure leak — a cross-company caller would
+    // otherwise see 403 "Forbidden" while a nonexistent UUID returns 404
+    // "Heartbeat run not found". Translate to 404 so the two are indistinguishable.
+    assertCompanyAccessOrNotFound(req, run.companyId);
     const retryExhaustedReason = await heartbeat.getRetryExhaustedReason(runId);
     const decoratedRun = heartbeat.decorateActiveRunStatus(run);
     res.json(
@@ -3573,9 +3576,13 @@ export function agentRoutes(
     assertBoard(req);
     const runId = req.params.runId as string;
     const existing = await heartbeat.getRun(runId);
-    if (existing) {
-      assertCompanyAccess(req, existing.companyId);
+    if (!existing) {
+      res.status(404).json({ error: "Heartbeat run not found" });
+      return;
     }
+    // PRO-43: translate cross-company 403 into 404 so the response is
+    // indistinguishable from the "run does not exist" case above.
+    assertCompanyAccessOrNotFound(req, existing.companyId);
     const run = await heartbeat.cancelRun(runId);
 
     if (run) {
@@ -3600,7 +3607,9 @@ export function agentRoutes(
       res.status(404).json({ error: "Heartbeat run not found" });
       return;
     }
-    assertCompanyAccess(req, existing.companyId);
+    // PRO-43: translate cross-company 403 into 404 so the response is
+    // indistinguishable from the "run does not exist" case above.
+    assertCompanyAccessOrNotFound(req, existing.companyId);
     const decision = typeof req.body?.decision === "string" ? req.body.decision : "";
     if (!["snooze", "continue", "dismissed_false_positive"].includes(decision)) {
       res.status(400).json({ error: "Unsupported watchdog decision" });
@@ -3636,7 +3645,9 @@ export function agentRoutes(
       res.status(404).json({ error: "Heartbeat run not found" });
       return;
     }
-    assertCompanyAccess(req, run.companyId);
+    // PRO-43: translate cross-company 403 into 404 so the response is
+    // indistinguishable from the "run does not exist" case above.
+    assertCompanyAccessOrNotFound(req, run.companyId);
 
     const afterSeq = Number(req.query.afterSeq ?? 0);
     const limit = Number(req.query.limit ?? 200);
@@ -3658,7 +3669,9 @@ export function agentRoutes(
       res.status(404).json({ error: "Heartbeat run not found" });
       return;
     }
-    assertCompanyAccess(req, run.companyId);
+    // PRO-43: translate cross-company 403 into 404 so the response is
+    // indistinguishable from the "run does not exist" case above.
+    assertCompanyAccessOrNotFound(req, run.companyId);
 
     const offset = Number(req.query.offset ?? 0);
     const limitBytes = readRunLogLimitBytes(req.query.limitBytes);
@@ -3678,7 +3691,9 @@ export function agentRoutes(
       res.status(404).json({ error: "Heartbeat run not found" });
       return;
     }
-    assertCompanyAccess(req, run.companyId);
+    // PRO-43: translate cross-company 403 into 404 so the response is
+    // indistinguishable from the "run does not exist" case above.
+    assertCompanyAccessOrNotFound(req, run.companyId);
 
     const context = asRecord(run.contextSnapshot);
     const executionWorkspaceId = asNonEmptyString(context?.executionWorkspaceId);
