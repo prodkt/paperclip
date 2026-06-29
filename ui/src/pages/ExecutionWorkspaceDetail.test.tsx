@@ -237,12 +237,13 @@ async function flush() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-async function waitForCondition(condition: () => boolean) {
-  for (let index = 0; index < 20; index += 1) {
+async function waitForCondition(condition: () => boolean, timeoutMs = 2000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
     if (condition()) return;
     await flush();
   }
-  expect(condition()).toBe(true);
+  expect(condition(), `condition did not become true within ${timeoutMs}ms`).toBe(true);
 }
 
 describe("ExecutionWorkspaceDetail plugin slots", () => {

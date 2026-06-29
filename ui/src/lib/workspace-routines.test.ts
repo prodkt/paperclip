@@ -108,4 +108,19 @@ describe("workspace routine helpers", () => {
       otherWorkspaces: [otherProjectRoutine, noProjectRoutine],
     });
   });
+
+  it("does not treat company-wide routines as current-workspace routines when the workspace has no project", () => {
+    const noProjectRoutine = createRoutine({
+      id: "routine-no-project",
+      projectId: null,
+      variables: [
+        { name: "workspaceBranch", label: null, type: "text", defaultValue: null, required: true, options: [] },
+      ],
+    });
+
+    expect(groupWorkspaceSpecificRoutines([noProjectRoutine], null)).toEqual({
+      thisWorkspace: [],
+      otherWorkspaces: [noProjectRoutine],
+    });
+  });
 });

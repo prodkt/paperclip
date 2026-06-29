@@ -47,7 +47,7 @@ export function groupWorkspaceSpecificRoutines(
   for (const routine of routines) {
     if (!routineHasWorkspaceSpecificVariables(routine)) continue;
 
-    if (routine.projectId === currentProjectId) {
+    if (currentProjectId !== null && routine.projectId === currentProjectId) {
       groups.thisWorkspace.push(routine);
     } else {
       groups.otherWorkspaces.push(routine);
