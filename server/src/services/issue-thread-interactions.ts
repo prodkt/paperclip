@@ -1288,7 +1288,8 @@ export function issueThreadInteractionService(db: Db) {
           .map((row) => row.id);
 
         if (questionRowIds.length > 0) {
-          const [sampleQuestionRow] = commentRows.filter((row) => row.kind === "ask_user_questions");
+          const sampleQuestionRow = commentRows.find((row) => row.kind === "ask_user_questions");
+          if (!sampleQuestionRow) continue;
           const updatedRows = await db
             .update(issueThreadInteractions)
             .set({
@@ -1308,7 +1309,8 @@ export function issueThreadInteractionService(db: Db) {
         }
 
         if (confirmationRowIds.length > 0) {
-          const [sampleConfirmationRow] = commentRows.filter((row) => isRequestConfirmationLikeKind(row.kind));
+          const sampleConfirmationRow = commentRows.find((row) => isRequestConfirmationLikeKind(row.kind));
+          if (!sampleConfirmationRow) continue;
           const updatedRows = await db
             .update(issueThreadInteractions)
             .set({
