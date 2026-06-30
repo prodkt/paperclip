@@ -52,8 +52,8 @@ It looks like a task manager. Under the hood: org charts, budgets, governance, g
     <td align="center"><img src="doc/assets/logos/openclaw.svg" width="32" alt="OpenClaw" /><br/><sub>OpenClaw</sub></td>
     <td align="center"><img src="doc/assets/logos/claude.svg" width="32" alt="Claude" /><br/><sub>Claude Code</sub></td>
     <td align="center"><img src="doc/assets/logos/codex.svg" width="32" alt="Codex" /><br/><sub>Codex</sub></td>
-    <td align="center"><img src="doc/assets/logos/gemini.svg" width="32" alt="Gemini" /><br/><sub>Gemini</sub></td>
-    <td align="center"><img src="doc/assets/logos/grok.svg" width="32" alt="Grok" /><br/><sub>Grok</sub></td>
+    <td align="center"><img src="doc/assets/logos/gemini.svg" width="32" alt="Gemini CLI" /><br/><sub>Gemini CLI</sub></td>
+    <td align="center"><img src="doc/assets/logos/grok.svg" width="32" alt="Grok Build" /><br/><sub>Grok Build</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="doc/assets/logos/cursor.svg" width="32" alt="Cursor" /><br/><sub>Cursor</sub></td>
